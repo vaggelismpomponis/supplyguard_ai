@@ -14,6 +14,7 @@ Retrieved text is data, never instructions: chunks that try to instruct an AI as
 stored with trusted = false and security_flags = ['prompt_injection'] for the red-team checks.
 """
 import json
+import math
 import os
 import re
 from datetime import date
@@ -167,7 +168,79 @@ def search(query: str, scopes: list[str], backend: str = "pgvector", k: int = 5)
              "security_flags": [f for f in m["security_flags"].split(",") if f]}
             for m, d, dist in zip(res["metadatas"][0], res["documents"][0], res["distances"][0])
         ]
+    if backend == "hybrid":
+        return hybrid_search(query, scopes, k)
     raise ValueError(f"unknown backend {backend!r}")
+
+
+# --- hybrid retrieval (#75): dense pgvector + BM25 + Neo4j graph context, fused with RRF ---------
+RRF_K = 60  # standard Reciprocal Rank Fusion constant: rank 1 -> 1/61
+CANDIDATES = 50
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+(?:-[0-9]+)?", text.lower())  # keeps ids such as mc-17 whole
+
+
+def bm25(query: str, docs: list[dict[str, Any]], k1: float = 1.5, b: float = 0.75) -> list[float]:
+    """Okapi BM25 score of every doc (title + content) for the query."""
+    tokens = [_words(f"{d['title']} {d['content']}") for d in docs]
+    avg = sum(map(len, tokens)) / (len(tokens) or 1)
+    df: dict[str, int] = {}
+    for t in tokens:
+        for w in set(t):
+            df[w] = df.get(w, 0) + 1
+    n, q = len(docs), set(_words(query))
+    scores = []
+    for t in tokens:
+        tf = {w: t.count(w) for w in q}
+        scores.append(sum(
+            math.log(1 + (n - df[w] + 0.5) / (df[w] + 0.5)) * tf[w] * (k1 + 1) / (tf[w] + k1 * (1 - b + b * len(t) / avg))
+            for w in q if tf[w] and w in df))
+    return scores
+
+
+def graph_suppliers(query: str) -> set[str]:
+    """Suppliers the query is about: named directly, or suppliers of a component it names (Neo4j)."""
+    from .common import neo4j_driver
+    from .data_quality import canonical_component_id, table
+
+    text = query.lower()
+    named = {s["supplier_id"] for s in table("suppliers.csv")
+             if s["supplier_id"].lower() in _words(text) or s["name"].lower() in text}
+    components = [c for c in (canonical_component_id(w) for w in re.findall(r"\bmc-?\d+\b", text)) if c]
+    if not components:
+        return named
+    with neo4j_driver() as driver:
+        records, _, _ = driver.execute_query(
+            "MATCH (s:Supplier)-[:SUPPLIES]->(c:Component) WHERE c.componentId IN $c RETURN collect(DISTINCT s.supplierId) AS ids",
+            c=components)
+    return named | set(records[0]["ids"])
+
+
+def hybrid_search(query: str, scopes: list[str], k: int = 5) -> list[dict[str, Any]]:
+    with pg() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""SELECT {SELECT_COLS}, 1 - (embedding <=> %s::vector) AS dense
+                FROM policy_chunks WHERE access_scope = ANY(%s)""",
+            (vec(embed([query])[0]), scopes),
+        )
+        cols = [d.name for d in cur.description]
+        docs = [dict(zip(cols, row)) for row in cur.fetchall()]
+    related = graph_suppliers(query)
+    lexical = bm25(query, docs)
+    rankings = [
+        sorted(range(len(docs)), key=lambda i: -docs[i]["dense"])[:CANDIDATES],
+        [i for i in sorted(range(len(docs)), key=lambda i: -lexical[i]) if lexical[i] > 0][:CANDIDATES],
+        # graph context: chunks of the suppliers the query is about, best dense match first
+        [i for i in sorted(range(len(docs)), key=lambda i: -docs[i]["dense"]) if docs[i]["supplier_id"] in related][:CANDIDATES],
+    ]
+    fused: dict[int, float] = {}
+    for ranking in rankings:
+        for rank, i in enumerate(ranking, 1):
+            fused[i] = fused.get(i, 0.0) + 1 / (RRF_K + rank)
+    top = sorted(fused, key=lambda i: -fused[i])[:k]
+    return [{**{c: v for c, v in docs[i].items() if c != "dense"}, "score": fused[i]} for i in top]
 
 
 if __name__ == "__main__":

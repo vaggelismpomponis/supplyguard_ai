@@ -238,7 +238,7 @@ def _documents(hits: list[dict]) -> list[DocumentResult]:
 
 def retrieve_documents(query: str, access_scope: str = "procurement", top_k: int = 5) -> list[DocumentResult]:
     """Document chunks the user's scope may read, with provenance, precedence and prompt-injection flags."""
-    return _documents(ingest_documents.search(query, _scopes(access_scope), "pgvector", top_k))
+    return _documents(ingest_documents.search(query, _scopes(access_scope), "hybrid", top_k))
 
 
 def retrieve_similar_incidents(query: str, component_type: str | None = None, severity: str | None = None,
