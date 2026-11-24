@@ -5,12 +5,17 @@ Target: Issue #38
 
 Implements MCP-compliant tool handlers for:
 1. create_purchase_order: Idempotent order execution returning PurchaseOrderReceipt
-2. get_supplier_risk: External risk evaluation querying the External Risk Service
-3. check_inventory_balance: Real-time inventory calculation (usable vs quarantined)
+2. expedite_purchase_order: Idempotent expedite request on an open PO
+3. request_stock_transfer: Idempotent internal hub/warehouse transfer (€0.12/unit, 2d)
+4. update_production_schedule: Idempotent production schedule adjustment
+5. get_supplier_risk: External risk evaluation querying the External Risk Service
+6. check_inventory_balance: Real-time inventory calculation (usable vs quarantined)
 """
 
 from __future__ import annotations
 
+import csv
+import hashlib
 import json
 import os
 import sys
@@ -23,27 +28,30 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.contracts import PurchaseOrderReceipt, PurchaseOrderRequest, SupplierRiskInfo
+from src.core.contracts import PurchaseOrderReceipt, SupplierRiskInfo
 
 
 def _get_risk_feed(region: Optional[str] = None) -> List[Dict[str, Any]]:
     """Query External Risk Service over HTTP or load local risk feed."""
     feed_file = REPO_ROOT / "src" / "support-data" / "external_service" / "risk_feed.json"
-    risk_url = os.getenv("EXTERNAL_RISK_URL")
-    
-    # If explicit external URL provided (e.g. inside Docker container), query it
-    if risk_url and not risk_url.startswith("http://localhost"):
+    risk_url = (os.getenv("EXTERNAL_RISK_URL") or "").strip().rstrip("/")
+
+    if risk_url:
         url = f"{risk_url}/alerts"
         if region:
             url += f"?region={region}"
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "SupplyGuard-MCP"})
-            with urllib.request.urlopen(req, timeout=1.0) as resp:
-                return json.loads(resp.read().decode())
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                data = json.loads(resp.read().decode())
+                if isinstance(data, dict):
+                    alerts = data.get("alerts", [])
+                    return [a for a in alerts if not region or a.get("region") == region]
+                if isinstance(data, list):
+                    return data
         except Exception:
             pass
 
-    # Fast local fallback
     if feed_file.exists():
         try:
             data = json.loads(feed_file.read_text(encoding="utf-8"))
@@ -56,11 +64,18 @@ def _get_risk_feed(region: Optional[str] = None) -> List[Dict[str, Any]]:
     return []
 
 
-class SimulatedProcurementSystem:
-    """Simulated ERP procurement engine with strict idempotency."""
+def _deterministic_po_id(action_id: str) -> str:
+    """Derive a collision-free PO ID from action_id that survives container restarts."""
+    digest = hashlib.sha256(action_id.encode("utf-8")).hexdigest()[:8].upper()
+    return f"PO-SUP-2026-{digest}"
 
-    def __init__(self):
+
+class SimulatedProcurementSystem:
+    """Simulated ERP procurement engine with strict DB-backed idempotency."""
+
+    def __init__(self) -> None:
         self._executed_orders: Dict[str, PurchaseOrderReceipt] = {}
+        self._executed_ops: Dict[str, Dict[str, Any]] = {}
 
     def create_purchase_order(
         self,
@@ -70,39 +85,48 @@ class SimulatedProcurementSystem:
         quantity: int,
         unit_price: float,
         delivery_date: Optional[str] = None,
+        thread_id: Optional[str] = None,
     ) -> PurchaseOrderReceipt:
-        """Create a new purchase order with idempotency check.
+        """Create a new purchase order with strict DB-backed idempotency.
 
-        If action_id was already executed, returns the previously created receipt.
+        If action_id was already executed, returns the original persisted receipt.
         """
-        # 1. Check in-memory / state cache
+        # 1. Check in-memory cache
         if action_id in self._executed_orders:
             return self._executed_orders[action_id]
 
+        order_id = _deterministic_po_id(action_id)
+
         # 2. Check database audit_log if DB is available
         try:
-            from src.db.idempotency import get_action_status, is_action_executed, record_action
-            if is_action_executed(action_id):
-                status_rec = get_action_status(action_id)
-                # Return recovered receipt
-                receipt = PurchaseOrderReceipt(
-                    order_id=f"PO-SUP-REC-{action_id[:8].upper()}",
-                    action_id=action_id,
-                    supplier_id=supplier_id,
-                    component_id=component_id,
-                    quantity=quantity,
-                    total_amount=round(quantity * unit_price, 2),
-                    status="confirmed",
-                    created_at=datetime.now(timezone.utc).isoformat(),
-                )
-                self._executed_orders[action_id] = receipt
-                return receipt
+            from src.db.connection import is_postgres_available
+
+            if is_postgres_available():
+                from src.db.idempotency import get_action_record, is_action_executed
+
+                if is_action_executed(action_id):
+                    rec = get_action_record(action_id) or {}
+                    params = rec.get("parameters") or {}
+                    stored_receipt = params.get("receipt") if isinstance(params, dict) else None
+                    if isinstance(stored_receipt, dict) and stored_receipt.get("order_id"):
+                        receipt = PurchaseOrderReceipt.model_validate(stored_receipt)
+                    else:
+                        receipt = PurchaseOrderReceipt(
+                            order_id=order_id,
+                            action_id=action_id,
+                            supplier_id=supplier_id,
+                            component_id=component_id,
+                            quantity=quantity,
+                            total_amount=round(quantity * unit_price, 2),
+                            status="confirmed",
+                            created_at=str(rec.get("executed_at") or datetime.now(timezone.utc).isoformat()),
+                        )
+                    self._executed_orders[action_id] = receipt
+                    return receipt
         except Exception:
             pass
 
-        # 3. Generate new Purchase Order
-        order_num = len(self._executed_orders) + 9001
-        order_id = f"PO-SUP-2026-{order_num}"
+        # 3. Generate new Purchase Order with collision-free ID
         total_amount = round(quantity * unit_price, 2)
         created_at = datetime.now(timezone.utc).isoformat()
 
@@ -116,59 +140,177 @@ class SimulatedProcurementSystem:
             status="confirmed",
             created_at=created_at,
         )
-
         self._executed_orders[action_id] = receipt
 
-        # 4. Record execution in PostgreSQL audit_log and purchase_orders table if connected
+        # 4. Record execution in PostgreSQL audit_log (if not already locked by execute_idempotent) and purchase_orders
         try:
-            from src.db.connection import get_pooled_connection
-            with get_pooled_connection() as conn:
-                with conn.transaction():
-                    with conn.cursor() as cur:
-                        # Record in audit_log
-                        cur.execute(
-                            """
-                            INSERT INTO audit_log (
-                                action_id, thread_id, action_type, status,
-                                parameters, rationale, executed_at
+            from src.db.connection import get_pooled_connection, is_postgres_available
+
+            if is_postgres_available():
+                with get_pooled_connection() as conn:
+                    with conn.transaction():
+                        with conn.cursor() as cur:
+                            cur.execute("ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS action_id VARCHAR(64);")
+                            cur.execute(
+                                "SELECT status FROM audit_log WHERE action_id = %s;",
+                                (action_id,),
                             )
-                            VALUES (%s, %s, %s, %s, %s::jsonb, %s, CURRENT_TIMESTAMP)
-                            ON CONFLICT (action_id) DO UPDATE SET
-                                status = 'executed',
-                                executed_at = CURRENT_TIMESTAMP;
-                            """,
-                            (
-                                action_id,
-                                f"thread-{action_id[:8]}",
-                                "purchase_alternative",
-                                "executed",
-                                json.dumps(receipt.model_dump()),
-                                f"Simulated PO {order_id} issued to supplier {supplier_id}",
-                            ),
-                        )
-                        # Record in purchase_orders table
-                        cur.execute(
-                            """
-                            INSERT INTO purchase_orders (
-                                po_id, supplier_id, component_id, qty, unit_price_eur,
-                                order_date, promised_date, status
+                            existing = cur.fetchone()
+                            if existing is None:
+                                cur.execute("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor VARCHAR(128);")
+                                cur.execute("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS component_id VARCHAR(64);")
+                                cur.execute(
+                                    """
+                                    INSERT INTO audit_log (
+                                        action_id, thread_id, action_type, component_id, status,
+                                        parameters, rationale, executed_at
+                                    )
+                                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, CURRENT_TIMESTAMP)
+                                    ON CONFLICT (action_id) DO NOTHING;
+                                    """,
+                                    (
+                                        action_id,
+                                        thread_id or f"thread-{action_id[:8]}",
+                                        "purchase_alternative",
+                                        component_id,
+                                        "executed",
+                                        json.dumps({"receipt": receipt.model_dump()}),
+                                        f"Simulated PO {order_id} issued to supplier {supplier_id}",
+                                    ),
+                                )
+                            cur.execute(
+                                """
+                                INSERT INTO purchase_orders (
+                                    po_id, supplier_id, component_id, qty, unit_price_eur,
+                                    order_date, promised_date, status, action_id
+                                )
+                                VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, %s, 'confirmed', %s)
+                                ON CONFLICT (po_id) DO NOTHING;
+                                """,
+                                (
+                                    order_id,
+                                    supplier_id,
+                                    component_id,
+                                    quantity,
+                                    unit_price,
+                                    delivery_date or "2026-10-28",
+                                    action_id,
+                                ),
                             )
-                            VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, %s, 'confirmed')
-                            ON CONFLICT (po_id) DO NOTHING;
-                            """,
-                            (
-                                order_id,
-                                supplier_id,
-                                component_id,
-                                quantity,
-                                unit_price,
-                                delivery_date or "2026-11-01",
-                            ),
-                        )
         except Exception:
             pass
 
         return receipt
+
+    def expedite_purchase_order(
+        self,
+        action_id: str,
+        po_id: str,
+        days_gain: int = 7,
+        fee_pct: float = 6.0,
+        thread_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Idempotently expedite an existing open purchase order."""
+        op_key = f"{action_id}:expedite:{po_id}"
+        if op_key in self._executed_ops:
+            return {**self._executed_ops[op_key], "idempotent_replay": True}
+
+        expedite_allowed = True
+        po_qty = 1500
+        unit_price = 9.80
+        po_csv = REPO_ROOT / "src" / "support-data" / "structured" / "purchase_orders.csv"
+        if po_csv.exists():
+            with po_csv.open("r", encoding="utf-8") as fh:
+                for row in csv.DictReader(fh):
+                    if row.get("po_id") == po_id:
+                        expedite_allowed = (row.get("expedite_allowed") or "").lower() in ("yes", "true", "1")
+                        po_qty = int(row.get("qty") or po_qty)
+                        unit_price = float(row.get("unit_price_eur") or unit_price)
+                        break
+
+        if not expedite_allowed:
+            raise ValueError(f"Purchase order '{po_id}' is not eligible for expediting.")
+
+        fee_eur = round(po_qty * unit_price * (fee_pct / 100.0), 2)
+        result = {
+            "operation": "expedite_purchase_order",
+            "expedite_ref": f"EXP-{po_id}",
+            "action_id": action_id,
+            "thread_id": thread_id,
+            "po_id": po_id,
+            "qty": po_qty,
+            "days_gain": days_gain,
+            "fee_pct": fee_pct,
+            "fee_eur": fee_eur,
+            "status": "confirmed",
+            "idempotent_replay": False,
+        }
+        self._executed_ops[op_key] = result
+        return result
+
+    def request_stock_transfer(
+        self,
+        action_id: str,
+        component_id: str,
+        from_location: str,
+        to_location: str,
+        qty: int,
+        thread_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Idempotently request an internal stock transfer (€0.12/unit, 2 days)."""
+        op_key = f"{action_id}:transfer:{from_location}:{to_location}"
+        if op_key in self._executed_ops:
+            return {**self._executed_ops[op_key], "idempotent_replay": True}
+
+        usable = self.check_inventory_balance(component_id).get("usable", 0)
+        if qty > usable:
+            raise ValueError(f"Requested transfer {qty} exceeds usable inventory {usable} for {component_id}.")
+
+        digest = hashlib.sha256(op_key.encode("utf-8")).hexdigest()[:6].upper()
+        result = {
+            "operation": "request_stock_transfer",
+            "transfer_ref": f"TRF-2026-{digest}",
+            "action_id": action_id,
+            "thread_id": thread_id,
+            "component_id": component_id,
+            "from_location": from_location,
+            "to_location": to_location,
+            "qty": qty,
+            "transfer_days": 2,
+            "cost_eur": round(qty * 0.12, 2),
+            "status": "confirmed",
+            "idempotent_replay": False,
+        }
+        self._executed_ops[op_key] = result
+        return result
+
+    def update_production_schedule(
+        self,
+        action_id: str,
+        product_id: str,
+        week_start: str,
+        planned_units: int,
+        thread_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Idempotently update a factory production schedule slot."""
+        op_key = f"{action_id}:schedule:{product_id}:{week_start}"
+        if op_key in self._executed_ops:
+            return {**self._executed_ops[op_key], "idempotent_replay": True}
+
+        digest = hashlib.sha256(op_key.encode("utf-8")).hexdigest()[:6].upper()
+        result = {
+            "operation": "update_production_schedule",
+            "schedule_ref": f"SCH-2026-{digest}",
+            "action_id": action_id,
+            "thread_id": thread_id,
+            "product_id": product_id,
+            "week_start": week_start,
+            "planned_units": planned_units,
+            "status": "confirmed",
+            "idempotent_replay": False,
+        }
+        self._executed_ops[op_key] = result
+        return result
 
     def get_supplier_risk(
         self,
@@ -178,25 +320,37 @@ class SimulatedProcurementSystem:
     ) -> SupplierRiskInfo:
         """Fetch supplier risk combining regional feed and supplier attributes."""
         country_code = country or "DE"
-        # If supplier_id S001, map to Atlas Components / Germany / Taiwan upstream
-        if supplier_id == "S001":
-            country_code = "DE"
-            supplier_name = supplier_name or "Atlas Components"
-        elif supplier_id == "S002":
-            country_code = "RO"
-            supplier_name = supplier_name or "Balkan MicroSystems"
-        elif supplier_id == "S003":
-            country_code = "SE"
-            supplier_name = supplier_name or "Nordic SemiTech"
+        upstream_id = None
+        sup_csv = REPO_ROOT / "src" / "support-data" / "structured" / "suppliers.csv"
+        if sup_csv.exists():
+            with sup_csv.open("r", encoding="utf-8") as fh:
+                for row in csv.DictReader(fh):
+                    if row.get("supplier_id") == supplier_id:
+                        country_code = country or row.get("country") or country_code
+                        supplier_name = supplier_name or row.get("name")
+                        upstream_id = row.get("upstream_manufacturer_id") or None
+                        break
+        else:
+            canonical = {
+                "S001": ("DE", "Atlas Components", "U01"),
+                "S002": ("RO", "Helios Supply", "U03"),
+                "S003": ("SE", "Borealis Parts", "U04"),
+                "S004": ("CZ", "Cordillera Industrial", "U02"),
+                "S005": ("NL", "Delta Micro Systems", "U01"),
+                "S006": ("DE", "Atlas Logistik GmbH", None),
+            }
+            if supplier_id in canonical:
+                country_code = country or canonical[supplier_id][0]
+                supplier_name = supplier_name or canonical[supplier_id][1]
+                upstream_id = canonical[supplier_id][2]
 
         alerts = _get_risk_feed(country_code)
-        # Also check Taiwan upstream wafer fab risk (Veltro Semiconductor)
         upstream_alerts = _get_risk_feed("TW")
 
         risk_score = 0.1
         geo_risk = "Low"
         logistics = "Normal"
-        notes = []
+        notes: List[str] = []
 
         if alerts:
             for a in alerts:
@@ -210,7 +364,7 @@ class SimulatedProcurementSystem:
                     if "freight" in a.get("topic", "") or "port" in a.get("topic", ""):
                         logistics = "Congested"
 
-        if supplier_id == "S001" and upstream_alerts:
+        if (upstream_id == "U01" or supplier_id in ("S001", "S005")) and upstream_alerts:
             risk_score = max(risk_score, 0.85)
             geo_risk = "Critical"
             logistics = "Disrupted"
@@ -226,40 +380,40 @@ class SimulatedProcurementSystem:
             notes=" | ".join(notes) if notes else "No critical disruption alerts.",
         )
 
-    def check_inventory_balance(self, component_id: str) -> Dict[str, int]:
+    def check_inventory_balance(self, component_id: str) -> Dict[str, Any]:
         """Compute usable vs reserved vs quarantined stock for a component."""
         try:
-            from src.db.connection import get_pooled_connection
-            with get_pooled_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        SELECT
-                            COALESCE(SUM(on_hand), 0),
-                            COALESCE(SUM(reserved), 0),
-                            COALESCE(SUM(quarantined), 0),
-                            COALESCE(SUM(usable), 0)
-                        FROM inventory
-                        WHERE component_id = %s;
-                        """,
-                        (component_id,),
-                    )
-                    row = cur.fetchone()
-                    if row and row[0] > 0:
-                        return {
-                            "component_id": component_id,
-                            "on_hand": int(row[0]),
-                            "reserved": int(row[1]),
-                            "quarantined": int(row[2]),
-                            "usable": int(row[3]),
-                        }
+            from src.db.connection import get_pooled_connection, is_postgres_available
+
+            if is_postgres_available():
+                with get_pooled_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            SELECT
+                                COALESCE(SUM(on_hand), 0),
+                                COALESCE(SUM(reserved), 0),
+                                COALESCE(SUM(quarantined), 0),
+                                COALESCE(SUM(usable), 0)
+                            FROM inventory
+                            WHERE component_id = %s;
+                            """,
+                            (component_id,),
+                        )
+                        row = cur.fetchone()
+                        if row and row[0] > 0:
+                            return {
+                                "component_id": component_id,
+                                "on_hand": int(row[0]),
+                                "reserved": int(row[1]),
+                                "quarantined": int(row[2]),
+                                "usable": int(row[3]),
+                            }
         except Exception:
             pass
 
-        # Fallback reading directly from synthetic CSV
         inv_csv = REPO_ROOT / "src" / "support-data" / "structured" / "inventory.csv"
         if inv_csv.exists():
-            import csv
             total_on_hand = 0
             total_reserved = 0
             total_quarantined = 0
@@ -280,17 +434,15 @@ class SimulatedProcurementSystem:
                     "usable": total_usable,
                 }
 
-        # Default fallback
         return {
             "component_id": component_id,
-            "on_hand": 5200,
-            "reserved": 1400,
-            "quarantined": 600,
-            "usable": 3200,
+            "on_hand": 0,
+            "reserved": 0,
+            "quarantined": 0,
+            "usable": 0,
         }
 
 
-# Singleton system instance
 _PROCUREMENT_SYSTEM = SimulatedProcurementSystem()
 
 
