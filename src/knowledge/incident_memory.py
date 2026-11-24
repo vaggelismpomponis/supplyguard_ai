@@ -134,5 +134,71 @@ def search(
         return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
+def save_approved_memory(
+    memory_id: str,
+    case_id: str,
+    supplier_id: str | None,
+    component_id: str | None,
+    delay_days: int | None,
+    strategy: str,
+    recovery_cost_eur: float | None,
+    outcome: str,
+    approved_summary: str,
+    access_scope: str = "internal",
+) -> dict[str, Any]:
+    """Persist a newly approved incident resolution summary to incident_memories idempotently."""
+    ctype: str | None = None
+    if component_id:
+        with open(STRUCTURED / "components.csv", encoding="utf-8", newline="") as f:
+            for r in csv.DictReader(f):
+                if r["component_id"] == component_id:
+                    ctype = component_type(r["description"])
+                    break
+    sev = severity(delay_days)
+    vector = embed([approved_summary])[0]
+    row = {
+        "memory_id": memory_id,
+        "kind": "approved_memory",
+        "case_id": case_id,
+        "supplier_id": supplier_id,
+        "component_id": component_id,
+        "component_type": ctype,
+        "disruption_type": "delay",
+        "delay_days": delay_days,
+        "severity": sev,
+        "strategy": strategy,
+        "recovery_cost_eur": recovery_cost_eur,
+        "outcome": outcome,
+        "access_scope": access_scope,
+        "content": approved_summary,
+    }
+    with pg() as conn:
+        conn.execute(DDL)
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                INSERT INTO incident_memories ({', '.join(COLS)}, embedding)
+                VALUES ({', '.join(['%s'] * len(COLS))}, %s::vector)
+                ON CONFLICT (memory_id) DO UPDATE SET
+                    kind = EXCLUDED.kind,
+                    case_id = EXCLUDED.case_id,
+                    supplier_id = EXCLUDED.supplier_id,
+                    component_id = EXCLUDED.component_id,
+                    component_type = EXCLUDED.component_type,
+                    disruption_type = EXCLUDED.disruption_type,
+                    delay_days = EXCLUDED.delay_days,
+                    severity = EXCLUDED.severity,
+                    strategy = EXCLUDED.strategy,
+                    recovery_cost_eur = EXCLUDED.recovery_cost_eur,
+                    outcome = EXCLUDED.outcome,
+                    access_scope = EXCLUDED.access_scope,
+                    content = EXCLUDED.content,
+                    embedding = EXCLUDED.embedding;
+                """,
+                [row[c] for c in COLS] + [vec(vector)],
+            )
+    return row
+
+
 if __name__ == "__main__":
     print(f"indexed {ingest()} incident records (cases + approved memories)")

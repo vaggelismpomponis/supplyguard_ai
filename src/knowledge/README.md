@@ -1,24 +1,18 @@
 # Knowledge
 
 Data and retrieval tools the SupplyGuard agent uses: operational tables (Postgres), the document
-corpus (pgvector and ChromaDB) and the multi-tier supplier graph (Neo4j). Workflow calls the tools
-and never touches the databases directly.
+corpus (pgvector and ChromaDB), incident memories (pgvector), and the multi-tier supplier graph (Neo4j).
+Workflow calls the tools in `src/knowledge/tools.py` and never touches the databases directly.
 
-> **Status (2026-11-24):** the data is loaded by `scripts/seed.py`. The tools below are the contract
-> ([`docs/ARCHITECTURE_CONTRACTS.md`](../../docs/ARCHITECTURE_CONTRACTS.md) §4) and are **not
-> implemented yet**. `tools.py`, `models.py`, `mocks.py`, `ingest.py` and `seed_graph.py` in this
-> folder are still the HelpDesk Lite policy and service-graph code; they are replaced together with
-> the HelpDesk agent (see [`docs/PROJECT_CHECKLIST.md`](../../docs/PROJECT_CHECKLIST.md#9-mid-week-audit-86)).
-> `common.py` (connections, embeddings) is shared and stays.
-
-## Tools (contract)
+## Implemented Tools (`src/knowledge/tools.py` & `SUPPLYGUARD_TOOLS`)
 
 | Tool | Returns | Rule |
 |---|---|---|
-| `query_inventory(component_id, factory_id=None)` | `OperationalImpact` | Usable = on hand − reserved − quarantined; quarantined lots are never usable |
-| `query_bom(component_id)` | products, factories, open customer orders | From `bill_of_materials`, `production_schedule`, `customer_orders` |
-| `query_supplier_graph(component_id, max_depth=2)` | suppliers, capacities, lead times, upstream manufacturers | Parameterized Cypher on the graph ([`docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md)); reports shared upstreams |
-| `retrieve_documents(query, access_scope, top_k=5)` | chunks with `source_id`, `version`, `effective_date`, `access_scope` | Filters by the user's scopes before ranking; the latest valid version of a document wins and conflicts are reported |
+| `query_inventory(component_id, factory_id=None)` | `InventoryStatusResult` | Usable = on hand − reserved − quarantined; quarantined lots are never usable |
+| `query_bom(component_id, horizon_days=60)` | `BOMResult` | From `bill_of_materials`, `production_schedule`, `customer_orders` |
+| `query_supplier_graph(component_id, max_depth=2)` | `SupplierGraphResult` | Parameterized Cypher on Neo4j ([`docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md)); reports shared upstreams and cert validity |
+| `retrieve_documents(query, access_scope, top_k=5)` | `list[DocumentResult]` | Hybrid retrieval (pgvector + BM25 + Neo4j graph context); filters by user scopes before ranking; demotes superseded versions |
+| `retrieve_similar_incidents(query, component_type=None, severity=None, top_k=5)` | `list[dict]` | Semantic search over 300 historical disruption cases + approved incident memories (`incident_memories`) |
 
 ## Data (`src/support-data/`)
 
@@ -29,21 +23,19 @@ memories, the 105 evaluation cases and the MC-17 reference scenario.
 
 ## Loading the data (idempotent)
 
-```
-docker compose run --rm seed     # tables -> Postgres, documents -> pgvector + ChromaDB, graph -> Neo4j
+```bash
+docker compose run --rm seed     # tables -> Postgres, graph -> Neo4j, documents -> pgvector + ChromaDB, memories -> pgvector
 ```
 
 Tables: `docker/postgres/init.sql`. Documents: table `policy_chunks` (pgvector) and collection
-`supplyguard_docs` (ChromaDB). Graph model: [`docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md).
-
-Not loaded yet: `historical_disruption_cases.csv` and `approved_incident_memories.jsonl`.
+`supplyguard_docs` (ChromaDB). Memories: table `incident_memories` (pgvector). Graph model: [`docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md).
 
 ## Config (environment)
 
 `DATABASE_URL` (or `POSTGRES_*`), `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `CHROMA_HOST`/`CHROMA_PORT`,
 and for embeddings `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_EMBEDDING_DEPLOYMENT`
 (or `OPENAI_API_KEY`). Without a working key, or with `OFFLINE_MODE=true`, embeddings fall back to
-a lexical hash: fine for dev and tests, weaker than real embeddings. Re-run the seed after changing it.
+a lexical hash. Re-run the seed after changing embedding configuration.
 
 ## Retrieval benchmark
 
