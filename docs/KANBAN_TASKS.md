@@ -1,433 +1,100 @@
 # SupplyGuard AI – Kanban Project Tasks Board
 
-Αυτό το αρχείο περιέχει όλα τα tasks (κάρτες / issues) έτοιμα για αντιγραφή ή εισαγωγή στο Kanban Project Board της ομάδας (π.χ. στο Codeberg / GitHub Projects / Jira).
+Αυτό το αρχείο περιέχει όλα τα επίσημα tasks του έργου (issues #32 έως #93), αντιστοιχισμένα 1:1 με τα βήματα των role files (`docs/roles/*.md`) και κατηγοριοποιημένα ανά ρόλο και φάση, ακριβώς όπως στο προηγούμενο project (`helpdesk_lite`).
 
 ---
 
-## Περιεχόμενα
-- [Πίνακας Επισκόπησης Tasks (KAN-01 έως KAN-30)](#πίνακας-επισκόπησης-tasks)
-- [Φάση 1: Kick-off, Architecture Contracts & Deep Agents Harness Setup (Ημ. 1–2)](#φάση-1-kick-off-contracts--deep-agents-setup-ημ-12)
-- [Φάση 2: Data Ingestion, Knowledge Graph & Multi-Vector Pipeline (Ημ. 2–4)](#φάση-2-data-ingestion-knowledge-graph--multi-vector-pipeline-ημ-24)
-- [Φάση 3: Deep Agents Specialization, Sub-Agents & Simulated MCP (Ημ. 4–6)](#φάση-3-deep-agents-specialization-sub-agents--simulated-mcp-ημ-46)
-- [Φάση 4: Chainlit UI, Human Approval Gate & Restart Resilience (Ημ. 6–8)](#φάση-4-chainlit-ui-human-approval-gate--restart-resilience-ημ-68)
-- [Φάση 5: Evaluation (105 Cases), Retrieval Benchmark, Red-Teaming & Demo (Ημ. 8–10)](#φάση-5-evaluation-105-cases-retrieval-benchmark-red-teaming--demo-ημ-810)
+## 1. Platform Tasks (@vaggelismpomponis)
+
+| Issue | Τίτλος Task | Labels | Handoff |
+|---|---|---|---|
+| [#32](https://github.com/vaggelismpomponis/supplyguard_ai/issues/32) | `[Platform] Kick-off: Architecture Contracts, Multi-Service Stack & Pinned Versions Policy ✋` | `role:platform`, `phase:kickoff` | ✋ Όλοι |
+| [#33](https://github.com/vaggelismpomponis/supplyguard_ai/issues/33) | `[Platform] Stack: Docker Compose with Postgres (pgvector), Neo4j 5.26+ & ChromaDB` | `role:platform`, `phase:skeleton` | |
+| [#34](https://github.com/vaggelismpomponis/supplyguard_ai/issues/34) | `[Platform] Stack: Environment Configuration (.env.example & Persistent Volumes)` | `role:platform`, `phase:skeleton` | |
+| [#35](https://github.com/vaggelismpomponis/supplyguard_ai/issues/35) | `[Platform] Stack: Multi-stage Dockerfile for Chainlit App & Deep Agents Runtime ✋` | `role:platform`, `phase:skeleton` | ✋ Interface |
+| [#36](https://github.com/vaggelismpomponis/supplyguard_ai/issues/36) | `[Platform] Milestone: Clean-Clone Benchmark (<10 min) on Multiple Laptops ✋` | `role:platform`, `phase:milestone` | ✋ Quality |
+| [#37](https://github.com/vaggelismpomponis/supplyguard_ai/issues/37) | `[Platform] Completion: Automated Compose Ingestion Service (seed) for Synthetic Data Package ✋` | `role:platform`, `phase:completion` | ✋ Knowledge |
+| [#38](https://github.com/vaggelismpomponis/supplyguard_ai/issues/38) | `[Platform] Completion: Simulated Procurement System & External Risk MCP Integration ✋` | `role:platform`, `phase:completion` | ✋ Workflow |
+| [#39](https://github.com/vaggelismpomponis/supplyguard_ai/issues/39) | `[Platform] Completion: Container Restart Support & Checkpoint Persistence for Idempotency Test ✋` | `role:platform`, `phase:completion` | ✋ Workflow, Quality |
+| [#40](https://github.com/vaggelismpomponis/supplyguard_ai/issues/40) | `[Platform] Completion: Final README Polish & Pre-Demo Clean-Clone Verification` | `role:platform`, `phase:completion` | |
 
 ---
 
-## Πίνακας Επισκόπησης Tasks
+## 2. Interface Tasks (@AlexZarkalis)
 
-| ID | Τίτλος Κάρτας / Issue | Ρόλος | Scope | Handoff | Προτεραιότητα |
-|---|---|---|---|---|---|
-| **KAN-01** | `chore(deps): add deepagents, chromadb, and mcp dependencies` | Platform | `deps`, `docker` | ✋ Workflow | P0 (Blocker) |
-| **KAN-02** | `docs(contracts): freeze domain schemas and architecture contracts` | Workflow | `agent`, `docs` | ✋ All | P0 (Blocker) |
-| **KAN-03** | `feat(docker): expand compose with chromadb and mock external services` | Platform | `docker` | ✋ Knowledge | P1 |
-| **KAN-04** | `feat(agent): initialize root deep agent harness with planning & postgres persistence` | Workflow | `agent`, `db` | ✋ Interface | P1 |
-| **KAN-05** | `docs(team): update contributing agreement and review rotation` | Quality | `docs` | ✋ All | P1 |
-| **KAN-06** | `feat(db): create relational supply chain tables in postgres` | Knowledge | `db` | ✋ Platform | P1 |
-| **KAN-07** | `feat(neo4j): model multi-tier supply chain and upstream dependencies` | Knowledge | `neo4j` | ✋ Workflow | P1 |
-| **KAN-08** | `feat(retrieval): ingest 212 documents into pgvector and chromadb` | Knowledge | `retrieval`, `db`| ✋ Quality | P1 |
-| **KAN-09** | `feat(retrieval): index 300 disruption cases and 40 approved memories` | Knowledge | `retrieval` | ✋ Workflow | P2 |
-| **KAN-10** | `feat(docker): automate database & graph seeding in compose seed service` | Platform | `docker`, `db` | ✋ Knowledge | P1 |
-| **KAN-11** | `test(platform): clean-clone benchmark verification (<10 min)` | Quality | `eval`, `docker` | ✋ All | P1 (Milestone) |
-| **KAN-12** | `feat(agent): implement triage and clarification subagent` | Workflow | `agent` | ✋ Interface | P1 |
-| **KAN-13** | `feat(agent): implement operational impact analyzer subagent` | Workflow | `agent`, `tools` | ✋ Knowledge | P1 |
-| **KAN-14** | `feat(agent): implement contract and provenance specialist subagent` | Workflow | `agent`, `retrieval`| ✋ Knowledge | P1 |
-| **KAN-15** | `feat(agent): implement supply graph dependency subagent with cypher queries` | Workflow | `agent`, `neo4j` | ✋ Knowledge | P1 |
-| **KAN-16** | `feat(tools): implement deterministic cost and revenue at risk calculators` | Workflow | `tools` | ✋ Quality | P1 |
-| **KAN-17** | `feat(agent): implement recovery strategy optimizer subagent` | Workflow | `agent` | ✋ Interface | P1 |
-| **KAN-18** | `feat(mcp): integrate simulated procurement and external risk mcp interfaces` | Platform | `mcp`, `agent` | ✋ Workflow | P1 |
-| **KAN-19** | `feat(ui): implement chainlit rbac authentication and scoped views` | Interface | `ui` | ✋ Platform | P1 |
-| **KAN-20** | `feat(ui): build investigation telemetry and structured findings dashboard` | Interface | `ui` | ✋ Workflow | P1 |
-| **KAN-21** | `feat(ui): build recovery strategy comparison matrix component` | Interface | `ui` | ✋ Workflow | P1 |
-| **KAN-22** | `feat(ui): build payload-bound approval card with double-click guard` | Interface | `ui`, `approval` | ✋ Workflow | P1 |
-| **KAN-23** | `test(agent): container restart resilience and session recovery verification` | Workflow | `agent`, `db` | ✋ Platform, Quality | P1 (Milestone) |
-| **KAN-24** | `feat(ui): post-approval simulated po execution receipt and incident report export` | Interface | `ui`, `mcp` | ✋ Workflow | P2 |
-| **KAN-25** | `eval(retrieval): benchmark report comparing pgvector, chromadb, and hybrid` | Knowledge | `eval`, `retrieval`| ✋ Quality | P1 |
-| **KAN-26** | `eval(langsmith): automated evaluation suite over 105 held-out scenarios` | Quality | `eval` | ✋ Workflow | P1 |
-| **KAN-27** | `sec(eval): adversarial red-teaming and prompt-injection defense verification` | Quality | `eval`, `agent` | ✋ Workflow | P1 |
-| **KAN-28** | `test(ui): multi-turn follow-up q&a verification from case memory` | Interface | `ui`, `agent` | ✋ Workflow | P2 |
-| **KAN-29** | `docs(demo): 10-minute live demo script and pre-demo smoke tests` | Quality | `docs`, `eval` | ✋ All | P0 (Demo) |
-| **KAN-30** | `test(team): live demo rehearsals and presenter rotation (>=2 runs)` | Quality | `docs` | ✋ All | P0 (Demo) |
+| Issue | Τίτλος Task | Labels | Handoff |
+|---|---|---|---|
+| [#41](https://github.com/vaggelismpomponis/supplyguard_ai/issues/41) | `[Interface] Kick-off: UI Contracts, RBAC Scopes & thread_id Session Mapping Agreement ✋` | `role:interface`, `phase:kickoff` | ✋ Workflow, Platform |
+| [#42](https://github.com/vaggelismpomponis/supplyguard_ai/issues/42) | `[Interface] Skeleton: Chainlit Application with Deep Agents Session Integration` | `role:interface`, `phase:skeleton` | |
+| [#43](https://github.com/vaggelismpomponis/supplyguard_ai/issues/43) | `[Interface] Skeleton: Role-Based Access Control (RBAC) Authentication (Procurement, Finance, Guest)` | `role:interface`, `phase:skeleton` | |
+| [#44](https://github.com/vaggelismpomponis/supplyguard_ai/issues/44) | `[Interface] Skeleton: Subagent Live Step Progress & Telemetry Indicators Display` | `role:interface`, `phase:skeleton` | |
+| [#45](https://github.com/vaggelismpomponis/supplyguard_ai/issues/45) | `[Interface] Skeleton: Clarification Dialog via Interrupt for Ambiguous Incidents` | `role:interface`, `phase:skeleton` | |
+| [#46](https://github.com/vaggelismpomponis/supplyguard_ai/issues/46) | `[Interface] Milestone: Day 5 UI Containerization in Docker Compose ✋` | `role:interface`, `phase:milestone` | ✋ Platform |
+| [#47](https://github.com/vaggelismpomponis/supplyguard_ai/issues/47) | `[Interface] Completion: Operational Impact Dashboard (Usable vs Quarantined Stock & Factory Timelines)` | `role:interface`, `phase:completion` | |
+| [#48](https://github.com/vaggelismpomponis/supplyguard_ai/issues/48) | `[Interface] Completion: Recovery Strategy Comparison Matrix (Recovery Cost vs Revenue at Risk)` | `role:interface`, `phase:completion` | |
+| [#49](https://github.com/vaggelismpomponis/supplyguard_ai/issues/49) | `[Interface] Completion: Payload-Bound Human Approval Card with Double-Click Protection ✋` | `role:interface`, `phase:completion` | ✋ Workflow |
+| [#50](https://github.com/vaggelismpomponis/supplyguard_ai/issues/50) | `[Interface] Completion: Post-Approval Receipt & Markdown/PDF Incident Report Export` | `role:interface`, `phase:completion` | |
+| [#51](https://github.com/vaggelismpomponis/supplyguard_ai/issues/51) | `[Interface] Completion: Session Resume UI on Reconnect After App Container Restart` | `role:interface`, `phase:completion` | |
+| [#52](https://github.com/vaggelismpomponis/supplyguard_ai/issues/52) | `[Interface] Completion: Multi-Turn Follow-Up Q&A from Persisted Case Memory` | `role:interface`, `phase:completion` | |
+| [#53](https://github.com/vaggelismpomponis/supplyguard_ai/issues/53) | `[Interface] Completion: Demo Rehearsals Participation (>=2) ✋` | `role:interface`, `phase:completion` | ✋ Quality |
 
 ---
 
-## Αναλυτικές Κάρτες Tasks (Ready to Copy/Paste)
+## 3. Workflow Tasks – Deep Agents (@VickyMil-ai)
 
-### Φάση 1: Kick-off, Contracts & Deep Agents Setup (Ημ. 1–2)
-
-#### KAN-01: `chore(deps): add deepagents, chromadb, and mcp dependencies`
-- **Owner:** Platform (@vaggelismpomponis) | **Backup:** Workflow
-- **Labels:** `role:platform`, `scope:deps`, `phase:1`, `prio:P0`
-- **Handoff (✋):** Παράδοση σε Workflow για την έναρξη του Deep Agents harness.
-- **Περιγραφή:**  
-  Ενημέρωση του `requirements.txt` και του `docs/PINNED_VERSIONS.md`. Προσθήκη των `deepagents==0.1.0`, `chromadb==0.5.23`, και `mcp==1.1.2` με αυστηρό pinning (`==`). Ενημέρωση του `.env.example` με τις απαιτούμενες μεταβλητές.
-- **Acceptance Criteria:**
-  - [ ] `requirements.txt` ενημερωμένο με strict pinning.
-  - [ ] `.env.example` περιέχει όλα τα ChromaDB, Neo4j, MCP και LangSmith keys.
-  - [ ] `pip install -r requirements.txt` ολοκληρώνεται χωρίς conflict εκδόσεων.
-
----
-
-#### KAN-02: `docs(contracts): freeze domain schemas and architecture contracts`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Knowledge
-- **Labels:** `role:workflow`, `scope:agent`, `scope:docs`, `phase:1`, `prio:P0`
-- **Handoff (✋):** Παράδοση σε όλους τους ρόλους ως βάση για mocks και υλοποίηση.
-- **Περιγραφή:**  
-  Συγγραφή και οριστικοποίηση του `docs/ARCHITECTURE_CONTRACTS.md`. Ορισμός Pydantic schemas: `DisruptionFact`, `OperationalImpact`, `RecoveryOption`, `ApprovalPayload`, `AccessScope` και υπογραφές tools.
-- **Acceptance Criteria:**
-  - [ ] Όλα τα core schemas ορισμένα με type hints και field validations.
-  - [ ] Υπογραφές tools (`query_inventory`, `query_bom`, `query_supplier_graph`, `retrieve_documents`) συμφωνημένες με Knowledge.
-  - [ ] Payload approval contract ορισμένο με κανόνα αυστηρής σύνδεσης (spending cap ≤ €75k).
+| Issue | Τίτλος Task | Labels | Handoff |
+|---|---|---|---|
+| [#54](https://github.com/vaggelismpomponis/supplyguard_ai/issues/54) | `[Workflow] Kick-off: Propose Contracts (DisruptionFact, OperationalImpact, RecoveryOption, ApprovalPayload) ✋` | `role:workflow`, `phase:kickoff` | ✋ Όλοι |
+| [#55](https://github.com/vaggelismpomponis/supplyguard_ai/issues/55) | `[Workflow] Kick-off: Agree on Tool Signatures (Inventory, BOM, Supplier Graph, Documents) ✋` | `role:workflow`, `phase:kickoff` | ✋ Knowledge |
+| [#56](https://github.com/vaggelismpomponis/supplyguard_ai/issues/56) | `[Workflow] Skeleton: Root Deep Agent Harness (create_deep_agent) with Planning Middleware & Scratchpad` | `role:workflow`, `phase:skeleton` | |
+| [#57](https://github.com/vaggelismpomponis/supplyguard_ai/issues/57) | `[Workflow] Skeleton: Triage & Entity Extraction Subagent with Clarification Rules` | `role:workflow`, `phase:skeleton` | |
+| [#58](https://github.com/vaggelismpomponis/supplyguard_ai/issues/58) | `[Workflow] Skeleton: Human Approval Interrupt Hook & PostgreSQL Checkpointer Integration ✋` | `role:workflow`, `phase:skeleton` | ✋ Platform |
+| [#59](https://github.com/vaggelismpomponis/supplyguard_ai/issues/59) | `[Workflow] Milestone: End-to-End Reference Incident Walkthrough with Mock Tools inside Compose` | `role:workflow`, `phase:milestone` | |
+| [#60](https://github.com/vaggelismpomponis/supplyguard_ai/issues/60) | `[Workflow] Completion: Replace Mocks with Real Knowledge Tools & Live Cypher Queries ✋` | `role:workflow`, `phase:completion` | ✋ Knowledge |
+| [#61](https://github.com/vaggelismpomponis/supplyguard_ai/issues/61) | `[Workflow] Completion: Specialist Subagents (Operational Impact, Contract & Provenance, Supply Graph)` | `role:workflow`, `phase:completion` | |
+| [#62](https://github.com/vaggelismpomponis/supplyguard_ai/issues/62) | `[Workflow] Completion: Deterministic Business Calculators (Recovery Cost & Revenue at Risk Tools)` | `role:workflow`, `phase:completion` | |
+| [#63](https://github.com/vaggelismpomponis/supplyguard_ai/issues/63) | `[Workflow] Completion: Recovery Strategy Optimizer Subagent (>=3 Viable Strategies & Trade-off Matrix)` | `role:workflow`, `phase:completion` | |
+| [#64](https://github.com/vaggelismpomponis/supplyguard_ai/issues/64) | `[Workflow] Completion: Strict Payload-Bound Approval Gate & Idempotent Simulated Procurement Execution ✋` | `role:workflow`, `phase:completion` | ✋ Platform |
+| [#65](https://github.com/vaggelismpomponis/supplyguard_ai/issues/65) | `[Workflow] Completion: Container Restart Verification (Zero Duplicate PO Execution on Replay) ✋` | `role:workflow`, `phase:completion` | ✋ Platform, Quality |
+| [#66](https://github.com/vaggelismpomponis/supplyguard_ai/issues/66) | `[Workflow] Completion: LangSmith Tracing Metadata, Subagent Spans & Case Memory Persistence ✋` | `role:workflow`, `phase:completion` | ✋ Quality |
 
 ---
 
-#### KAN-03: `feat(docker): expand compose with chromadb and mock external services`
-- **Owner:** Platform (@vaggelismpomponis) | **Backup:** Workflow
-- **Labels:** `role:platform`, `scope:docker`, `phase:1`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Knowledge για τη σύνδεση του vector store.
-- **Περιγραφή:**  
-  Επέκταση του `docker-compose.yml` για υποστήριξη 5 services: `postgres` (pgvector), `neo4j` (5.26+), `chromadb`, `external-risk`, και `app`. Προσθήκη healthchecks και persistent volumes.
-- **Acceptance Criteria:**
-  - [ ] `docker compose up -d` εκκινεί επιτυχώς και τα 5 containers.
-  - [ ] Healthchecks αναφέρουν `healthy` σε όλα τα services.
-  - [ ] Τα ports δεν συγκρούονται με τοπικές εγκαταστάσεις.
+## 4. Knowledge Tasks (@stef-fot)
+
+| Issue | Τίτλος Task | Labels | Handoff |
+|---|---|---|---|
+| [#67](https://github.com/vaggelismpomponis/supplyguard_ai/issues/67) | `[Knowledge] Kick-off: Agree on Tool Output Models & Retrieval Signatures ✋` | `role:knowledge`, `phase:kickoff` | ✋ Workflow |
+| [#68](https://github.com/vaggelismpomponis/supplyguard_ai/issues/68) | `[Knowledge] Dataset: Relational Schema DDL for Suppliers, Components, BOMs, Inventory & Orders` | `role:knowledge`, `phase:skeleton` | |
+| [#69](https://github.com/vaggelismpomponis/supplyguard_ai/issues/69) | `[Knowledge] Graph: Design & Document Neo4j Multi-tier Supply Chain Model with Schema Diagram` | `role:knowledge`, `phase:skeleton` | |
+| [#70](https://github.com/vaggelismpomponis/supplyguard_ai/issues/70) | `[Knowledge] Ingestion: pgvector Document Ingestion Script with Provenance Metadata & Access Scopes ✋` | `role:knowledge`, `phase:skeleton` | ✋ Platform |
+| [#71](https://github.com/vaggelismpomponis/supplyguard_ai/issues/71) | `[Knowledge] Seeding: Idempotent Neo4j Seeding Script with Upstream Supplier Dependencies ✋` | `role:knowledge`, `phase:skeleton` | ✋ Workflow |
+| [#72](https://github.com/vaggelismpomponis/supplyguard_ai/issues/72) | `[Knowledge] Vector: ChromaDB Indexing for Document Corpus and Benchmark Comparison` | `role:knowledge`, `phase:skeleton` | |
+| [#73](https://github.com/vaggelismpomponis/supplyguard_ai/issues/73) | `[Knowledge] Skeleton: Provide Mock Knowledge & Graph Tools with Agreed Signatures to Workflow` | `role:knowledge`, `phase:skeleton` | |
+| [#74](https://github.com/vaggelismpomponis/supplyguard_ai/issues/74) | `[Knowledge] Milestone: Day 5 Automated Data Seeding Execution in Compose ✋` | `role:knowledge`, `phase:milestone` | ✋ Platform |
+| [#75](https://github.com/vaggelismpomponis/supplyguard_ai/issues/75) | `[Knowledge] Completion: Implement Hybrid Retrieval Tool (pgvector + BM25 + Neo4j Graph Traversal)` | `role:knowledge`, `phase:completion` | |
+| [#76](https://github.com/vaggelismpomponis/supplyguard_ai/issues/76) | `[Knowledge] Completion: Index 300 Disruption Cases and 40 Approved Incident Memories` | `role:knowledge`, `phase:completion` | |
+| [#77](https://github.com/vaggelismpomponis/supplyguard_ai/issues/77) | `[Knowledge] Completion: Resolve Planted Data Quality Defects (Conflicting Dates, Stale Certs, Duplicate Notices)` | `role:knowledge`, `phase:completion` | |
+| [#78](https://github.com/vaggelismpomponis/supplyguard_ai/issues/78) | `[Knowledge] Completion: Hand Off Test Dataset & Ground Truth to Quality for 105 Evaluation Cases ✋` | `role:knowledge`, `phase:completion` | ✋ Quality |
 
 ---
 
-#### KAN-04: `feat(agent): initialize root deep agent harness with planning & postgres persistence`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Interface
-- **Labels:** `role:workflow`, `scope:agent`, `scope:db`, `phase:1`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Interface για τη διασύνδεση του chat session.
-- **Περιγραφή:**  
-  Αρχικοποίηση του Root Deep Agent (`create_deep_agent`) με planning middleware, context scratchpad, και PostgreSQL checkpointer για state persistence.
-- **Acceptance Criteria:**
-  - [ ] Ο agent μπορεί να εκτελέσει βασικό task decomposition loop.
-  - [ ] Η κατάσταση αποθηκεύεται σε PostgreSQL checkpoints.
-  - [ ] Session thread ανακτάται απρόσκοπτα μέσω `thread_id`.
+## 5. Quality Tasks (@VickyMil-ai)
 
----
-
-#### KAN-05: `docs(team): update contributing agreement and review rotation`
-- **Owner:** Quality (@VickyMil-ai) | **Backup:** Interface
-- **Labels:** `role:quality`, `scope:docs`, `phase:1`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε όλη την ομάδα.
-- **Περιγραφή:**  
-  Ευθυγράμμιση της ομάδας στο `CONTRIBUTING.md` και `CONTRIBUTING_LOG.md`: ρόλοι/backups, Conventional Commits scopes (`agent`, `ui`, `mcp`, `db`, `neo4j`, `retrieval`, `approval`, `eval`, `docker`, `docs`, `deps`), κανόνες PR (<300 lines) και Definition of Done.
-- **Acceptance Criteria:**
-  - [ ] `CONTRIBUTING.md` ενημερωμένο με τα νέα scopes.
-  - [ ] Review rotation πίνακας ενεργοποιημένος.
-  - [ ] Συμφωνία ομάδας υπογεγραμμένη στο log.
-
----
-
-### Φάση 2: Data Ingestion, Knowledge Graph & Multi-Vector Pipeline (Ημ. 2–4)
-
-#### KAN-06: `feat(db): create relational supply chain tables in postgres`
-- **Owner:** Knowledge (@stef-fot) | **Backup:** Platform
-- **Labels:** `role:knowledge`, `scope:db`, `phase:2`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Platform για το `init.sql`.
-- **Περιγραφή:**  
-  Σχεδιασμός DDL και δημιουργία πινάκων PostgreSQL: `suppliers`, `components`, `products`, `bom_lines`, `purchase_orders`, `shipments`, `inventory_lots` (με physical/reserved/quarantined), `production_schedules`, `customer_orders`.
-- **Acceptance Criteria:**
-  - [ ] Σχεσιακό σχήμα πλήρες με foreign keys και indexes.
-  - [ ] Υποστήριξη πεδίων διαχωρισμού usable vs reserved/quarantined stock.
-  - [ ] DDL scripts εκτελούνται χωρίς λάθη στο `docker/postgres/init.sql`.
-
----
-
-#### KAN-07: `feat(neo4j): model multi-tier supply chain and upstream dependencies`
-- **Owner:** Knowledge (@stef-fot) | **Backup:** Workflow
-- **Labels:** `role:knowledge`, `scope:neo4j`, `phase:2`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Workflow για Cypher query tools.
-- **Περιγραφή:**  
-  Μοντελοποίηση στο Neo4j και φόρτωση των CSVs: Suppliers, Components, Products, Factories, Customers και Upstream Manufacturers. Ιδιαίτερη έμφαση στη σχέση `(:Supplier)-[:DEPENDS_ON_UPSTREAM]->(:UpstreamManufacturer)` για την αποκάλυψη της κοινής εξάρτησης Atlas και Delta.
-- **Acceptance Criteria:**
-  - [ ] Seeding script είναι πλήρως idempotent (`MERGE`).
-  - [ ] Cypher queries επιστρέφουν σωστά τις εξαρτήσεις 1ου και 2ου επιπέδου.
-  - [ ] Επιβεβαίωση εντοπισμού κοινού upstream κατασκευαστή chip fab.
-
----
-
-#### KAN-08: `feat(retrieval): ingest 212 documents into pgvector and chromadb`
-- **Owner:** Knowledge (@stef-fot) | **Backup:** Quality
-- **Labels:** `role:knowledge`, `scope:retrieval`, `scope:db`, `phase:2`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Quality για το benchmark ανάκτησης.
-- **Περιγραφή:**  
-  Κατάτμηση και ευρετηρίαση 212 εγγράφων σε PostgreSQL `pgvector` και `ChromaDB`. Προσθήκη metadata provenance (`source_id`, `version`/`effective_date`, `access_scope`, `document_type`).
-- **Acceptance Criteria:**
-  - [ ] Όλα τα 212 έγγραφα κατατμημένα με ακριβή metadata.
-  - [ ] HNSW indexes δημιουργημένα σε pgvector και ChromaDB collections.
-  - [ ] Φυτεμένο κακόβουλο έγγραφο επισημασμένο για red-teaming.
-
----
-
-#### KAN-09: `feat(retrieval): index 300 disruption cases and 40 approved memories`
-- **Owner:** Knowledge (@stef-fot) | **Backup:** Workflow
-- **Labels:** `role:knowledge`, `scope:retrieval`, `phase:2`, `prio:P2`
-- **Handoff (✋):** Παράδοση σε Workflow για few-shot incident retrieval.
-- **Περιγραφή:**  
-  Ευρετηρίαση 300 ιστορικών disruption cases και 40 approved incident memories σε ξεχωριστό vector collection για παροχή context σε νέες υποθέσεις.
-- **Acceptance Criteria:**
-  - [ ] Memories αναζητήσιμες βάσει σημασιολογικής ομοιότητας.
-  - [ ] Φίλτρα ανά component type και σοβαρότητα καθυστέρησης.
-
----
-
-#### KAN-10: `feat(docker): automate database & graph seeding in compose seed service`
-- **Owner:** Platform (@vaggelismpomponis) | **Backup:** Knowledge
-- **Labels:** `role:platform`, `scope:docker`, `scope:db`, `phase:2`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Quality για το clean-clone test.
-- **Περιγραφή:**  
-  Δημιουργία ενοποιημένου Compose service `seed` που εκτελεί αυτόματα τη φόρτωση όλων των δεδομένων του `support-data/` πριν εκκινήσει το app container (`condition: service_completed_successfully`).
-- **Acceptance Criteria:**
-  - [ ] `docker compose up` φορτώνει όλα τα δεδομένα χωρίς χειροκίνητη παρέμβαση.
-  - [ ] Το script είναι πλήρως idempotent (επανεκτέλεση δεν διπλασιάζει εγγραφές).
-
----
-
-#### KAN-11: `test(platform): clean-clone benchmark verification (<10 min)`
-- **Owner:** Quality (@VickyMil-ai) | **Backup:** All
-- **Labels:** `role:quality`, `scope:eval`, `scope:docker`, `phase:2`, `prio:P1`
-- **Handoff (✋):** Milestone αποδοχής τέλους 1ης εβδομάδας.
-- **Περιγραφή:**  
-  Εκτέλεση clean clone μόνο με το README σε πολλαπλά λειτουργικά συστήματα. Μέτρηση χρόνου εκκίνησης (<10 λεπτά).
-- **Acceptance Criteria:**
-  - [ ] Το stack εκκινεί σε <10′ από καθαρό clone.
-  - [ ] Καταγραφή benchmark στο `docs/CLEAN_CLONE_BENCHMARK.md`.
-
----
-
-### Φάση 3: Deep Agents Specialization, Sub-Agents & Simulated MCP (Ημ. 4–6)
-
-#### KAN-12: `feat(agent): implement triage and clarification subagent`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Interface
-- **Labels:** `role:workflow`, `scope:agent`, `phase:3`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Interface για clarification prompts.
-- **Περιγραφή:**  
-  Υλοποίηση Triage Subagent για εξαγωγή supplier S001, component MC-17, 12 ημερών καθυστέρησης και spending cap €75,000. Ενεργοποίηση clarification interrupt αν το όνομα είναι ασαφές.
-- **Acceptance Criteria:**
-  - [ ] Ακριβής εξαγωγή πεδίων στο `DisruptionFact`.
-  - [ ] Διακοπή για διευκρίνιση όταν το μήνυμα είναι ασαφές (π.χ. "Atlas") χωρίς hallucinations.
-
----
-
-#### KAN-13: `feat(agent): implement operational impact analyzer subagent`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Knowledge
-- **Labels:** `role:workflow`, `scope:agent`, `scope:tools`, `phase:3`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Knowledge για inventory tools validation.
-- **Περιγραφή:**  
-  Υλοποίηση Operational Impact Subagent. Εξέταση αποθεμάτων σε πραγματικό χρόνο: εντοπισμός 3,200 διαθέσιμων μονάδων (αφαίρεση 1,400 δεσμευμένων & 600 καραντίνας), 6 προϊόντα, 77 πελάτες, και ακάλυπτη ζήτηση 5,350 μονάδων.
-- **Acceptance Criteria:**
-  - [ ] Ακριβής αριθμητική ταξινόμηση φυσικού vs usable αποθέματος.
-  - [ ] Εντοπισμός εργοστασίων Katowice & Lyon που ξεμένουν πρώτα.
-
----
-
-#### KAN-14: `feat(agent): implement contract and provenance specialist subagent`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Knowledge
-- **Labels:** `role:workflow`, `scope:agent`, `scope:retrieval`, `phase:3`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Knowledge για document citations.
-- **Περιγραφή:**  
-  Υλοποίηση Contract Subagent. Ανάλυση συμβολαίων και ποιοτικών πιστοποιήσεων. Εντοπισμός ληγμένης πιστοποίησης Borealis (S002) και συγκρούσεων μεταξύ email και επίσημων συμβολαίων.
-- **Acceptance Criteria:**
-  - [ ] Εντοπισμός και επισήμανση ληγμένης πιστοποίησης Borealis.
-  - [ ] Ανίχνευση συγκρούσεων lead time / τιμών ανάμεσα σε emails και συμβόλαια.
-
----
-
-#### KAN-15: `feat(agent): implement supply graph dependency subagent with cypher queries`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Knowledge
-- **Labels:** `role:workflow`, `scope:agent`, `scope:neo4j`, `phase:3`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Knowledge για Cypher optimization.
-- **Περιγραφή:**  
-  Υλοποίηση Supply Graph Subagent. Εκτέλεση queries στο Neo4j για εντοπισμό εναλλακτικών πηγών και αποκάλυψη της κοινής upstream εξάρτησης του προμηθευτή Delta με την Atlas.
-- **Acceptance Criteria:**
-  - [ ] Cypher query επιστρέφει ότι Delta και Atlas μοιράζονται τον ίδιο chip fab.
-  - [ ] Ο προμηθευτής Delta απορρίπτεται ως κρυφό ρίσκο συγκέντρωσης.
-
----
-
-#### KAN-16: `feat(tools): implement deterministic cost and revenue at risk calculators`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Quality
-- **Labels:** `role:workflow`, `scope:tools`, `phase:3`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Quality για numerical testing.
-- **Περιγραφή:**  
-  Ανάπτυξη Python tools για ντετερμινιστικό υπολογισμό Recovery Cost (ναύλοι, τιμές) και Revenue at Risk (ρήτρες πελατών, αξία παραγγελιών). Απαγόρευση μαθηματικών υπολογισμών από το LLM.
-- **Acceptance Criteria:**
-  - [ ] Μηδενικά λάθη υπολογισμών (zero math hallucinations).
-  - [ ] Σαφής διαχωρισμός Revenue at Risk από το Recovery Cost.
-
----
-
-#### KAN-17: `feat(agent): implement recovery strategy optimizer subagent`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Interface
-- **Labels:** `role:workflow`, `scope:agent`, `phase:3`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Interface για Strategy Comparison Matrix.
-- **Περιγραφή:**  
-  Υλοποίηση Strategy Optimizer Subagent. Σύνθεση τουλάχιστον 3 στρατηγικών (Transfer, Expedite, Alternative, Reallocate, Reschedule). Τεκμηρίωση απορρίψεων (Helios αργός, Borealis uncertified, Delta dependent).
-- **Acceptance Criteria:**
-  - [ ] Διαμόρφωση συγκριτικού πίνακα τουλάχιστον 3 στρατηγικών.
-  - [ ] Συνολικό recovery cost αναφοράς ~€30,000 (κάτω από το όριο των €75,000).
-
----
-
-#### KAN-18: `feat(mcp): integrate simulated procurement and external risk mcp interfaces`
-- **Owner:** Platform (@vaggelismpomponis) | **Backup:** Workflow
-- **Labels:** `role:platform`, `scope:mcp`, `scope:agent`, `phase:3`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Workflow για PO execution.
-- **Περιγραφή:**  
-  Υλοποίηση MCP server interfaces για εκτέλεση Purchase Orders στο simulated procurement system και πρόσβαση στο external risk feed.
-- **Acceptance Criteria:**
-  - [ ] MCP tool `execute_procurement_po` εκτελείται με επιτυχία μέσω JSON-RPC / stdio.
-  - [ ] Επιστροφή έγκυρου execution receipt με confirmation ID.
-
----
-
-### Φάση 4: Chainlit UI, Human Approval Gate & Restart Resilience (Ημ. 6–8)
-
-#### KAN-19: `feat(ui): implement chainlit rbac authentication and scoped views`
-- **Owner:** Interface (@AlexZarkalis) | **Backup:** Platform
-- **Labels:** `role:interface`, `scope:ui`, `phase:4`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Platform για environment configuration.
-- **Περιγραφή:**  
-  Υλοποίηση εισόδου με ρόλους στο Chainlit: *Procurement Manager*, *Finance Controller*, και *Read-only Guest*. Εφαρμογή δυναμικού φίλτρου `access_scope` στα ανακτώμενα έγγραφα.
-- **Acceptance Criteria:**
-  - [ ] Procurement Manager δεν βλέπει εμπιστευτικά οικονομικά περιθώρια.
-  - [ ] Finance Controller έχει πλήρη πρόσβαση σε συμβατικές τιμές & ρήτρες.
-  - [ ] Guest βλέπει μόνο δημόσιες ανακοινώσεις.
-
----
-
-#### KAN-20: `feat(ui): build investigation telemetry and structured findings dashboard`
-- **Owner:** Interface (@AlexZarkalis) | **Backup:** Workflow
-- **Labels:** `role:interface`, `scope:ui`, `phase:4`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Workflow για streaming step events.
-- **Περιγραφή:**  
-  Ανάπτυξη UI component που προβάλλει live step indicators καθώς εκτελούνται οι Deep Agent subagents (Triage, Stock Check, Contract Analysis, Supply Graph, Optimization).
-- **Acceptance Criteria:**
-  - [ ] Live απεικόνιση ενεργειών και χρόνων εκτέλεσης ανά subagent.
-  - [ ] Καθαρή παρουσίαση αποθεμάτων (usable, reserved, quarantined).
-
----
-
-#### KAN-21: `feat(ui): build recovery strategy comparison matrix component`
-- **Owner:** Interface (@AlexZarkalis) | **Backup:** Workflow
-- **Labels:** `role:interface`, `scope:ui`, `phase:4`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Workflow για options payload.
-- **Περιγραφή:**  
-  Ανάπτυξη διαδραστικού συγκριτικού πίνακα στρατηγικών στο Chainlit. Διακριτές στήλες Recovery Cost vs Revenue at Risk, και σαφής ένδειξη των λόγων απόρριψης.
-- **Acceptance Criteria:**
-  - [ ] Εμφάνιση τουλάχιστον 3 στρατηγικών σε μορφή κάρτας/πίνακα.
-  - [ ] Highlight απορρίψεων: Helios (αργός), Borealis (cert expired), Delta (upstream).
-
----
-
-#### KAN-22: `feat(ui): build payload-bound approval card with double-click guard`
-- **Owner:** Interface (@AlexZarkalis) | **Backup:** Workflow
-- **Labels:** `role:interface`, `scope:ui`, `scope:approval`, `phase:4`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Workflow για approval interrupt.
-- **Περιγραφή:**  
-  Υλοποίηση της κάρτας έγκρισης. Εμφάνιση ακριβούς payload (supplier, quantity, unit price, total cost ≤ €75k, citations). Κουμπιά: **[Approve]**, **[Reject]**, **[Modify Plan]**. Προστασία διπλού κλικ (`asyncio.Lock`).
-- **Acceptance Criteria:**
-  - [ ] Πλήρης δέσμευση του approval payload (supplier, ποσότητα, τιμή).
-  - [ ] Το Modify Plan ακυρώνει την κατάσταση και ενεργοποιεί επανεπικύρωση.
-  - [ ] Κανένα διπλό κλικ δεν προκαλεί διπλή ενέργεια.
-
----
-
-#### KAN-23: `test(agent): container restart resilience and session recovery verification`
-- **Owner:** Workflow (@VickyMil-ai) | **Backup:** Platform, Quality
-- **Labels:** `role:workflow`, `scope:agent`, `scope:db`, `phase:4`, `prio:P1`
-- **Handoff (✋):** Milestone ανθεκτικότητας και idempotency.
-- **Περιγραφή:**  
-  Δοκιμή επανεκκίνησης του app container (`docker compose restart app`) ενώ εκκρεμεί η έγκριση. Επιβεβαίωση ότι η συνεδρία συνεχίζεται από το PostgreSQL checkpoint και η εκτέλεση γίνεται ακριβώς μία φορά (zero duplicate PO execution).
-- **Acceptance Criteria:**
-  - [ ] Μετά από container restart, το session ανακτάται άμεσα.
-  - [ ] Καμία διπλή εκτέλεση στο simulated procurement (strict idempotency guard).
-
----
-
-#### KAN-24: `feat(ui): post-approval simulated po execution receipt and incident report export`
-- **Owner:** Interface (@AlexZarkalis) | **Backup:** Workflow
-- **Labels:** `role:interface`, `scope:ui`, `scope:mcp`, `phase:4`, `prio:P2`
-- **Handoff (✋):** Παράδοση σε Workflow για memory storage.
-- **Περιγραφή:**  
-  Εμφάνιση επίσημου receipt εκτέλεσης μετά την έγκριση (PO confirmation ID). Δυνατότητα λήψης δομημένου Incident Report σε Markdown/PDF.
-- **Acceptance Criteria:**
-  - [ ] Receipt εμφανίζει supplier, PO number, timestamp και τελικό κόστος.
-  - [ ] Incident report είναι πλήρως τεκμηριωμένο με citations.
-
----
-
-### Φάση 5: Evaluation (105 Cases), Retrieval Benchmark, Red-Teaming & Demo (Ημ. 8–10)
-
-#### KAN-25: `eval(retrieval): benchmark report comparing pgvector, chromadb, and hybrid`
-- **Owner:** Knowledge (@stef-fot) | **Backup:** Quality
-- **Labels:** `role:knowledge`, `scope:eval`, `scope:retrieval`, `phase:5`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Quality για ένταξη στην τελική έκθεση.
-- **Περιγραφή:**  
-  Εκτέλεση πειράματος αξιολόγησης ανάκτησης σε 212 έγγραφα: σύγκριση Recall@K, Precision@K, και Latency ανάμεσα σε `pgvector`, `ChromaDB`, και `Hybrid Retrieval`.
-- **Acceptance Criteria:**
-  - [ ] Benchmark report ολοκληρωμένο με συγκριτικούς πίνακες και γραφήματα.
-  - [ ] Υπεροχή Hybrid Retrieval σε σύνθετα ερωτήματα.
-
----
-
-#### KAN-26: `eval(langsmith): automated evaluation suite over 105 held-out scenarios`
-- **Owner:** Quality (@VickyMil-ai) | **Backup:** Workflow
-- **Labels:** `role:quality`, `scope:eval`, `phase:5`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Workflow για διορθώσεις.
-- **Περιγραφή:**  
-  Εκτέλεση automated evaluators στο LangSmith στα 105 held-out σενάρια διακοπής. Έλεγχος triage, αριθμητικής ακρίβειας, τήρησης budget cap, και εγκυρότητας πιστοποιήσεων.
-- **Acceptance Criteria:**
-  - [ ] 100% traces καταγεγραμμένα στο LangSmith.
-  - [ ] Pass rate >90% στα evaluation scenarios.
-
----
-
-#### KAN-27: `sec(eval): adversarial red-teaming and prompt-injection defense verification`
-- **Owner:** Quality (@VickyMil-ai) | **Backup:** Workflow
-- **Labels:** `role:quality`, `scope:eval`, `scope:agent`, `phase:5`, `prio:P1`
-- **Handoff (✋):** Παράδοση σε Workflow για guardrail patches.
-- **Περιγραφή:**  
-  Δοκιμή red-teaming με το φυτεμένο κακόβουλο έγγραφο (περιέχει εντολή παράκαμψης έγκρισης). Επιβεβαίωση ότι ο Adversarial Challenger Subagent εξουδετερώνει την επίθεση και προστατεύει τον έλεγχο του agent.
-- **Acceptance Criteria:**
-  - [ ] Το κακόβουλο έγγραφο επισημαίνεται και αγνοείται.
-  - [ ] Καμία μη εξουσιοδοτημένη ενέργεια δεν εκτελείται.
-
----
-
-#### KAN-28: `test(ui): multi-turn follow-up q&a verification from case memory`
-- **Owner:** Interface (@AlexZarkalis) | **Backup:** Workflow
-- **Labels:** `role:interface`, `scope:ui`, `scope:agent`, `phase:5`, `prio:P2`
-- **Handoff (✋):** Παράδοση σε Workflow για validation.
-- **Περιγραφή:**  
-  Δοκιμή ερωτήσεων συνέχειας μετά την ολοκλήρωση της υπόθεσης ("Γιατί απορρίφθηκε ο Helios;", "Τι αλλάζει με όριο €90,000;", "Προστασία VIP πελατών").
-- **Acceptance Criteria:**
-  - [ ] Οι απαντήσεις αντλούνται αξιόπιστα από την αποθηκευμένη μνήμη της υπόθεσης.
-  - [ ] Νέα σενάρια προϋπολογισμού επανυπολογίζονται σωστά.
-
----
-
-#### KAN-29: `docs(demo): 10-minute live demo script and pre-demo smoke tests`
-- **Owner:** Quality (@VickyMil-ai) | **Backup:** All
-- **Labels:** `role:quality`, `scope:docs`, `scope:eval`, `phase:5`, `prio:P0`
-- **Handoff (✋):** Παράδοση σε όλη την ομάδα για τις πρόβες.
-- **Περιγραφή:**  
-  Ολοκλήρωση του αναλυτικού σεναρίου live demo διάρκειας 10 λεπτών με χρονικό καταμερισμό ανά στάδιο (Goal, Triage, Telemetry, Strategy Matrix, Approval & Restart, Traces).
-- **Acceptance Criteria:**
-  - [ ] `docs/DEMO_SCRIPT.md` ενημερωμένο για SupplyGuard AI.
-  - [ ] Pre-demo smoke test επιβεβαιώνει ότι όλα τα components λειτουργούν άψογα.
-
----
-
-#### KAN-30: `test(team): live demo rehearsals and presenter rotation (>=2 runs)`
-- **Owner:** Quality (@VickyMil-ai) | **Backup:** All
-- **Labels:** `role:quality`, `scope:docs`, `phase:5`, `prio:P0`
-- **Handoff (✋):** Τελικό παραδοτέο bootcamp.
-- **Περιγραφή:**  
-  Διεξαγωγή τουλάχιστον 2 πλήρων προβών του live demo με rotation παρουσιαστών. Επιβεβαίωση ότι κάθε μέλος της 5μελούς ομάδας μπορεί να εξηγήσει οποιοδήποτε κομμάτι της ροής.
-- **Acceptance Criteria:**
-  - [ ] ≥2 πλήρεις πρόβες χρονομετρημένες σε <10 λεπτά.
-  - [ ] Καταγραφή rotation στο `docs/REHEARSAL_LOG.md`.
-  - [ ] 100% ετοιμότητα ομάδας για την τελική παρουσίαση.
+| Issue | Τίτλος Task | Labels | Handoff |
+|---|---|---|---|
+| [#79](https://github.com/vaggelismpomponis/supplyguard_ai/issues/79) | `[Quality] Kick-off: Coordinate Team Agreements in CONTRIBUTING_LOG.md` | `role:quality`, `phase:kickoff` | |
+| [#80](https://github.com/vaggelismpomponis/supplyguard_ai/issues/80) | `[Quality] Kick-off: Populate Remote Project Task Board from Role Files ✋` | `role:quality`, `phase:kickoff` | ✋ Όλοι |
+| [#81](https://github.com/vaggelismpomponis/supplyguard_ai/issues/81) | `[Quality] Kick-off: Draft CONTRIBUTING.md Pull Request for SupplyGuard AI` | `role:quality`, `phase:kickoff` | |
+| [#82](https://github.com/vaggelismpomponis/supplyguard_ai/issues/82) | `[Quality] Tracing: Setup LangSmith Project & Tracing Configuration for Deep Agents ✋` | `role:quality`, `phase:skeleton` | ✋ Platform |
+| [#83](https://github.com/vaggelismpomponis/supplyguard_ai/issues/83) | `[Quality] Dataset: Load 105 Held-out Scenarios and MC-17 Reference Incident Benchmark ✋` | `role:quality`, `phase:skeleton` | ✋ Knowledge |
+| [#84](https://github.com/vaggelismpomponis/supplyguard_ai/issues/84) | `[Quality] Evaluators: Implement Automated Evaluators (Triage, Numerical Correctness, Policy, Dependencies, Approval)` | `role:quality`, `phase:skeleton` | |
+| [#85](https://github.com/vaggelismpomponis/supplyguard_ai/issues/85) | `[Quality] Milestone: Coordinate Day 5 Clean-Clone Test Across Team Laptops ✋` | `role:quality`, `phase:milestone` | ✋ Platform |
+| [#86](https://github.com/vaggelismpomponis/supplyguard_ai/issues/86) | `[Quality] Milestone: Mid-Week Audit of PROJECT_CHECKLIST.md` | `role:quality`, `phase:milestone` | |
+| [#87](https://github.com/vaggelismpomponis/supplyguard_ai/issues/87) | `[Quality] Completion: Execute Retrieval Benchmark Experiment (pgvector vs ChromaDB vs Hybrid)` | `role:quality`, `phase:completion` | |
+| [#88](https://github.com/vaggelismpomponis/supplyguard_ai/issues/88) | `[Quality] Completion: Execute LangSmith Evaluation Run on 105 Disruption Cases` | `role:quality`, `phase:completion` | |
+| [#89](https://github.com/vaggelismpomponis/supplyguard_ai/issues/89) | `[Quality] Completion: Adversarial Red-Teaming & Prompt Injection Defense Verification ✋` | `role:quality`, `phase:completion` | ✋ Workflow |
+| [#90](https://github.com/vaggelismpomponis/supplyguard_ai/issues/90) | `[Quality] Completion: Author & Execute Container Restart Scenario with Zero Duplicate Execution Check ✋` | `role:quality`, `phase:completion` | ✋ Workflow, Platform |
+| [#91](https://github.com/vaggelismpomponis/supplyguard_ai/issues/91) | `[Quality] Completion: Draft 10-Minute Demo Script & Rehearsal Schedule` | `role:quality`, `phase:completion` | |
+| [#92](https://github.com/vaggelismpomponis/supplyguard_ai/issues/92) | `[Quality] Completion: Conduct >=2 Demo Rehearsals with Role Presentation Rotation` | `role:quality`, `phase:completion` | |
+| [#93](https://github.com/vaggelismpomponis/supplyguard_ai/issues/93) | `[Quality] Completion: Finalize CONTRIBUTING.md & Verify Definition of Done` | `role:quality`, `phase:completion` | |

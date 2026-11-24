@@ -11,14 +11,14 @@ Project-wide πρόοδος για την πλατφόρμα **SupplyGuard AI** 
 
 - [ ] Ρόλοι και backup ρόλοι ορίστηκαν (`CONTRIBUTING_LOG.md`)
 - [ ] Repo branding και branch strategy συμφωνημένα (`main`/`develop` προστατευμένα)
-- [ ] **Contracts**: Pydantic models (`IncidentCase`, `DisruptionFact`, `OperationalImpact`, `RecoveryStrategy`, `ApprovalPayload`)
+- [ ] **Contracts**: Pydantic models (`DisruptionFact`, `OperationalImpact`, `RecoveryOption`, `ApprovalPayload`)
 - [ ] **Contracts**: Tool signatures (`query_inventory`, `query_bom`, `query_supplier_graph`, `retrieve_documents`, `retrieve_incident_memories`)
 - [ ] **Contracts**: Chainlit session ↔ `thread_id` mapping και RBAC scopes (`procurement`, `finance`, `public`)
 - [ ] **Contracts**: MCP interfaces για Simulated Procurement System και External Risk Feed
 - [ ] **Orchestration**: Αρχιτεκτονική Deep Agents (`deepagents` / `create_deep_agent`) με planning middleware
 - [ ] Docker Compose stack με 5 services (`postgres`, `neo4j`, `chromadb`, `external-risk`, `app`)
 - [ ] `.env.example` πλήρες με αυστηρά pinned versions (`PINNED_VERSIONS.md`)
-- [ ] Kanban Board με 30 tasks οργανωμένα σε 5 φάσεις
+- [ ] Tasks κατηγοριοποιημένα ανά ρόλο στο GitHub Project board
 
 ---
 
@@ -101,45 +101,22 @@ Project-wide πρόοδος για την πλατφόρμα **SupplyGuard AI** 
 
 | Ρόλος | Checklist | Πρόοδος | Owner | Backup |
 |---|---|---|---|---|
-| Platform | [`platform.md`](./roles/platform.md) | 0/11 | @vaggelismpomponis | Workflow |
-| Interface | [`interface.md`](./roles/interface.md) | 0/14 | @AlexZarkalis | Quality |
-| Workflow | [`workflow.md`](./roles/workflow.md) | 0/14 | @VickyMil-ai | Knowledge |
-| Knowledge | [`knowledge.md`](./roles/knowledge.md) | 0/14 | @stef-fot | Platform |
-| Quality | [`quality.md`](./roles/quality.md) | 0/13 | @VickyMil-ai | Interface |
+| Platform | [`platform.md`](./roles/platform.md) | 0/9 | @vaggelismpomponis | Workflow |
+| Interface | [`interface.md`](./roles/interface.md) | 0/13 | @AlexZarkalis | Quality |
+| Workflow | [`workflow.md`](./roles/workflow.md) | 0/13 | @VickyMil-ai | Knowledge |
+| Knowledge | [`knowledge.md`](./roles/knowledge.md) | 0/12 | @stef-fot | Platform |
+| Quality | [`quality.md`](./roles/quality.md) | 0/15 | @VickyMil-ai | Interface |
 
 ---
 
-## 8. Χαρτογράφηση Kanban Tasks
+## 8. Χαρτογράφηση Tasks ανά Ρόλο στο GitHub
 
-| Task ID | Τίτλος Task | Ρόλος | Φάση | Handoff (✋) |
-|---|---|---|---|---|
-| **KAN-01** | Repository Rebranding & Deep Agents Dependencies | Platform | Phase 1 | ✋ Workflow |
-| **KAN-02** | Domain Schemas & Architecture Contracts | Workflow | Phase 1 | ✋ All |
-| **KAN-03** | Docker Compose Expansion (ChromaDB + Mock Services) | Platform | Phase 1 | ✋ Knowledge |
-| **KAN-04** | Initial Deep Agents Skeleton with Planning & Checkpointing | Workflow | Phase 1 | ✋ Interface |
-| **KAN-05** | Team Working Agreement & CONTRIBUTING.md Alignment | Quality | Phase 1 | ✋ All |
-| **KAN-06** | Relational Operational Schema Migration in PostgreSQL | Knowledge | Phase 2 | ✋ Platform |
-| **KAN-07** | Neo4j Multi-tier Supply Chain Graph Seeding | Knowledge | Phase 2 | ✋ Workflow |
-| **KAN-08** | Ingest 212 Provenance Documents into pgvector & ChromaDB | Knowledge | Phase 2 | ✋ Quality |
-| **KAN-09** | Index 300 Disruption Cases and 40 Approved Incident Memories | Knowledge | Phase 2 | ✋ Workflow |
-| **KAN-10** | Automated Compose Ingestion Service (`seed`) | Platform | Phase 2 | ✋ Knowledge |
-| **KAN-11** | Clean-Clone Benchmark Verification (<10 min) | Quality | Phase 2 | ✋ All |
-| **KAN-12** | Triage & Clarification Subagent | Workflow | Phase 3 | ✋ Interface |
-| **KAN-13** | Operational Impact Analyzer Subagent | Workflow | Phase 3 | ✋ Knowledge |
-| **KAN-14** | Contract & Provenance Specialist Subagent | Workflow | Phase 3 | ✋ Knowledge |
-| **KAN-15** | Supply Graph Dependency Subagent (Neo4j Cypher) | Workflow | Phase 3 | ✋ Knowledge |
-| **KAN-16** | Deterministic Business Calculation Tools | Workflow | Phase 3 | ✋ Quality |
-| **KAN-17** | Recovery Strategy Optimizer Subagent | Workflow | Phase 3 | ✋ Interface |
-| **KAN-18** | Simulated Procurement & External Risk MCP Integration | Platform | Phase 3 | ✋ Workflow |
-| **KAN-19** | Chainlit RBAC Authentication (Procurement, Finance, Guest) | Interface | Phase 4 | ✋ Platform |
-| **KAN-20** | Investigation Telemetry & Findings Dashboard | Interface | Phase 4 | ✋ Workflow |
-| **KAN-21** | Recovery Strategy Comparison Matrix UI | Interface | Phase 4 | ✋ Workflow |
-| **KAN-22** | Payload-Bound Human Approval Card | Interface | Phase 4 | ✋ Workflow |
-| **KAN-23** | Container Restart & Thread Resume Verification | Workflow | Phase 4 | ✋ Platform, Quality |
-| **KAN-24** | Post-Approval Action Execution & Incident Report Export | Interface | Phase 4 | ✋ Workflow |
-| **KAN-25** | Automated Retrieval Benchmark Report | Knowledge | Phase 5 | ✋ Quality |
-| **KAN-26** | LangSmith Evaluation Suite over 105 Held-out Cases | Quality | Phase 5 | ✋ Workflow |
-| **KAN-27** | Adversarial Resilience & Prompt Injection Defense | Quality | Phase 5 | ✋ Workflow |
-| **KAN-28** | Multi-Turn Follow-Up Q&A Verification | Interface | Phase 5 | ✋ Workflow |
-| **KAN-29** | 10-Minute Live Demo Script & Pre-Demo Smoke Testing | Quality | Phase 5 | ✋ All |
-| **KAN-30** | Team Demo Rehearsal & Rotation (≥2 Runs) | Quality | Phase 5 | ✋ All |
+Όλα τα tasks είναι δημιουργημένα στο GitHub repo ως issues [#32 έως #93](https://github.com/vaggelismpomponis/supplyguard_ai/issues).
+
+- **Platform (#32–#40):** 9 tasks (`[Platform] Kick-off`, `Stack`, `Milestone`, `Completion`)
+- **Interface (#41–#53):** 13 tasks (`[Interface] Kick-off`, `Skeleton`, `Milestone`, `Completion`)
+- **Workflow (#54–#66):** 13 tasks (`[Workflow] Kick-off`, `Skeleton`, `Milestone`, `Completion` - Deep Agents)
+- **Knowledge (#67–#78):** 12 tasks (`[Knowledge] Kick-off`, `Dataset`, `Graph`, `Seeding`, `Completion`)
+- **Quality (#79–#93):** 15 tasks (`[Quality] Kick-off`, `Tracing`, `Dataset`, `Evaluators`, `Completion`)
+
+Πλήρης πίνακας με links και περιγραφές στο [`docs/KANBAN_TASKS.md`](./KANBAN_TASKS.md).
