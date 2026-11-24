@@ -39,7 +39,7 @@ Watch live `cl.Step` progress indicators across all 6 specialist subagents:
 
 ### Step 4 · Review the Payload-Bound Approval Card
 The approval card binds cryptographically (`SHA-256` payload digest) to the exact supplier, quantity, unit price, and total cost (`€30,378.00`, within the `€75,000.00` cap):
-- Click **✅ Approve** to execute idempotently in the Simulated Procurement System (`PO-2026-9003`, `EXP-PO-2026-9002`, `TRF-2026-0800`) and download the **Markdown (`.md`) and PDF (`.pdf`) Incident Report**.
+- Click **✅ Approve** to execute idempotently in the Simulated Procurement System (`PO-SUP-2026-...`, `EXP-PO-2026-9002`, `TRF-2026-...`) and download the **Markdown (`.md`) and PDF (`.pdf`) Incident Report**.
 - Click **✏️ Modify Plan** to change quantities or budget caps—any change invalidates the prior payload and triggers revalidation and a fresh approval card.
 - Click **❌ Reject** to abort execution without altering any procurement state.
 
