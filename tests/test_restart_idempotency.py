@@ -390,7 +390,7 @@ def test_seed_rerun_preserves_checkpoints_and_tickets():
         os.environ["OFFLINE_MODE"] = "true"
         from scripts.seed import run_seeding
 
-        run_seeding(policies=True, graph=False)
+        run_seeding(["tables", "documents", "memories"])
 
         # Verify checkpoint is still intact
         tup = saver.get_tuple({"configurable": {"thread_id": thread_id, "checkpoint_ns": ""}})
