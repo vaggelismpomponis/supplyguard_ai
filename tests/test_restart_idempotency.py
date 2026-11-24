@@ -18,13 +18,25 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+import sys
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import pytest
 import yaml
 
-from langgraph.checkpoint.base import CheckpointTuple
-from langgraph.graph import END, START, StateGraph
+try:
+    from langgraph.checkpoint.base import CheckpointTuple
+    from langgraph.graph import END, START, StateGraph
+    from src.db.checkpointer import PostgresSaver
+    HAS_LANGGRAPH = True
+except ImportError:
+    HAS_LANGGRAPH = False
+    CheckpointTuple = None
+    END = START = StateGraph = None
+    PostgresSaver = None
 
-from src.db.checkpointer import PostgresSaver
 from src.db.connection import get_pooled_connection
 from src.db.idempotency import (
     create_ticket_idempotent,
@@ -52,6 +64,11 @@ requires_postgres = pytest.mark.skipif(
     reason="Live PostgreSQL database not available at localhost:5432",
 )
 
+requires_postgres_and_langgraph = pytest.mark.skipif(
+    not is_postgres_available() or not HAS_LANGGRAPH,
+    reason="PostgreSQL or langgraph not available in this environment",
+)
+
 
 def test_compose_volumes_and_restart_policy():
     """Verify docker-compose.yml defines persistent volumes and resilient restart policies."""
@@ -65,6 +82,7 @@ def test_compose_volumes_and_restart_policy():
     volumes = data.get("volumes", {})
     assert "postgres_data" in volumes, "postgres_data must be defined as a persistent volume"
     assert "neo4j_data" in volumes, "neo4j_data must be defined as a persistent volume"
+    assert "chroma_data" in volumes, "chroma_data must be defined as a persistent volume"
 
     # 2. Service mount points
     assert any("postgres_data:" in str(v) for v in services["postgres"].get("volumes", []))
@@ -79,7 +97,7 @@ def test_compose_volumes_and_restart_policy():
     assert seed.get("restart") == "no", "seed service must not restart continuously"
 
 
-@requires_postgres
+@requires_postgres_and_langgraph
 def test_postgres_checkpointer_saves_and_recovers_state():
     """Verify PostgresSaver persists graph state across simulated process-level termination/crash recovery."""
     thread_id = f"test_restart_{uuid.uuid4().hex[:12]}"
@@ -129,7 +147,7 @@ def test_postgres_checkpointer_saves_and_recovers_state():
         PostgresSaver().delete_thread(thread_id)
 
 
-@requires_postgres
+@requires_postgres_and_langgraph
 def test_postgres_saver_metadata_filter():
     """Verify PostgresSaver.list correctly filters checkpoints using JSONB metadata containment."""
     thread_id = f"filter_test_{uuid.uuid4().hex[:12]}"
@@ -172,7 +190,7 @@ def test_postgres_saver_metadata_filter():
 
 
 @pytest.mark.asyncio
-@requires_postgres
+@requires_postgres_and_langgraph
 async def test_postgres_saver_async_methods():
     """Verify asynchronous PostgresSaver methods run without blocking event loop."""
     thread_id = f"async_test_{uuid.uuid4().hex[:12]}"

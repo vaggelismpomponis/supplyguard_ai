@@ -101,7 +101,7 @@ Project-wide πρόοδος για την πλατφόρμα **SupplyGuard AI** 
 
 | Ρόλος | Checklist | Πρόοδος | Owner | Backup |
 |---|---|---|---|---|
-| Platform | [`platform.md`](./roles/platform.md) | 0/9 | @vaggelismpomponis | Workflow |
+| Platform | [`platform.md`](./roles/platform.md) | 9/9 | @vaggelismpomponis | Workflow |
 | Interface | [`interface.md`](./roles/interface.md) | 13/13 | @AlexZarkalis | Quality |
 | Workflow | [`workflow.md`](./roles/workflow.md) | 0/13 | @VickyMil-ai | Knowledge |
 | Knowledge | [`knowledge.md`](./roles/knowledge.md) | 0/12 | @stef-fot | Platform |

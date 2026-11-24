@@ -17,9 +17,17 @@ def pg() -> psycopg.Connection:
         port = os.getenv("POSTGRES_PORT", "5432")
         user = os.getenv("POSTGRES_USER", "postgres")
         pw = os.getenv("POSTGRES_PASSWORD", "postgres_secure_password")
-        db = os.getenv("POSTGRES_DB", "helpdesk")
+        db = os.getenv("POSTGRES_DB", "supplyguard")
         url = f"postgresql://{user}:{pw}@{host}:{port}/{db}"
     return psycopg.connect(url, connect_timeout=1)
+
+
+def chroma_client():
+    """Return ChromaDB client connected via HTTP."""
+    import chromadb
+    host = os.getenv("CHROMA_HOST", "localhost")
+    port = int(os.getenv("CHROMA_PORT", "8001"))
+    return chromadb.HttpClient(host=host, port=port)
 
 
 def neo4j_driver() -> Driver:
