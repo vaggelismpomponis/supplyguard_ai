@@ -49,33 +49,39 @@ All production, persistence, and test packages are pinned to exact versions in `
 
 ```text
 # Core Framework & Agent Workflow
-chainlit==1.3.2           # Interactive chat interface, steps, and approval cards
-deepagents==0.1.0         # Deep Agents orchestration framework with planning & scratchpad
-langchain==0.3.7          # Composition and tool abstraction
-langchain-core==0.3.17    # Core Pydantic primitives, messages, runnable protocols
-langchain-community==0.3.7 # Community integrations
-langchain-openai==0.2.6   # LLM runtime client
+chainlit==2.12.0              # Interactive chat interface, steps, and approval cards
+deepagents==0.7.41            # Deep Agents orchestration framework with planning & scratchpad
+langchain==1.5.2              # Composition and tool abstraction
+langchain-anthropic==1.7.12   # Anthropic model client
+langchain-core==1.8.4         # Core Pydantic primitives, messages, runnable protocols
+langchain-openai==1.8.5       # OpenAI / Azure OpenAI runtime client
+langgraph==1.2.24             # Stateful graph & checkpoint runtime
 
 # Persistence & Data Stores
-psycopg[binary,pool]==3.2.3 # PostgreSQL driver with connection pooling support
-pgvector==0.3.6           # Python bindings for PostgreSQL vector extension
-neo4j==5.26.0             # Official Neo4j Cypher driver
-chromadb==0.5.23          # ChromaDB vector store client & benchmark store
+pgvector==0.5.1               # Python bindings for PostgreSQL vector extension
+psycopg[binary,pool]==3.3.9   # PostgreSQL driver with connection pooling support
+psycopg2-binary==2.9.13       # Secondary Postgres DBAPI driver
+SQLAlchemy==2.1.9             # Relational ORM / driver dependency
+neo4j==5.28.8                 # Official Neo4j Cypher driver
+chromadb==0.5.23              # ChromaDB vector store client & benchmark store
 
 # Integration & Protocols
-mcp==1.1.2                # Model Context Protocol for procurement & risk tools
+mcp==1.30.0                   # Model Context Protocol for procurement & risk tools
 
-# Settings, Validation & Environment
-pydantic==2.9.2           # High-performance data validation for contracts
-pydantic-settings==2.6.1  # Environment variable parsing and configuration
-python-dotenv==1.0.1      # Local development .env loader
+# HTTP, Settings, Validation & Environment
+httpx==0.28.1                 # Async/sync HTTP client
+pydantic==2.14.4              # High-performance data validation for contracts
+pydantic-settings==2.16.3     # Environment variable parsing and configuration
+python-dotenv==1.2.4          # Local development .env loader
+PyYAML==6.0.4                 # YAML parser for configuration and Compose tests
+requests==2.34.2              # HTTP client
 
 # Observability & Tracing
-langsmith==0.1.143        # Execution tracing, run metadata, evaluation dataset
+langsmith==0.16.1             # Execution tracing, run metadata, evaluation dataset
 
 # Quality Assurance & Testing
-pytest==8.3.3             # Unit and integration test runner
-pytest-asyncio==0.24.0    # Async test support
+pytest==9.2.0                 # Unit and integration test runner
+pytest-asyncio==1.5.0         # Async test support
 ```
 
 ---
