@@ -1,1 +1,1 @@
-"""HelpDesk Lite package root."""
+"""SupplyGuard AI package root."""

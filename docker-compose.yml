@@ -22,7 +22,6 @@ services:
       retries: 5
     networks:
       - supplyguard_network
-      - helpdesk_network
 
   # ------------------------------------------------------------------------------
   # 2. Neo4j Graph Database 5.26+ (Multi-tier Supply Chain Graph)
@@ -46,7 +45,6 @@ services:
       start_period: 30s
     networks:
       - supplyguard_network
-      - helpdesk_network
 
   # ------------------------------------------------------------------------------
   # 3. ChromaDB Vector Store (Document Corpus & Benchmark Store)
@@ -70,7 +68,6 @@ services:
       start_period: 10s
     networks:
       - supplyguard_network
-      - helpdesk_network
 
   # ------------------------------------------------------------------------------
   # 4. External Risk & Disruption Feed Service (Mock HTTP / MCP Feed)
@@ -92,7 +89,6 @@ services:
       start_period: 5s
     networks:
       - supplyguard_network
-      - helpdesk_network
 
   # ------------------------------------------------------------------------------
   # 5. Automated Compose Ingestion Service (seed) for Synthetic Data Package
@@ -143,7 +139,6 @@ services:
       - ./requirements.txt:/app/requirements.txt:ro
     networks:
       - supplyguard_network
-      - helpdesk_network
 
   # ------------------------------------------------------------------------------
   # 6. SupplyGuard AI Application (Chainlit + Deep Agents Runtime)
@@ -204,14 +199,10 @@ services:
       start_period: 15s
     networks:
       - supplyguard_network
-      - helpdesk_network
 
 networks:
   supplyguard_network:
     name: supplyguard_network
-    driver: bridge
-  helpdesk_network:
-    name: helpdesk_network
     driver: bridge
 
 volumes:

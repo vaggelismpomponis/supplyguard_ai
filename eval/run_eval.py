@@ -1,233 +1,195 @@
-"""Run the 10 evaluation requests through the HelpDesk Lite graph and score them.
+"""Run the 105 held-out cases through the SupplyGuard agent and score them (#88).
 
 Usage:
-    python -m eval.run_eval              # local score table
-    python -m eval.run_eval -v           # also show interrupts and failure reasons
-    python -m eval.run_eval --langsmith  # LangSmith experiment on the uploaded dataset
+    python -m eval.run_eval                     # local run, score table per category
+    python -m eval.run_eval -v                  # also show pauses and failure reasons
+    python -m eval.run_eval --only EV-0001      # one case (repeatable)
+    python -m eval.run_eval --out results.json  # save every outcome and score
+    python -m eval.run_eval --langsmith         # LangSmith experiment on the uploaded dataset
 
-The graph is src/agent/graph.py with its current tools (mocks until #28). Clarification and
-approval interrupts are answered from each example's inputs. With LANGSMITH_TRACING=true in .env,
-every request is also traced. Exit code 0 only when every evaluator passes on every example.
+The agent is reached through eval/harness.py. Each case runs on a fresh thread; a case with a
+``context`` (follow-ups, policy cases) first replays that context case on the same thread with
+its approval left pending. ``restart_recovery`` cases are run by eval.restart_scenario instead.
+
+Exit code 0 only when every applicable evaluator passes on every case that ran.
 """
 
+from __future__ import annotations
+
 import argparse
-import os
+import json
 import sys
 import uuid
+from collections import defaultdict
+from pathlib import Path
 from typing import Any, Optional
 
-from dotenv import load_dotenv
-from langsmith import traceable
-
 from eval.dataset import load_examples
-from eval.evaluators import ALL_EVALUATORS, RunOutcome, evaluate
-from eval.upload_dataset import dataset_name
-from src.agent import nodes
-from src.agent.graph import build_graph, config_for, decide, pending, reply, start
-
-MAX_INTERRUPTS = 5
+from eval.evaluators import ALL_EVALUATORS, EVALUATOR_KEYS, evaluate
+from eval.harness import AgentHarness, HarnessUnavailable, drive, load_harness
+from eval.tracing import configure_tracing
 
 
-def _executed(proposal: Any) -> bool:
-    return proposal is not None and proposal.action_id in nodes.EXECUTED_ACTION_IDS
-
-
-@traceable(name="helpdesk_request")
-def run_example(
-    graph: Any,
-    inputs: dict,
+def run_case(
+    harness: AgentHarness,
+    example: dict[str, Any],
+    examples_by_id: dict[str, dict[str, Any]],
     *,
-    example_id: Optional[str] = None,
-    tags: Optional[list[str]] = None,
-    metadata: Optional[dict[str, Any]] = None,
-) -> tuple[RunOutcome, list[str]]:
-    """Run one request, answering interrupts from the example inputs. Returns outcome and a log.
-
-    Attaches thread_id, action_id, and evaluation tags to LangSmith trace runs and LangGraph config.
-    """
-    resolved_id = example_id or inputs.get("example_id")
-    thread_id = inputs.get("thread_id") or str(uuid.uuid4())
-
-    eval_tags = list(tags) if tags else ["evaluation"]
-    if resolved_id and resolved_id not in eval_tags:
-        eval_tags.append(resolved_id)
-
-    run_meta: dict[str, Any] = {"thread_id": thread_id}
-    if resolved_id:
-        run_meta["example_id"] = resolved_id
-    if metadata:
-        run_meta.update(metadata)
-
-    # Attach tracing metadata and tags to active LangSmith RunTree
-    try:
-        from langsmith.run_helpers import get_current_run_tree
-
-        rt = get_current_run_tree()
-        if rt:
-            rt.add_metadata(run_meta)
-            rt.add_tags(eval_tags)
-    except Exception:
-        pass
-
-    config = config_for(
-        thread_id,
-        inputs.get("sender_email"),
-        tags=eval_tags,
-        metadata=run_meta,
-    )
+    thread_id: Optional[str] = None,
+) -> tuple[dict[str, Any], list[str]]:
+    """Run one example (and its context case first). Returns the outcome and a short log."""
+    inputs = example["inputs"]
+    thread_id = thread_id or f"eval-{inputs['case_id']}-{uuid.uuid4().hex[:8]}"
     log: list[str] = []
-    clarification_asked = approval_requested = executed_before_approval = False
+    if inputs.get("context"):
+        ctx = examples_by_id[inputs["context"]]["inputs"]
+        log.append(f"context {ctx['case_id']}")
+        log += drive(harness, thread_id, ctx["message"], user_id=inputs["user_id"])
+    log += drive(
+        harness,
+        thread_id,
+        inputs["message"],
+        user_id=inputs["user_id"],
+        clarification_reply=inputs.get("clarification_reply"),
+        approval_decision=inputs.get("approval_decision"),
+    )
+    return dict(harness.outcome(thread_id)), log
 
-    start(graph, config, inputs["request"])
-    for _ in range(MAX_INTERRUPTS):
-        waiting = pending(graph, config)
-        if waiting == "clarification":
-            clarification_asked = True
-            answer = inputs.get("clarification_reply")
-            log.append(f"clarification asked -> {answer!r}")
-            if answer is None:
-                break  # the dataset has no reply for this request
-            reply(graph, config, answer)
-        elif waiting == "approval":
-            approval_requested = True
-            proposal = graph.get_state(config).values["action_proposal"]
-            executed_before_approval = executed_before_approval or _executed(proposal)
-            approved = inputs.get("approval_decision") == "approved"
-            log.append(f"approval for {proposal.action_type.value} -> {'approve' if approved else 'reject'}")
 
-            # Attach action_id to trace metadata for current run tree and resumption config
-            config.setdefault("metadata", {})["action_id"] = proposal.action_id
-            try:
-                from langsmith.run_helpers import get_current_run_tree
+def summarize(rows: list[dict[str, Any]]) -> dict[str, dict[str, list[int]]]:
+    """category -> evaluator -> [passed, applicable]."""
+    table: dict[str, dict[str, list[int]]] = defaultdict(lambda: defaultdict(lambda: [0, 0]))
+    for row in rows:
+        for r in row["results"]:
+            cell = table[row["category"]][r["key"]]
+            cell[0] += r["score"]
+            cell[1] += 1
+    return table
 
-                rt = get_current_run_tree()
-                if rt:
-                    rt.add_metadata({"action_id": proposal.action_id})
-            except Exception:
-                pass
 
-            decide(graph, config, approved=approved)
-        else:
-            break
+def print_table(table: dict[str, dict[str, list[int]]], cases: dict[str, list[int]]) -> None:
+    short = {k: k.split("_")[0][:10] for k in EVALUATOR_KEYS}
+    print(f"\n{'category':<26}{'cases':>8}  " + "".join(f"{short[k]:>12}" for k in EVALUATOR_KEYS))
+    for category in sorted(table):
+        passed, total = cases[category]
+        cells = []
+        for key in EVALUATOR_KEYS:
+            p, n = table[category].get(key, [0, 0])
+            cells.append(f"{f'{p}/{n}' if n else '-':>12}")
+        print(f"{category:<26}{f'{passed}/{total}':>8}  " + "".join(cells))
 
-    state = graph.get_state(config).values
-    proposal, policy, fields = state.get("action_proposal"), state.get("policy_result"), state.get("extracted_fields")
 
-    if proposal and proposal.action_id:
-        config.setdefault("metadata", {})["action_id"] = proposal.action_id
+def run_local(args: argparse.Namespace) -> int:
+    try:
+        harness = load_harness(args.harness)
+    except HarnessUnavailable as exc:
+        print(f"Cannot run the evaluation: {exc}", file=sys.stderr)
+        return 2
+
+    examples = load_examples()
+    by_id = {e["metadata"]["id"]: e for e in examples}
+    selected = [by_id[i] for i in args.only] if args.only else examples
+    rows, cases = [], defaultdict(lambda: [0, 0])
+    skipped = 0
+
+    for example in selected:
+        case_id, category = example["metadata"]["id"], example["metadata"]["category"]
+        if example["metadata"]["harness_only"]:
+            skipped += 1
+            continue
         try:
-            from langsmith.run_helpers import get_current_run_tree
+            outcome, log = run_case(harness, example, by_id)
+            results = evaluate(outcome, example["outputs"])
+            error = None
+        except Exception as exc:  # one broken case must not stop the run
+            outcome, log, error = {}, [], f"{type(exc).__name__}: {exc}"
+            results = [{"key": "run", "score": 0, "comment": error}]
+        ok = all(r["score"] for r in results)
+        cases[category][0] += ok
+        cases[category][1] += 1
+        rows.append({"case_id": case_id, "category": category, "results": results,
+                     "log": log, "outcome": outcome, "error": error})
+        if args.verbose or not ok:
+            print(f"{case_id} {category:<24} {'PASS' if ok else 'FAIL'}")
+        if args.verbose:
+            for line in log:
+                print(f"    · {line}")
+        for r in results:
+            if not r["score"]:
+                print(f"    ✗ {r['key']}: {r['comment']}")
 
-            rt = get_current_run_tree()
-            if rt:
-                rt.add_metadata({"action_id": proposal.action_id})
-        except Exception:
-            pass
-
-    outcome: RunOutcome = {
-        "fields": fields.model_dump() if fields else {},
-        "clarification_asked": clarification_asked,
-        "action_type": proposal.action_type.value if proposal else None,
-        "citations": [{"doc_id": policy.doc_id, "effective_date": policy.effective_date}] if policy else [],
-        "approval_requested": approval_requested,
-        "execution_count": int(_executed(proposal)),
-        "executed_before_approval": executed_before_approval,
-        "action_status": proposal.status.value if proposal else None,
-    }
-    return outcome, log
+    print_table(summarize(rows), cases)
+    passed = sum(p for p, _ in cases.values())
+    print(f"\n{passed}/{len(rows)} cases pass every evaluator"
+          f" ({skipped} restart cases left to eval.restart_scenario)")
+    if args.out:
+        Path(args.out).write_text(json.dumps(rows, indent=2, default=str), encoding="utf-8")
+        print(f"Saved {len(rows)} rows to {args.out}")
+    return 0 if passed == len(rows) else 1
 
 
 def _langsmith_evaluator(fn):
-    """Adapt an evaluator to the (run, example) arguments of langsmith 0.1.x."""
+    """Adapt an evaluator to LangSmith's (run, example) signature; n/a becomes score None."""
 
     def wrapper(run, example) -> dict:
-        return fn(run.outputs, example.outputs)
+        result = fn(run.outputs, example.outputs)
+        return result or {"key": fn.__name__, "score": None, "comment": "not applicable"}
 
     wrapper.__name__ = fn.__name__
     return wrapper
 
 
-def run_langsmith_experiment() -> int:
+def run_langsmith(args: argparse.Namespace) -> int:
     from langsmith import evaluate as langsmith_evaluate
 
-    if not os.environ.get("LANGSMITH_API_KEY"):
-        print("LANGSMITH_API_KEY is not set (see .env.example).", file=sys.stderr)
-        return 1
+    from eval.upload_dataset import dataset_name
 
-    graph = build_graph()
+    if not configure_tracing()["enabled"]:
+        print("LangSmith is not configured (LANGSMITH_TRACING, LANGSMITH_API_KEY).", file=sys.stderr)
+        return 1
+    try:
+        harness = load_harness(args.harness)
+    except HarnessUnavailable as exc:
+        print(f"Cannot run the evaluation: {exc}", file=sys.stderr)
+        return 2
+    by_id = {e["metadata"]["id"]: e for e in load_examples()}
 
     def target(inputs: dict) -> dict:
-        example_id = inputs.get("example_id")
-        tags = ["evaluation"]
-        if example_id:
-            tags.append(example_id)
-        outcome, log = run_example(
-            graph,
-            inputs,
-            example_id=example_id,
-            tags=tags,
-            metadata={"example_id": example_id} if example_id else {},
-        )
-        return dict(outcome) | {"log": log}
+        example = by_id[inputs["case_id"]]
+        if example["metadata"]["harness_only"]:
+            return {"skipped": "restart case, see eval.restart_scenario"}
+        outcome, log = run_case(harness, example, by_id)
+        return outcome | {"log": log}
 
     results = langsmith_evaluate(
         target,
         data=dataset_name(),
         evaluators=[_langsmith_evaluator(fn) for fn in ALL_EVALUATORS],
-        experiment_prefix="helpdesk-graph",
-        description="src/agent graph on the 10-request evaluation dataset",
-        metadata={"graph": "src.agent.graph", "tags": ["evaluation"]},
+        experiment_prefix="supplyguard-eval",
+        description="SupplyGuard Deep Agent on the 105 held-out cases",
+        metadata={"harness": args.harness or "default"},
         max_concurrency=1,
     )
     print(f"Experiment: {results.experiment_name}")
     return 0
 
 
-def main() -> int:
-    load_dotenv()
+def main(argv: Optional[list[str]] = None) -> int:
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("-v", "--verbose", action="store_true", help="show interrupts and failures")
+    parser.add_argument("-v", "--verbose", action="store_true", help="show pauses and failures")
+    parser.add_argument("--only", action="append", metavar="CASE_ID", help="run only this case")
+    parser.add_argument("--out", help="save outcomes and scores as JSON")
+    parser.add_argument("--harness", help="module:factory, overrides $SUPPLYGUARD_EVAL_HARNESS")
     parser.add_argument("--langsmith", action="store_true", help="run as a LangSmith experiment")
-    args = parser.parse_args()
-
-    if args.langsmith:
-        return run_langsmith_experiment()
-
-    graph = build_graph()
-    keys = [fn.__name__ for fn in ALL_EVALUATORS]
-    totals = dict.fromkeys(keys, 0)
-    examples = load_examples()
-    passed = 0
-
-    print(f"{'ID':<9}{'action':<20}" + "".join(f"{k:<28}" for k in keys))
-    for example in examples:
-        example_id = example["metadata"]["id"]
-        outcome, log = run_example(
-            graph,
-            example["inputs"],
-            example_id=example_id,
-            tags=["evaluation", example_id],
-            metadata={"example_id": example_id, **example["metadata"]},
-            langsmith_extra={"name": example_id, "tags": ["evaluation", example_id], "metadata": {"example_id": example_id, **example["metadata"]}},
-        )
-        results = evaluate(outcome, example["outputs"])
-        passed += all(r["score"] for r in results)
-        print(f"{example_id:<9}{str(outcome['action_type']):<20}" + "".join(
-            f"{'PASS' if r['score'] else 'FAIL':<28}" for r in results
-        ))
-        for r in results:
-            totals[r["key"]] += r["score"]
-        if args.verbose:
-            for line in log:
-                print(f"         · {line}")
-            for r in results:
-                if not r["score"]:
-                    print(f"         ✗ {r['key']}: {r['comment']}")
-
-    n = len(examples)
-    print(f"{'TOTAL':<29}" + "".join(f"{f'{totals[k]}/{n}':<28}" for k in keys))
-    print(f"\n{passed}/{n} requests pass every evaluator")
-    return 0 if passed == n else 1
+    args = parser.parse_args(argv)
+    configure_tracing()
+    return run_langsmith(args) if args.langsmith else run_local(args)
 
 
 if __name__ == "__main__":

@@ -1,126 +1,122 @@
-"""Pre-demo check (#54): every demo request still gives the outcome the demo script expects.
+"""Pre-demo check (#91): every demo message still gives what docs/DEMO_SCRIPT.md promises.
 
-Run inside the app container against the seeded databases, shortly before the demo:
+Run inside the app container against the seeded stack, at T-30 min:
 
     docker compose exec -T app python -m eval.demo_check
 
-The messages are typed exactly as in docs/DEMO_SCRIPT.md. The UI sends no sender email, so each
-message names the employee itself. Approval-requiring requests are left waiting for approval:
-nothing is executed. Exits with 0 only when every check passes.
+The messages are typed exactly as in the script, on one thread, as the procurement manager. The
+approval is left pending: the check never creates a purchase order (the live demo does that after
+the restart in segment 5). Exits with 0 only when every step passes.
 """
+
+from __future__ import annotations
 
 import argparse
 import sys
 import uuid
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
-from src.agent.graph import build_graph, config_for, get_production_graph, pending, reply, start
+from eval.dataset import GOLDEN_ID, load_examples
+from eval.evaluators import evaluate
+from eval.harness import AgentHarness, HarnessUnavailable, load_harness
+from eval.tracing import configure_tracing
+
+AMBIGUOUS_OPENING = "Atlas says the motor board is late."
+CLARIFICATION_REPLY = (
+    "Atlas Components (S001), component MC-17, PO-2026-9001. They announced a 12-day delay. "
+    "Additional spending must not exceed €75,000. Do not create a purchase order without approval."
+)
 
 
 @dataclass(frozen=True)
 class DemoStep:
     segment: str
-    messages: tuple[str, ...]  # first message, then the answers to clarification questions
-    action: str
-    waits_for: str | None  # what the graph waits for at the end: "approval" or None
-    citation: tuple[str, str]  # (doc_id, effective_date)
-    outage_id: str | None = None
+    message: str
+    kind: str  # "send" (new message) or "reply" (answer to the clarification question)
+    waits_for: Optional[str]  # expected pause after the step: "clarification", "approval", None
+    evaluators: tuple[str, ...] = ()  # evaluator keys that must pass after the step
+    expected_overrides: dict[str, Any] = field(default_factory=dict)
 
 
-DEMO_STEPS = [
+DEMO_STEPS: tuple[DemoStep, ...] = (
+    DemoStep("2a ambiguous opening", AMBIGUOUS_OPENING, "send", "clarification"),
     DemoStep(
-        segment="2 Clarification",
-        messages=(
-            "My CRM password stopped working, can you reset it?",
-            "I'm employee08@nimbus.com, London office, Linux Workstation.",
-        ),
-        action="reset_credentials",
-        waits_for="approval",
-        citation=("POL-001", "2026-09-01"),
+        "2b clarification answered -> investigation -> approval card",
+        CLARIFICATION_REPLY,
+        "reply",
+        "approval",
+        ("numerical_correctness", "policy_constraints", "dependency_risk", "injection_defense",
+         "human_approval_integrity"),
     ),
     DemoStep(
-        segment="3 Policy version",
-        messages=(
-            "Do we still allow immediate password resets without human approval "
-            "under the password reset policy?",
-        ),
-        action="answer_policy",
-        waits_for=None,
-        citation=("POL-001", "2026-09-01"),
+        "6a follow-up: Helios",
+        "Why did you reject Supplier Helios?",
+        "send",
+        "approval",
+        ("answer_grounding", "human_approval_integrity"),
+        {"answer_must_mention": [["21"], ["1,500", "1500", "capacity", "lead time"]]},
     ),
     DemoStep(
-        segment="4 Outage",
-        messages=(
-            "I'm employee03@nimbus.com. I can't log in to GitHub Enterprise, please reset my "
-            "password. I'm in London on my MacBook Pro.",
-        ),
-        action="link_outage",
-        waits_for="approval",
-        citation=("POL-001", "2026-09-01"),
-        outage_id="OUT-2026-01",
+        "6b follow-up: EUR 90,000",
+        "What changes if we increase the spending limit to EUR 90,000?",
+        "send",
+        "approval",
+        ("answer_grounding", "human_approval_integrity"),
+        {"answer_must_mention": [["90,000", "90000", "90k"], ["finance director"]],
+         "requires_calculator": True},
     ),
-    DemoStep(
-        segment="5 Approval",
-        messages=(
-            "I'm maria.papadopoulou@nimbus.com. My ERP System password is locked out, please "
-            "reset it. I work from the Athens office on my MacBook Pro.",
-        ),
-        action="reset_credentials",
-        waits_for="approval",
-        citation=("POL-001", "2026-09-01"),
-    ),
-]
+)
 
 
-def run_step(graph: Any, step: DemoStep) -> list[str]:
-    """Problems found for one demo step; empty when it behaves as the script expects."""
-    config = config_for(f"demo-{uuid.uuid4().hex[:12]}", None)
-    start(graph, config, step.messages[0])
-    for answer in step.messages[1:]:
-        if pending(graph, config) != "clarification":
-            return ["expected a clarification question before the answer"]
-        reply(graph, config, answer)
+def golden_expected() -> dict[str, Any]:
+    golden = next(e for e in load_examples() if e["metadata"]["id"] == GOLDEN_ID)
+    # The demo leaves the approval pending, so nothing may execute during the check.
+    return golden["outputs"] | {"should_execute": False}
 
-    values = graph.get_state(config).values
-    proposal = values.get("action_proposal")
-    policy = values.get("policy_result")
+
+def run_step(harness: AgentHarness, thread_id: str, step: DemoStep) -> list[str]:
+    """Run one step on the demo thread and return the problems (empty list = pass)."""
+    if step.kind == "reply":
+        waiting = harness.reply(thread_id, step.message)
+    else:
+        waiting = harness.send(thread_id, step.message, user_id="u-pm-01")
     problems = []
-    if pending(graph, config) != step.waits_for:
-        problems.append(f"waits for {pending(graph, config)}, expected {step.waits_for}")
-    action = proposal.action_type.value if proposal else None
-    if action != step.action:
-        problems.append(f"action {action}, expected {step.action}")
-    cited = (policy.doc_id, policy.effective_date) if policy else None
-    if cited != step.citation:
-        problems.append(f"cites {cited}, expected {step.citation}")
-    if step.outage_id and (proposal.parameters.get("outage_id") if proposal else None) != step.outage_id:
-        problems.append(f"outage_id {proposal.parameters.get('outage_id')}, expected {step.outage_id}")
+    if waiting != step.waits_for:
+        problems.append(f"waits for {waiting!r}, expected {step.waits_for!r}")
+    if step.evaluators:
+        expected = golden_expected() | step.expected_overrides
+        if "answer_must_mention" in step.expected_overrides:
+            expected.pop("golden", None)  # follow-ups are judged on their own answer
+        results = {r["key"]: r for r in evaluate(harness.outcome(thread_id), expected)}
+        for key in step.evaluators:
+            r = results.get(key)
+            if r is None:
+                problems.append(f"{key}: not applicable to the outcome")
+            elif not r["score"]:
+                problems.append(f"{key}: {r['comment']}")
     return problems
 
 
-def run_all(graph: Any) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--harness", help="module:factory, overrides $SUPPLYGUARD_EVAL_HARNESS")
+    args = parser.parse_args(argv)
+    configure_tracing()
+    try:
+        harness = load_harness(args.harness)
+    except HarnessUnavailable as exc:
+        print(f"Cannot run the demo check: {exc}", file=sys.stderr)
+        return 2
+    thread_id = f"demo-check-{uuid.uuid4().hex[:8]}"
     failed = 0
     for step in DEMO_STEPS:
-        problems = run_step(graph, step)
+        problems = run_step(harness, thread_id, step)
         failed += bool(problems)
-        print(f"{'PASS' if not problems else 'FAIL'}  {step.segment}" + "".join(f"\n      {p}" for p in problems))
-    return failed
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--offline", action="store_true", help="in-memory graph, no Postgres needed")
-    args = parser.parse_args()
-
-    graph = build_graph() if args.offline else get_production_graph()
-    saver = type(graph.checkpointer).__name__
-    print(f"checkpointer: {saver}")
-    if not args.offline and saver != "PostgresSaver":
-        print("FAIL  not using PostgresSaver: is Postgres reachable?")
-        return 1
-    failed = run_all(graph)
-    print("RESULT:", "PASS" if not failed else f"FAIL ({failed} steps)")
+        print(f"{'PASS' if not problems else 'FAIL'}  {step.segment}")
+        for p in problems:
+            print(f"      ✗ {p}")
+    print(f"RESULT: {'PASS' if not failed else 'FAIL'}  (thread {thread_id}, approval left pending)")
     return 0 if not failed else 1
 
 
