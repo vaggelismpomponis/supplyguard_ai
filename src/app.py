@@ -60,6 +60,14 @@ logger = logging.getLogger(__name__)
 
 graph = get_production_graph()
 
+# Disable Chainlit's built-in SQLAlchemy/asyncpg DataLayer auto-detection from DATABASE_URL
+# since persistence is handled by LangGraph PostgresSaver and SupplyGuard's case store.
+if hasattr(cl, "data_layer"):
+
+    @cl.data_layer
+    def _disable_chainlit_default_data_layer() -> None:
+        return None
+
 # ==============================================================================
 # 1. Subagent & Graph Node Telemetry Step Registry (Issue #44)
 # ==============================================================================
