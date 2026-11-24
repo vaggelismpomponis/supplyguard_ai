@@ -139,6 +139,55 @@ class TestPostgresSchemaInit(unittest.TestCase):
             self.assertIn(idx, self.sql_content, f"Missing index '{idx}'")
 
 
+class TestSupplyGuardSchema(unittest.TestCase):
+    """Test suite for SupplyGuard AI supply chain domain tables in init.sql."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sql_path = INIT_SQL_PATH
+        cls.sql_content = cls.sql_path.read_text(encoding="utf-8")
+
+    def test_supply_chain_tables_declared(self):
+        tables = [
+            "upstream_manufacturers",
+            "suppliers",
+            "factories",
+            "locations",
+            "components",
+            "products",
+            "bill_of_materials",
+            "supplier_components",
+            "inventory",
+            "quarantine_lots",
+            "reservations",
+            "customers",
+            "customer_orders",
+            "production_schedule",
+            "purchase_orders",
+            "shipment_updates",
+            "historical_disruption_cases",
+            "supplier_message_inbox",
+        ]
+        for tbl in tables:
+            self.assertIn(
+                f"CREATE TABLE IF NOT EXISTS {tbl}",
+                self.sql_content,
+                f"SupplyGuard relational table '{tbl}' not found in init.sql",
+            )
+
+    def test_supply_chain_indexes_declared(self):
+        indexes = [
+            "idx_suppliers_name",
+            "idx_suppliers_upstream",
+            "idx_bom_component",
+            "idx_supplier_comp_component",
+            "idx_inventory_component",
+            "idx_po_supplier_comp",
+        ]
+        for idx in indexes:
+            self.assertIn(idx, self.sql_content, f"Missing index '{idx}'")
+
+
 class TestPostgresUpgradeMigration(unittest.TestCase):
     """Test suite for non-destructive schema upgrade migration script."""
 

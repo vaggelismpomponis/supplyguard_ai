@@ -1,13 +1,13 @@
-# HelpDesk Lite
+# SupplyGuard AI
 
-**An agentic AI assistant for IT support engineers: faster first-correct-answer, with a human accountable for every state-changing action.**
+**Agentic Supply Chain Disruption and Recovery Platform: autonomous incident extraction, multi-tier dependency tracing, deterministic strategy optimization, and payload-bound human approval.**
 
-[![Status](https://img.shields.io/badge/status-warm--up%20project-blue)](#project-status)
-[![Orchestration](https://img.shields.io/badge/orchestration-LangGraph-1f6feb)](#technology-stack)
+[![Status](https://img.shields.io/badge/status-capstone%20project-blue)](#project-status)
+[![Orchestration](https://img.shields.io/badge/orchestration-Deep%20Agents-1f6feb)](#technology-stack)
 [![UI](https://img.shields.io/badge/UI-Chainlit-orange)](#technology-stack)
 [![License](https://img.shields.io/badge/license-see%20LICENSE-lightgrey)](./LICENSE)
 
-Code.Hub · PwC · Agentic AI Bootcamp
+Code.Hub · PwC · Agentic AI Bootcamp Capstone Project
 
 ---
 
@@ -34,87 +34,71 @@ Code.Hub · PwC · Agentic AI Bootcamp
 
 ## Overview
 
-HelpDesk Lite reduces the time between an incoming IT support request and the first correct response. The assistant extracts the relevant facts from a request, consults company policies and a service dependency graph, and proposes exactly one of five actions. Any action that changes an account or a system pauses for explicit human approval and survives application restarts.
+SupplyGuard AI is an enterprise-grade agentic assistant that protects manufacturing and logistics operations against sudden supply chain disruptions. When a supplier announces a delay (e.g. *Atlas Components announces a 12-day delay on MC-17 microcontrollers*), SupplyGuard AI extracts critical incident parameters, traces downstream dependencies through the Bill of Materials (BOM), identifies multi-tier vulnerabilities in the supplier graph, formulates multiple viable recovery strategies, and submits a payload-bound purchase order for explicit human approval.
 
-This repository is the team's warm-up project. Its purpose is to establish a shared stack and prove that the core building blocks work before the final project begins.
+Every state-changing action in the simulated procurement system requires human approval and is guarded by strict database row-level locking for complete idempotency across container restarts.
 
 ## Key Capabilities
 
 | # | Capability | Description |
 |---|------------|-------------|
-| 1 | Field extraction | Extracts `employee`, `application`, `symptom` and `urgency` from the request. |
-| 2 | Clarification | Asks follow-up questions when essential details are missing; never guesses. |
-| 3 | Policy retrieval | Searches the policy document store and cites the source and **effective date**. |
-| 4 | Service graph check | Inspects dependencies and active outages. |
-| 5 | Action proposal | Selects one of: answer from policy, link to outage, reset credentials, open ticket, escalate to an engineer. |
-| 6 | Human-in-the-loop | Halts and waits for approval before any account-changing or ticket-creating action. |
-| 7 | Persistence | Resumes the conversation from the same point after an application restart. |
+| 1 | Disruption Triage & Clarification | Extracts `supplier_id`, `component_id`, `delay_days`, and `spending_cap`; pauses for interactive clarification if ambiguous. |
+| 2 | Operational Impact Analysis | Computes usable stock (`on_hand - reserved - quarantined`), evaluates assembly factory run-out timelines, and flags open customer orders at risk. |
+| 3 | Multi-tier Graph Traversal | Traverses Neo4j multi-tier supplier networks to identify common upstream dependencies (e.g. shared tier-2 wafer fab Veltro Semiconductor in Taiwan). |
+| 4 | Strategy Optimization | Generates ≥3 viable recovery options (Transfer Stock, Expedite Orders, Purchase from Alternate Supplier) with deterministic cost and revenue-at-risk calculations. |
+| 5 | Payload-Bound Approval | Halts execution and renders an immutable Approval Card in Chainlit; double-click protection and budget cap enforcement (€75,000 reference). |
+| 6 | Simulated Procurement Execution | Issues purchase orders through the Model Context Protocol (MCP) server; returns confirmed order receipts. |
+| 7 | Checkpoint Persistence & Idempotency | Survives container restarts without losing session state or re-executing approved purchase orders. |
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A[Incoming request] --> B[extract_fields]
-    B --> C{Missing fields?}
-    C -- Yes --> D[ask_clarification<br/>interrupt]
+    A[Disruption Incident Message] --> B[Triage & Entity Extraction Subagent]
+    B --> C{Ambiguous Entity?}
+    C -- Yes --> D[Interactive Clarification Dialog<br/>Interrupt]
     D --> B
-    C -- No --> E[retrieve_policy<br/>pgvector, latest effective date wins]
-    E --> F[check_graph<br/>Neo4j: dependencies, outages]
-    F --> G[decide_action<br/>one of 5 actions]
-    G --> H{State-changing?}
-    H -- No --> I[answer / link outage]
-    H -- Yes --> J[human_approval<br/>interrupt]
-    J -- Approved --> K[execute_action<br/>idempotent]
-    J -- Rejected --> L
-    I --> L[Final response with citations]
-    K --> L
+    C -- No --> E[Operational Impact Subagent<br/>Inventory & BOM Analysis]
+    E --> F[Supply Graph Subagent<br/>Neo4j Multi-tier Traversal]
+    F --> G[Recovery Strategy Optimizer<br/>≥3 Viable Options & Trade-off Matrix]
+    G --> H{Budget & Policy Valid?}
+    H -- Exceeds Cap --> I[Flag Policy Violation / Adjust]
+    H -- Valid --> J[Payload-Bound Human Approval Card<br/>Interrupt]
+    J -- Approved --> K[Simulated Procurement System<br/>MCP Order Execution]
+    J -- Rejected --> L[Log Rejection & Request Alternate]
+    K --> M[Post-Approval Receipt & Case Memory]
 ```
-
-### Design Principles
-
-- **No silos.** Each role has a primary owner but no exclusive knowledge; pair sessions and review rotation are mandatory.
-- **Walking skeleton first.** Build an end-to-end flow with mocks early, then replace the mocks incrementally.
-- **Contracts before code.** State schema, Pydantic models and tool signatures are agreed up front.
-- **Simple business logic.** The value lies in the stack and patterns: interrupt, checkpoint and tracing.
-
-### Critical Implementation Notes
-
-| Topic | Guidance |
-|-------|----------|
-| Interrupt and checkpointing | Map `thread_id` consistently to the Chainlit session so the correct thread is found after a restart. |
-| Idempotency | Persist an `action_id` and status (`pending → approved → executed`) and check it before execution. |
-| Policy versions | Store `effective_date` and `doc_id` as metadata; retrieval keeps the most recent version. |
-| Service dependencies | If an application depends on a service with an active outage, the correct action is *link to outage*, not a credential reset. |
 
 ## Technology Stack
 
 | Technology | Purpose |
 |------------|---------|
-| LangGraph | Workflow, state, interrupts |
-| Chainlit | UI: chat, progress, approval buttons |
-| LangChain Core | Prompts, models, tools, Pydantic |
-| Docker Compose | Service orchestration |
-| PostgreSQL + pgvector | Tickets, LangGraph checkpoints, semantic policy search |
-| Neo4j | Employees, teams, applications, services, outages |
-| LangSmith | Tracing and evaluation |
+| Deep Agents (`deepagents`) | Root agent orchestration, planning middleware, and virtual scratchpad |
+| Chainlit | Interactive web UI, live step telemetry, approval cards, and report export |
+| PostgreSQL 16 + pgvector | Relational ERP data, HNSW vector store, `audit_log`, and checkpoints |
+| Neo4j 5.26+ | Multi-tier supply chain graph (Suppliers, Components, Products, Factories, Upstream) |
+| ChromaDB 0.5.23 | Secondary vector database for document corpus and retrieval benchmarking |
+| Model Context Protocol (MCP) | Procurement system and external risk tool transport boundaries |
+| LangSmith | Observability, execution tracing, and automated evaluation on 105 scenarios |
 
 ## Project Status
 
-The project is in its initial phase. This repository currently contains the project documentation; implementation artifacts are planned deliverables.
+SupplyGuard AI is executing its Capstone sprint. The multi-service platform stack, automated seeding, contracts, and simulated procurement MCP integration are fully operational.
 
-| Deliverable | Status |
-|-------------|--------|
-| Documentation (project notes, Git guide) | Available in [`docs/`](./docs) |
-| `docker-compose.yml` and `.env.example` | Available |
-| Chainlit application | Available (Integrated LangGraph + Chainlit UI with human approval & restart resilience) |
-| Policy ingestion and graph seeding scripts | Available (Automated in Compose via `seed` service) |
-| LangSmith project with evaluation run (10 requests) | Available (10-scenario evaluation suite with automated LangSmith evaluators) |
-| `CONTRIBUTING.md` (team agreement) | Available in [`CONTRIBUTING.md`](./CONTRIBUTING.md) |
-| 10-minute live demo, including resume after restart | Ready / Documented (Step-by-step 10-minute live demo rehearsal guide) |
+| Deliverable | Status | Owner / Reference |
+|-------------|--------|-------------------|
+| Architecture Contracts & Schemas | Completed | [`docs/ARCHITECTURE_CONTRACTS.md`](./docs/ARCHITECTURE_CONTRACTS.md) |
+| Docker Compose 5-Service Stack | Completed | [`docker-compose.yml`](./docker-compose.yml) (Postgres, Neo4j, ChromaDB, External Risk, Seed, App) |
+| Multi-stage Dockerfile & Pinned Versions | Completed | [`Dockerfile`](./Dockerfile) & [`docs/PINNED_VERSIONS.md`](./docs/PINNED_VERSIONS.md) |
+| Clean-Clone Benchmark (<10 min) | Completed | [`docs/CLEAN_CLONE_BENCHMARK.md`](./docs/CLEAN_CLONE_BENCHMARK.md) (Average ~3.5 min) |
+| Automated Ingestion Service (seed) | Completed | [`scripts/seed.py`](./scripts/seed.py) (Idempotent synthetic package seeding) |
+| Simulated Procurement & Risk MCP | Completed | [`src/mcp/`](./src/mcp) (Order execution receipts & risk feed) |
+| Checkpoint Persistence & Restart Support | Completed | [`tests/test_mcp_procurement_and_restart.py`](./tests/test_mcp_procurement_and_restart.py) |
+| Kanban Tasks & Milestone Tracking | Synchronized | [`docs/KANBAN_TASKS.md`](./docs/KANBAN_TASKS.md) & GitHub Issues #32-#93 |
 
 ## Getting Started
 
-Follow these instructions to start the entire HelpDesk Lite stack from a clean clone. The full stack boots up in **<10 minutes**.
+Follow these instructions to start the entire SupplyGuard AI stack from a clean clone. The full stack boots up in **<10 minutes** (benchmark: ~3.5 minutes).
 
 ### Prerequisites
 
@@ -125,8 +109,8 @@ Follow these instructions to start the entire HelpDesk Lite stack from a clean c
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/vaggelismpomponis/helpdesk_lite.git
-cd helpdesk_lite
+git clone https://github.com/vaggelismpomponis/supplyguard_ai.git
+cd supplyguard_ai
 
 # 2. Configure environment variables (copy template)
 # Linux / macOS:
@@ -138,7 +122,7 @@ Copy-Item .env.example .env
 # Windows (CMD):
 copy .env.example .env
 
-# 3. Start all services (PostgreSQL + pgvector, Neo4j, Chainlit App)
+# 3. Start all services (PostgreSQL + pgvector, Neo4j, ChromaDB, External Risk, Seed, App)
 docker compose up -d --build
 ```
 
@@ -152,9 +136,11 @@ docker compose ps
 
 | Service | Endpoint | Credentials / Details |
 |---------|----------|-----------------------|
-| **Chainlit UI** | [http://localhost:8000](http://localhost:8000) | IT Support Assistant interactive web chat |
+| **SupplyGuard UI (Chainlit)** | [http://localhost:8000](http://localhost:8000) | Interactive supply chain disruption assistant & approval UI |
 | **Neo4j Browser** | [http://localhost:7474](http://localhost:7474) | User: `neo4j` / Password: `neo4j_secure_password`<br>Bolt protocol: `bolt://localhost:7687` |
-| **PostgreSQL + pgvector** | `localhost:5432` | DB: `helpdesk` / User: `postgres` / Password: `postgres_secure_password`<br>Extension `vector` enabled |
+| **PostgreSQL + pgvector** | `localhost:5432` | DB: `supplyguard` / User: `postgres` / Password: `postgres_secure_password`<br>Extension `vector` enabled |
+| **ChromaDB Vector Store** | [http://localhost:8001](http://localhost:8001) | Document corpus vector index & retrieval benchmark store |
+| **External Risk Service** | [http://localhost:8080/alerts](http://localhost:8080/alerts) | Simulated external risk & disruption notice feed |
 
 ### Common Operations
 

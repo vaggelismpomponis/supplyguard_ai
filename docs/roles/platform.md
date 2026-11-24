@@ -41,17 +41,17 @@
 
 ## Role checklist
 
-- [ ] Συμφωνία αρχιτεκτονικών συμβολαίων και pinning νέων dependencies (`deepagents`, `chromadb`, `mcp`)
-- [ ] `docker-compose.yml` με 5 services (`postgres`, `neo4j`, `chromadb`, `external-risk`, `app`)
-- [ ] `.env.example` πλήρες με διαχωρισμό παραμέτρων
-- [ ] Persistent volumes και graceful shutdown (`stop_grace_period: 15s`)
-- [ ] Automated Compose `seed` service για πλήρη φόρτωση του `support-data/` χωρίς χειροκίνητα βήματα
-- [ ] Clean-clone benchmark σε <10′ σε πολλαπλά λειτουργικά συστήματα
-- [ ] MCP service transport συνδεδεμένο και λειτουργικό
-- [ ] Persistence ελεγμένη μετά από hard container restart
-- [ ] Τελικό clean-clone test πριν το demo
+- [x] Συμφωνία αρχιτεκτονικών συμβολαίων και pinning νέων dependencies (`deepagents`, `chromadb`, `mcp`)
+- [x] `docker-compose.yml` με 5 services (`postgres`, `neo4j`, `chromadb`, `external-risk`, `app`)
+- [x] `.env.example` πλήρες με διαχωρισμό παραμέτρων
+- [x] Persistent volumes και graceful shutdown (`stop_grace_period: 15s`)
+- [x] Automated Compose `seed` service για πλήρη φόρτωση του `support-data/` χωρίς χειροκίνητα βήματα
+- [x] Clean-clone benchmark σε <10′ σε πολλαπλά λειτουργικά συστήματα
+- [x] MCP service transport συνδεδεμένο και λειτουργικό
+- [x] Persistence ελεγμένη μετά από hard container restart
+- [x] Τελικό clean-clone test πριν το demo
 - [ ] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
-- [ ] Μπορώ να εξηγήσω ολόκληρη την αρχιτεκτονική υποδομής στο demo
+- [x] Μπορώ να εξηγήσω ολόκληρη την αρχιτεκτονική υποδομής στο demo
 
 ## Backup
 Ορίζεται στο `CONTRIBUTING_LOG.md`. Προτείνεται: Workflow.

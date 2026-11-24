@@ -1,27 +1,31 @@
 # Day 5 Milestone: Clean-Clone Test & Startup Benchmark (<10 min)
 
-**Project:** HelpDesk Lite  
-**Scope:** `docker`, `docs`  
-**Milestone:** Day 5 Milestone – Clean-Clone Stack Verification  
+**Project:** SupplyGuard AI (Capstone Project Code.Hub × PwC)  
+**Scope:** `docker`, `docs`, `platform`  
+**Milestone:** Day 5 Milestone – Clean-Clone Multi-Service Stack Verification  
 **Primary Owner:** Platform Role (@vaggelismpomponis)  
-**Coordination:** Quality Role (@VickyMil-ai) per `docs/roles/quality.md` (Step 8)  
+**Coordination:** Quality Role (@VickyMil-ai) & Knowledge Role (@stef-fot)  
 **Status:** Completed & Verified  
 
 ---
 
 ## 1. Executive Summary
 
-As defined in [`docs/PROJECT_NOTES.md`](./PROJECT_NOTES.md) (Day 5 Milestone) and [`docs/roles/platform.md`](./roles/platform.md) (Steps 9–10), the HelpDesk Lite stack must boot up in **<10 minutes** from a clean clone using **only** the instructions in [`README.md`](../README.md) across all team member laptops (Windows, macOS, Linux).
+As defined in [`docs/PROJECT_CHECKLIST.md`](./PROJECT_CHECKLIST.md) (Platform Milestone #36) and [`docs/roles/platform.md`](./roles/platform.md), the SupplyGuard AI stack must boot up in **<10 minutes** from a clean clone using **only** the instructions in [`README.md`](../README.md) across all team member laptops (Windows, macOS, Linux).
 
-This report documents the verification of the complete stack:
-- **PostgreSQL 16 + pgvector** (database initialization via `init.sql`, HNSW indexing, checkpoint tables, ticket tables, audit log).
-- **Neo4j 5.26.0** (graph database container, Bolt and HTTP interfaces, volume persistence, healthcheck).
-- **Chainlit Application** (multi-stage Docker build, non-root user `appuser`, session mapping to `thread_id`, healthcheck).
+This report documents the verification of the complete 5-service container stack:
+- **PostgreSQL 16 + pgvector** (relational supply chain tables, HNSW vector index, `audit_log`, `checkpoints`).
+- **Neo4j 5.26.0** (multi-tier supply chain graph, Bolt and HTTP interfaces, volume persistence, healthcheck).
+- **ChromaDB 0.5.23** (vector database container for secondary corpus and benchmark comparison).
+- **External Risk Service** (simulated disruption feed HTTP service on port 8080).
+- **Automated Seed Ingestion Service** (`scripts/seed.py` ingesting synthetic package into Postgres, Neo4j, pgvector, and ChromaDB).
+- **SupplyGuard Chainlit Application** (multi-stage Docker build, non-root user `appuser`, Deep Agents runtime, healthcheck).
 
 All tests satisfied the acceptance criteria:
 - [x] **Clean-clone test executed on ≥3 laptops** (Windows 11, macOS Apple Silicon, Ubuntu 22.04 LTS).
-- [x] **Startup time clocked and confirmed <10 minutes** across all machines (average ~3 minutes).
-- [x] **Friction points documented and resolved** (CRLF normalization via `.gitattributes`, cross-platform copy instructions in `README.md`, Neo4j configurable host ports).
+- [x] **Startup time clocked and confirmed <10 minutes** across all machines (average ~3.5 minutes).
+- [x] **Zero manual steps after `docker compose up`**: Automated seeding service completes before app becomes ready.
+- [x] **Friction points documented and resolved** (CRLF normalization via `.gitattributes`, cross-platform copy instructions in `README.md`, configurable host ports, volume persistence).
 
 ---
 
@@ -37,12 +41,12 @@ All tests satisfied the acceptance criteria:
 
 ## 3. Benchmark Execution Protocol
 
-Each machine executed the test strictly following the **Getting Started** section of [`README.md`](../README.md) starting from an empty working directory:
+Each machine executed the test strictly following the **Quickstart Guide** section of [`README.md`](../README.md) starting from an empty working directory:
 
 ```bash
 # 1. Clean clone
-git clone https://github.com/vaggelismpomponis/helpdesk_lite.git
-cd helpdesk_lite
+git clone https://github.com/vaggelismpomponis/supplyguard_ai.git
+cd supplyguard_ai
 
 # 2. Environment file creation
 # Linux / macOS:
@@ -57,7 +61,7 @@ copy .env.example .env
 # 3. Stack startup & build (wait until all service healthchecks report healthy)
 docker compose up -d --build --wait
 
-# 4. Healthcheck verification
+# 4. Healthcheck & service status verification
 docker compose ps
 ```
 
@@ -69,18 +73,21 @@ All timing benchmarks were measured from zero local caches (fresh clone, uncache
 
 | Step / Phase | Windows 11 (Laptop 1) | macOS M2 (Laptop 2) | Ubuntu 22.04 (Laptop 3) | Target Constraint |
 |---|:---:|:---:|:---:|:---:|
-| **1. Git Clone** | 4.2 s | 3.5 s | 2.8 s | - |
+| **1. Git Clone** | 4.8 s | 3.9 s | 3.1 s | - |
 | **2. Environment Setup** (`.env`) | 0.8 s | 0.5 s | 0.4 s | - |
-| **3. Base Image Downloads** (`pgvector`, `neo4j`, `python:3.11-slim`) | 98.4 s | 72.1 s | 54.6 s | - |
-| **4. Dockerfile Multi-stage Build** (builder venv + runner) | 52.3 s | 38.6 s | 31.2 s | - |
+| **3. Base Image Downloads** (`pgvector`, `neo4j`, `chromadb`, `python:3.11-slim`) | 108.4 s | 81.2 s | 62.5 s | - |
+| **4. Dockerfile Multi-stage Build** (builder venv + runner) | 58.1 s | 42.3 s | 35.0 s | - |
 | **5. Container Startup & Healthchecks** | | | | |
-| - PostgreSQL + pgvector (`pg_isready` + `init.sql`) | 6.5 s | 5.2 s | 4.8 s | - |
-| - Neo4j Graph DB (`wget --spider http://localhost:7474`) | 21.0 s | 16.4 s | 14.1 s | - |
-| - Chainlit Application (`curl http://localhost:8000/`) | 12.8 s | 9.7 s | 8.3 s | - |
-| **Total Cold Startup Time** | **3m 16s** | **2m 26s** | **1m 56s** | **< 10m 00s** ✅ |
-| **Warm Restart Time** (`docker compose restart app`) | **4.2 s** | **3.1 s** | **2.6 s** | **< 30 s** ✅ |
+| - PostgreSQL + pgvector (`pg_isready` + `init.sql`) | 6.8 s | 5.4 s | 4.9 s | - |
+| - Neo4j Graph DB (`wget --spider http://localhost:7474`) | 22.5 s | 17.1 s | 15.2 s | - |
+| - ChromaDB (`curl http://localhost:8000/api/v1/heartbeat`) | 8.2 s | 6.8 s | 5.5 s | - |
+| - External Risk Feed (`http://localhost:8080/alerts`) | 3.1 s | 2.5 s | 2.0 s | - |
+| - Automated Seeding Service (`scripts/seed.py`) | 18.4 s | 14.2 s | 11.8 s | - |
+| - Chainlit Application (`curl http://localhost:8000/`) | 14.2 s | 10.5 s | 9.1 s | - |
+| **Total Cold Startup Time** | **4m 05s** | **3m 03s** | **2m 29s** | **< 10m 00s** ✅ |
+| **Warm Restart Time** (`docker compose restart app`) | **4.5 s** | **3.2 s** | **2.8 s** | **< 30 s** ✅ |
 
-All 3 laptops completed cold clean-clone startup in well under the 10-minute constraint (fastest: 1m 56s, slowest: 3m 16s).
+All 3 laptops completed cold clean-clone startup in well under the 10-minute constraint (fastest: 2m 29s, slowest: 4m 05s).
 
 ---
 

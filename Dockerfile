@@ -52,9 +52,10 @@ RUN groupadd -g 1001 appuser && \
 # Pre-create writable config directories for Chainlit runtime
 RUN mkdir -p /app/.chainlit && chown -R appuser:appuser /app
 
-# Copy application source code and scripts
+# Copy application source code, scripts, and welcome UI
 COPY src/ /app/src/
 COPY scripts/ /app/scripts/
+COPY chainlit.md /app/chainlit.md
 
 RUN chown -R appuser:appuser /app
 
