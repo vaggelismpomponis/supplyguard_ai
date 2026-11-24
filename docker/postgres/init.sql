@@ -112,6 +112,11 @@ CREATE TABLE IF NOT EXISTS policy_chunks (
     embedding vector(1536) NOT NULL,
     access_scope VARCHAR(32) DEFAULT 'procurement',
     metadata JSONB DEFAULT '{}',
+    doc_type VARCHAR(32),                          -- contract, qualification, supplier_notice, email, ... (#70)
+    supplier_id VARCHAR(32),
+    version INTEGER,
+    trusted BOOLEAN NOT NULL DEFAULT TRUE,         -- FALSE: the text tries to instruct the assistant
+    security_flags TEXT[] NOT NULL DEFAULT '{}',   -- e.g. {prompt_injection}
     PRIMARY KEY (doc_id, effective_date, chunk_index)
 );
 
