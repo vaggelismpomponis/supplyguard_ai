@@ -9,17 +9,41 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from src.knowledge.models import GraphResult, PolicyResult
+from src.agent.schemas import (
+    AccessScope,
+    ApprovalPayload,
+    DisruptionFact,
+    DocumentaryFinding,
+    FactoryStockTimeline,
+    IncidentReport,
+    OperationalImpact,
+    ProcurementReceipt,
+    RecoveryOption,
+    SupplyGuardActionType,
+    UserProfile,
+)
 
 __all__ = [
+    "AccessScope",
     "ActionProposal",
     "ActionStatus",
     "ActionType",
     "AgentState",
+    "ApprovalPayload",
+    "DisruptionFact",
+    "DocumentaryFinding",
     "ExtractedFields",
+    "FactoryStockTimeline",
     "GraphResult",
+    "IncidentReport",
+    "OperationalImpact",
     "PolicyResult",
+    "ProcurementReceipt",
+    "RecoveryOption",
     "ResponseInterpretation",
     "STATE_CHANGING_ACTIONS",
+    "SupplyGuardActionType",
+    "UserProfile",
 ]
 
 
