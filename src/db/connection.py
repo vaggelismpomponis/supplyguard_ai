@@ -67,7 +67,16 @@ def get_pooled_connection() -> Generator[psycopg.Connection, None, None]:
 
 
 def is_postgres_available() -> bool:
-    """Check if PostgreSQL is reachable."""
+    """Check if PostgreSQL is reachable with fast socket pre-check."""
+    import socket
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = int(os.getenv("POSTGRES_PORT", "5432"))
+    try:
+        with socket.create_connection((host, port), timeout=0.15):
+            pass
+    except OSError:
+        return False
+
     try:
         with psycopg.connect(get_db_url(), connect_timeout=1) as conn:
             with conn.cursor() as cur:

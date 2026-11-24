@@ -17,19 +17,38 @@ from types import TracebackType
 from typing import Any, AsyncIterator, Iterator, Optional, Sequence
 
 import psycopg
-from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.base import (
-    WRITES_IDX_MAP,
-    BaseCheckpointSaver,
-    ChannelVersions,
-    Checkpoint,
-    CheckpointMetadata,
-    CheckpointTuple,
-    get_checkpoint_id,
-    get_checkpoint_metadata,
-)
-from langgraph.checkpoint.serde.base import SerializerProtocol
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+try:
+    from langchain_core.runnables import RunnableConfig
+    from langgraph.checkpoint.base import (
+        WRITES_IDX_MAP,
+        BaseCheckpointSaver,
+        ChannelVersions,
+        Checkpoint,
+        CheckpointMetadata,
+        CheckpointTuple,
+        get_checkpoint_id,
+        get_checkpoint_metadata,
+    )
+    from langgraph.checkpoint.serde.base import SerializerProtocol
+    from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+    HAS_LANGGRAPH = True
+except ImportError:
+    from typing import Generic, TypeVar
+    T = TypeVar("T")
+    class _MockBaseSaver(Generic[T]):
+        def __init__(self, *args, **kwargs): pass
+    HAS_LANGGRAPH = False
+    RunnableConfig = Any
+    BaseCheckpointSaver = _MockBaseSaver
+    ChannelVersions = Any
+    Checkpoint = Any
+    CheckpointMetadata = Any
+    CheckpointTuple = Any
+    SerializerProtocol = Any
+    JsonPlusSerializer = None
+    WRITES_IDX_MAP = {}
+    def get_checkpoint_id(*args, **kwargs): return ""
+    def get_checkpoint_metadata(*args, **kwargs): return {}
 
 from src.db.connection import get_pooled_connection, get_db_connection
 
