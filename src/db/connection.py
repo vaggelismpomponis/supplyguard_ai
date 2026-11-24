@@ -1,4 +1,4 @@
-"""PostgreSQL connection management and connection pooling for HelpDesk Lite.
+"""PostgreSQL connection management and connection pooling for SupplyGuard AI.
 
 Platform Role | Scope: db, docker
 """
@@ -22,7 +22,7 @@ def get_db_url() -> str:
         port = os.getenv("POSTGRES_PORT", "5432")
         user = os.getenv("POSTGRES_USER", "postgres")
         pw = os.getenv("POSTGRES_PASSWORD", "postgres_secure_password")
-        db = os.getenv("POSTGRES_DB", "helpdesk")
+        db = os.getenv("POSTGRES_DB", "supplyguard")
         url = f"postgresql://{user}:{pw}@{host}:{port}/{db}"
     return url
 

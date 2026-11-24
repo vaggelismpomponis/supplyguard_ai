@@ -1,5 +1,5 @@
 # ==============================================================================
-# HelpDesk Lite - Multi-stage Application Dockerfile (Chainlit + LangGraph)
+# SupplyGuard AI - Multi-stage Application Dockerfile (Chainlit + Deep Agents)
 # Pinned Base Image Policy: python:3.11-slim (docs/PINNED_VERSIONS.md)
 # ==============================================================================
 
@@ -56,6 +56,9 @@ RUN mkdir -p /app/.chainlit && chown -R appuser:appuser /app
 COPY src/ /app/src/
 COPY scripts/ /app/scripts/
 COPY chainlit.md /app/chainlit.md
+# Evaluation, red-team, restart and pre-demo scripts run inside the container (docs/EVALUATION.md)
+COPY eval/ /app/eval/
+COPY tests/ /app/tests/
 
 RUN chown -R appuser:appuser /app
 

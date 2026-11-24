@@ -84,7 +84,7 @@ def test_docker_compose_service_definitions():
 
     app_service = services["app"]
     assert "build" in app_service
-    assert app_service.get("container_name") in ["supplyguard_app", "helpdesk_app"]
+    assert app_service.get("container_name") == "supplyguard_app"
 
     # Dependency check
     depends_on = app_service.get("depends_on", {})
@@ -97,10 +97,10 @@ def test_docker_compose_service_definitions():
 
     # Network linking check
     networks = data.get("networks", {})
-    assert any(n in networks for n in ["supplyguard_network", "helpdesk_network"])
-    assert "helpdesk_network" in services["postgres"].get("networks", [])
-    assert "helpdesk_network" in services["neo4j"].get("networks", [])
-    assert "helpdesk_network" in app_service.get("networks", [])
+    assert "supplyguard_network" in networks
+    assert "helpdesk_network" not in networks
+    for name in ("postgres", "neo4j", "chromadb", "app"):
+        assert "supplyguard_network" in services[name].get("networks", []), name
 
 
 def test_chainlit_starter_app_contracts():
@@ -123,7 +123,7 @@ def test_docker_compose_seed_service_defined():
     assert "seed" in services, "seed service must be defined in compose"
 
     seed_service = services["seed"]
-    assert seed_service.get("container_name") in ["supplyguard_seed", "helpdesk_seed"]
+    assert seed_service.get("container_name") == "supplyguard_seed"
     assert "scripts/seed.py" in " ".join(seed_service.get("command", []))
     assert seed_service.get("restart") == "no"
 

@@ -118,12 +118,14 @@ During multi-platform testing, four specific friction points were identified, do
 | Role | Name | Responsibilities | Sign-off Status | Date |
 |---|---|---|---|---|
 | **Platform** | @vaggelismpomponis (Primary) | Docker Compose, Dockerfile, Base Images, `.env.example`, `.gitattributes`, benchmark execution | **Signed-off** ✅ | 2026-11-18 |
-| **Quality** | @VickyMil-ai | Clean-clone coordination, timing verification, checklist validation | **Signed-off** ✅ | 2026-11-18 |
+| **Quality** | @VickyMil-ai | Clean-clone coordination, timing verification, checklist validation | **Pending: SupplyGuard re-run, see §8** | |
 | **Interface** | @AlexZarkalis | macOS host verification, UI availability check (`http://localhost:8000`) | **Signed-off** ✅ | 2026-11-18 |
 
 ---
 
-## 7. Pre-Demo Final Clean-Clone Rehearsal (Day 10 Completion)
+## 7. Pre-Demo Final Clean-Clone Rehearsal (Day 10 Completion) — HelpDesk Lite, historical
+
+> **Historical.** This section records the HelpDesk Lite warm-up project and does not apply to SupplyGuard AI. The SupplyGuard pre-demo clean-clone run uses the procedure and run sheet in [§8](#8-quality-coordination-supplyguard-day-5-clean-clone-test-85--platform).
 
 Prior to the official live demo, the entire HelpDesk Lite stack underwent a final, end-to-end clean-clone verification rehearsal across all 3 developer operating systems (Windows 11, macOS Apple Silicon, and Ubuntu Linux).
 
@@ -172,7 +174,57 @@ docker compose run --rm app pytest tests/ -v
 | Role | Name | Responsibilities | Sign-off Status | Date |
 |---|---|---|---|---|
 | **Platform** | @vaggelismpomponis (Primary) | Final README polish, clean-clone rehearsal, Docker Compose & Dockerfile verification | **Signed-off** ✅ | 2026-11-18 |
-| **Quality** | @VickyMil-ai | Rehearsal timing verification, 10-request evaluator validation, Definition of Done check | **Signed-off** ✅ | 2026-11-18 |
+| **Quality** | @VickyMil-ai | Rehearsal timing verification, 10-request evaluator validation, Definition of Done check | **Pending: HelpDesk Lite sign-off, not valid for SupplyGuard** | |
 | **Interface** | @AlexZarkalis | macOS host UI verification (`http://localhost:8000`), approval card rendering | **Signed-off** ✅ | 2026-11-18 |
 | **Knowledge** | @stef-fot | Automated ingestion and Neo4j graph seeding idempotency verification | **Signed-off** ✅ | 2026-11-18 |
 | **Workflow** | @VickyMil-ai | Restart state persistence and idempotent resume verification | **Signed-off** ✅ | 2026-11-18 |
+
+---
+
+## 8. Quality Coordination: SupplyGuard Day 5 Clean-Clone Test (#85) ✋ Platform
+
+**Owner:** Quality (@VickyMil-ai) · **Status:** planned, not yet run
+
+### 8.1 Why a re-run
+
+The timings in sections 4 and 7 were measured on 2026-11-18, before the SupplyGuard stack existed (the
+platform PR #96 and the Day 1 contracts are dated 2026-11-24). Section 7 clones `helpdesk_lite` and
+counts 81 HelpDesk tests. The Quality sign-offs in sections 6 and 7.4 are therefore set back to
+pending until the 5-service SupplyGuard stack is measured with the procedure below.
+
+### 8.2 Procedure (each laptop, from an empty folder)
+
+```bash
+git clone https://github.com/vaggelismpomponis/supplyguard_ai.git && cd supplyguard_ai
+git switch develop
+cp .env.example .env                                   # Copy-Item / copy on Windows
+time docker compose up -d --build --wait               # record the "real" time
+docker compose ps                                      # postgres, neo4j, chromadb, external-risk, app healthy; seed exited 0
+docker compose logs seed | tail -5                     # 212 documents into pgvector and ChromaDB
+docker compose exec -T app python -m pytest -q         # record passed / failed
+docker compose exec -T app python -m eval.red_team scan          # 1 item: DOC-NOT-HELIOS-PRICE
+docker compose exec -T app python -m eval.retrieval_benchmark --live   # benchmark data reachable
+time docker compose restart app                        # warm restart < 30 s
+```
+
+Pass criteria: cold start under 10 minutes; all services healthy and `seed` exited 0 with no
+manual step; the scan finds the planted document; the benchmark connects to pgvector, ChromaDB and
+Neo4j; warm restart under 30 s.
+
+### 8.3 Run sheet (Day 5, 2026-11-30)
+
+| Laptop | OS / arch | Docker | Tester | Cold start | Healthy + seed | Tests | Scan | Benchmark live | Warm restart | Friction |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Windows 11 | | @vaggelismpomponis | | | | | | | |
+| 2 | macOS (Apple Silicon) | | @AlexZarkalis | | | | | | | |
+| 3 | Linux or 2nd OS | | @stef-fot | | | | | | | |
+| 4 | | | @VickyMil-ai | | | | | | | |
+
+Every friction point becomes an issue for Platform and a row in the CONTRIBUTING log.
+
+### 8.4 Sign-off
+
+| Role | Name | Scope | Status | Date |
+|---|---|---|---|---|
+| Quality | @VickyMil-ai | Coordination, run sheet complete, criteria checked | Pending | |
+| Platform | @vaggelismpomponis | Fixes for friction points | Pending | |

@@ -29,12 +29,12 @@ This is the team agreement for SupplyGuard AI, the agentic supply chain disrupti
 
 ### Roles and Backups
 
-| Role | Primary owner | Backup role (proposed) | Role file |
+| Role | Primary owner | Backup role | Role file |
 |------|---------------|------------------------|-----------|
-| Platform | _TBD_ | Workflow | [platform.md](./docs/roles/platform.md) |
-| Interface | _TBD_ | Quality | [interface.md](./docs/roles/interface.md) |
-| Workflow | _TBD_ | Knowledge | [workflow.md](./docs/roles/workflow.md) |
-| Knowledge | _TBD_ | Platform | [knowledge.md](./docs/roles/knowledge.md) |
+| Platform | @vaggelismpomponis | Workflow | [platform.md](./docs/roles/platform.md) |
+| Interface | @AlexZarkalis | Quality | [interface.md](./docs/roles/interface.md) |
+| Workflow | @VickyMil-ai | Knowledge | [workflow.md](./docs/roles/workflow.md) |
+| Knowledge | @stef-fot | Platform | [knowledge.md](./docs/roles/knowledge.md) |
 | Quality | @VickyMil-ai | Interface | [quality.md](./docs/roles/quality.md) |
 
 ## Branching
@@ -125,7 +125,7 @@ Closes: #64
 
 - [ ] The branch is based on the latest `develop`.
 - [ ] No merge conflicts with the target branch: run `git fetch origin` and `git merge-tree --write-tree HEAD origin/develop` (`origin/main` for release pull requests).
-- [ ] The code runs and the relevant tests pass (`pytest`). Evaluation-affecting changes include the evaluation result.
+- [ ] The code runs and the relevant tests pass (`pytest`). Changes that affect agent behaviour include the result of `python -m eval.run_eval` (see [EVALUATION](./docs/EVALUATION.md)); changes to retrieval include the retrieval benchmark.
 - [ ] No secrets, credentials or stray files are included.
 - [ ] Commit messages follow the convention above.
 - [ ] Any new dependency is pinned with `==` and justified in the description (see [PINNED_VERSIONS](./docs/PINNED_VERSIONS.md)).
@@ -156,12 +156,12 @@ Steps marked ✋ in the role files and issues need a formal handoff: the receivi
 - the matching role checklist item is ticked;
 - any ✋ handoff is signed off in the [CONTRIBUTING log](./docs/CONTRIBUTING_LOG.md).
 
-**The project** is done when every item in the [project Definition of Done](./docs/PROJECT_CHECKLIST.md#6-definition-of-done) is met, including:
+**The project** is done when every item in the [project Definition of Done](./docs/PROJECT_CHECKLIST.md#6-definition-of-done) is met and verified with evidence in the [DoD verification table](./docs/CONTRIBUTING_LOG.md#definition-of-done-verification-93), including:
 
 - a clean clone starts the full stack with `docker compose up -d` in under 10 minutes and seeds all data automatically;
 - no purchase order executes without explicit, payload-bound approval within the €75,000 cap, and a restart while approval is pending causes zero duplicate execution;
 - the planted prompt-injection document is detected and neutralized;
-- results are delivered for the 105 held-out evaluation cases, the retrieval benchmark (pgvector, ChromaDB, hybrid) and red-team testing, with traces in LangSmith;
+- results are delivered for the 105 held-out evaluation cases ([EVALUATION](./docs/EVALUATION.md)), the retrieval benchmark ([RETRIEVAL_BENCHMARK](./docs/RETRIEVAL_BENCHMARK.md)) and red-team testing ([RED_TEAM_REPORT](./docs/RED_TEAM_REPORT.md)), with traces in LangSmith;
 - every member has commits and reviews and can explain the whole flow in the live demo.
 
 ## Changing This Agreement

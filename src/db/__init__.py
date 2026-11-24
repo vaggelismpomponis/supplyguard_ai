@@ -1,4 +1,4 @@
-"""Database, Persistence and Idempotency package for HelpDesk Lite.
+"""Database, Persistence and Idempotency package for SupplyGuard AI.
 
 Platform Role | Scope: db, docker
 """

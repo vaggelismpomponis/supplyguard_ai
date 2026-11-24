@@ -1,6 +1,6 @@
-# Οδηγός Git για το HelpDesk_Lite
+# Οδηγός Git για το SupplyGuard AI
 
-Remote repository: `https://github.com/vaggelismpomponis/helpdesk_lite.git`
+Remote repository: `https://github.com/vaggelismpomponis/supplyguard_ai.git`
 
 ## 1. Βασικές έννοιες
 
@@ -19,8 +19,8 @@ git config --global user.name "Το Όνομά σου"
 git config --global user.email "email@example.com"
 
 # Κλωνοποίηση του repo (αν δεν υπάρχει τοπικά)
-git clone https://github.com/vaggelismpomponis/helpdesk_lite.git
-cd helpdesk_lite
+git clone https://github.com/vaggelismpomponis/supplyguard_ai.git
+cd supplyguard_ai
 
 # Έλεγχος remote
 git remote -v
@@ -92,10 +92,10 @@ gitGraph
 
 | Τύπος | Παράδειγμα |
 |-------|------------|
-| Νέο feature | `feature/ticket-creation` |
-| Διόρθωση σφάλματος | `bugfix/login-error` |
-| Επείγουσα διόρθωση | `hotfix/fix-crash` |
-| Τεκμηρίωση | `docs/update-readme` |
+| Νέο feature | `feature/eval-suite-105` |
+| Διόρθωση σφάλματος | `bugfix/approval-double-click` |
+| Επείγουσα διόρθωση | `hotfix/fix-seed-crash` |
+| Τεκμηρίωση | `docs/demo-script-rehearsal` |
 
 Χρησιμοποίησε πεζά γράμματα και παύλες, χωρίς κενά.
 
@@ -118,7 +118,7 @@ git checkout -b develop --track origin/develop
 ### Βήμα 2: Δημιουργία feature branch από το `develop`
 
 ```powershell
-git checkout -b feature/ticket-creation
+git checkout -b feature/eval-suite-105
 ```
 
 ### Βήμα 3: Δουλειά και commits
@@ -126,17 +126,17 @@ git checkout -b feature/ticket-creation
 ```powershell
 git status
 git add .
-git commit -m "Προσθήκη φόρμας δημιουργίας ticket"
+git commit -m "feat(eval): add evaluators for the 105 held-out cases"
 ```
 
-Κάνε μικρά, συχνά commits με περιγραφικά μηνύματα.
+Κάνε μικρά, συχνά commits. Τα μηνύματα ακολουθούν το Conventional Commits (`<type>(<scope>): <subject>`, βλ. [CONTRIBUTING.md](../CONTRIBUTING.md#commit-messages)).
 
 ### Βήμα 4: Push του branch στο remote
 
 Την πρώτη φορά:
 
 ```powershell
-git push -u origin feature/ticket-creation
+git push -u origin feature/eval-suite-105
 ```
 
 Στη συνέχεια αρκεί `git push`.
@@ -154,67 +154,45 @@ git rebase origin/develop
 
 Αν υπάρχουν conflicts, δες την ενότητα 7.
 
-### Εναλλακτικά: δημιουργία feature branch από το Codeberg (web UI)
+### Εναλλακτικά: δημιουργία feature branch από το GitHub (web UI)
 
 Μπορείς να δημιουργήσεις το branch από τον browser, χωρίς terminal.
 
-**Μέθοδος Α: από τη σελίδα Branches**
+**Μέθοδος Α: από το dropdown των branches**
 
-1. Συνδέσου στο Codeberg και άνοιξε `https://codeberg.org/ebomponis001/HelpDesk_Lite`.
-2. Στην καρτέλα **Code** πάτησε το **branches** (π.χ. «2 branches») στη μπάρα πάνω από τα αρχεία.
-3. Στη γραμμή του `develop` πάτησε το εικονίδιο **Create new branch from "develop"** (το πρώτο εικονίδιο από αριστερά στα δεξιά της γραμμής).
+1. Άνοιξε `https://github.com/vaggelismpomponis/supplyguard_ai`.
+2. Στην καρτέλα **Code** άνοιξε το dropdown των branches (πάνω αριστερά, δείχνει π.χ. `main`) και διάλεξε `develop`.
+3. Ξανάνοιξε το dropdown και γράψε το όνομα του νέου branch, π.χ. `feature/eval-suite-105`, στο πεδίο **Find or create a branch…**.
+4. Πάτησε **Create branch feature/eval-suite-105 from develop**.
 
-   ![Σελίδα Branches με το εικονίδιο δημιουργίας νέου branch από το develop](images/01-branches-page.png)
+**Μέθοδος Β: από τη σελίδα Branches**
 
-4. Στο παράθυρο **Create new branch** γράψε το όνομα στο πεδίο **Branch name**, π.χ. `feature/ticket-creation`, και πάτησε **Confirm**.
-
-   ![Παράθυρο Create new branch](images/02-create-branch-dialog.png)
-
-5. Το νέο branch εμφανίζεται στη λίστα και ο μετρητής ενημερώνεται (π.χ. «3 branches»).
-
-   ![Λίστα branches μετά τη δημιουργία](images/03-branches-list-after.png)
-
-**Μέθοδος Β: από το dropdown των branches**
-
-1. Στην καρτέλα **Code**, επίλεξε από το dropdown το `develop`.
-2. Ξανάνοιξε το dropdown και πληκτρολόγησε το όνομα του νέου branch στο πεδίο αναζήτησης.
-3. Πάτησε την επιλογή **Create branch … from 'develop'**.
+1. Στην καρτέλα **Code** πάτησε **Branches** (ή άνοιξε `…/supplyguard_ai/branches`).
+2. Πάτησε **New branch**, γράψε το όνομα, διάλεξε **Source:** `develop` και πάτησε **Create new branch**.
 
 Μετά, φέρε το νέο branch στον υπολογιστή σου:
 
 ```powershell
 git fetch origin
-git checkout feature/ticket-creation
+git checkout feature/eval-suite-105
 ```
 
-> Η ακριβής διατύπωση των κουμπιών μπορεί να διαφέρει ελαφρώς ανάλογα με την έκδοση του Codeberg (Forgejo).
+> Η ακριβής διατύπωση των κουμπιών μπορεί να διαφέρει ελαφρώς ανάλογα με την έκδοση του GitHub.
 
-## 6. Άνοιγμα Pull Request στο Codeberg
+## 6. Άνοιγμα Pull Request στο GitHub
 
-1. Κάνε push το feature branch (Βήμα 4).
-2. Άνοιξε το repo στο `https://codeberg.org/ebomponis001/HelpDesk_Lite`.
+1. Κάνε push το feature branch (Βήμα 4). Το GitHub συχνά δείχνει αμέσως μπάρα **Compare & pull request**· μπορείς να την πατήσεις και να πας στο βήμα 4.
+2. Άνοιξε το repo στο `https://github.com/vaggelismpomponis/supplyguard_ai`.
 3. Πήγαινε στην καρτέλα **Pull requests** και πάτησε **New pull request**.
-
-   ![Καρτέλα Pull requests](images/04-pull-requests.png)
-
 4. Επίλεξε:
-   - **merge into (προς):** `develop`
-   - **pull from (από):** `feature/ticket-creation`
+   - **base:** `develop`
+   - **compare:** `feature/eval-suite-105`
 
-   ![Φόρμα New pull request](images/05-new-pull-request.png)
+   Αν τα δύο branches είναι ίδια, εμφανίζεται το μήνυμα «There isn't anything to compare». Χρειάζεται τουλάχιστον ένα commit στο feature branch.
+5. Πάτησε **Create pull request** και συμπλήρωσε **τίτλο** (σε μορφή `<type>(<scope>): <subject>`) και **περιγραφή** (τι αλλάζει, γιατί, πώς δοκιμάστηκε). Αν υπάρχει σχετικό issue, γράψε `Closes #12`.
+6. Πάτησε ξανά **Create pull request**. Από το πλευρικό πάνελ **Reviewers** πρόσθεσε τον reviewer σύμφωνα με το review rotation του [CONTRIBUTING.md](../CONTRIBUTING.md#pull-requests-and-reviews).
 
-   Αν τα δύο branches είναι ίδια, εμφανίζεται το μήνυμα «These branches are equal. There is no need to create a pull request». Χρειάζεται τουλάχιστον ένα commit στο feature branch.
-5. Συμπλήρωσε **τίτλο** (σε μορφή `<type>(<scope>): <subject>`) και **περιγραφή** (τι αλλάζει, γιατί, πώς δοκιμάστηκε). Αν υπάρχει σχετικό issue, γράψε `Closes #12`.
-
-   ![Τίτλος και περιγραφή του PR](images/06-pr-title-description.png)
-
-6. Πάτησε **Create pull request**. Μετά, από το πλευρικό πάνελ **Reviewers** πρόσθεσε τον reviewer.
-
-   ![Επιλογή reviewer στο πλευρικό πάνελ](images/07-pr-reviewer.png)
-
-   Το PR εμφανίζεται ως **Open**, με τα commits και τα αρχεία που αλλάζουν.
-
-   ![Ανοιχτό PR](images/08-pr-open.png)
+   Το PR εμφανίζεται ως **Open**, με τις καρτέλες **Commits** και **Files changed**.
 
 7. Απάντησε στα σχόλια του review αν υπάρχουν. Νέα commits στο ίδιο branch ενημερώνουν αυτόματα το PR.
 8. Μετά την έγκριση, ο **reviewer** κάνει **Merge Squash** (ανάλογα με τη συμφωνία της ομάδας).
@@ -223,39 +201,32 @@ git checkout feature/ticket-creation
 ```powershell
 git checkout develop
 git pull origin develop
-git branch -d feature/ticket-creation   # μόνο τοπικά
+git branch -d feature/eval-suite-105   # μόνο τοπικά
 git fetch --prune                       # καθαρισμός αναφορών σε remote branches που διαγράφηκαν
 ```
 
-> Μετά από **Squash** το Git δεν αναγνωρίζει το τοπικό feature branch ως merged και το `git branch -d` μπορεί να αρνηθεί. Αφού επιβεβαιώσεις ότι το PR έγινε merge, χρησιμοποίησε `git branch -D feature/ticket-creation`.
+> Μετά από **Squash** το Git δεν αναγνωρίζει το τοπικό feature branch ως merged και το `git branch -d` μπορεί να αρνηθεί. Αφού επιβεβαιώσεις ότι το PR έγινε merge, χρησιμοποίησε `git branch -D feature/eval-suite-105`.
 
 > Ο δημιουργός του PR **δεν** τρέχει `git push origin --delete ...`.
 
 ### Για τον reviewer: merge και διαγραφή remote branch
 
-1. Άνοιξε το PR στο Codeberg και έλεγξε τις αλλαγές (καρτέλα **Files changed**).
-2. Πάτησε **Approve** αν όλα είναι σωστά.
-3. Στο κάτω μέρος του PR άνοιξε το βελάκι δίπλα στο κουμπί merge και διάλεξε **Create squash commit** (για PR σε `develop`). Για release PR προς `main` διάλεξε **Create merge commit**.
+1. Άνοιξε το PR στο GitHub και έλεγξε τις αλλαγές (καρτέλα **Files changed**).
+2. Πάτησε **Review changes**, διάλεξε **Approve** και **Submit review** αν όλα είναι σωστά.
+3. Στο κάτω μέρος του PR άνοιξε το βελάκι δίπλα στο κουμπί merge και διάλεξε **Squash and merge** (για PR σε `develop`). Για release PR προς `main` διάλεξε **Create a merge commit**.
 
-   ![Επιλογές merge](images/09-merge-options.png)
+   Αν το PR δεν έχει τις απαιτούμενες εγκρίσεις, ένας administrator μπορεί παρ' όλα αυτά να κάνει merge. Χρησιμοποίησέ το μόνο με συμφωνία της ομάδας.
 
-   Αν το PR δεν έχει τις απαιτούμενες εγκρίσεις (π.χ. «0 of 1 approvals granted»), ένας administrator μπορεί παρ' όλα αυτά να κάνει merge. Χρησιμοποίησέ το μόνο με συμφωνία της ομάδας.
-
-4. Έλεγξε τον τίτλο και την περιγραφή του squash commit (ο τίτλος παίρνει αυτόματα το `(#αριθμός)` του PR) και πάτησε **Create squash commit**. Τσέκαρε το **Delete branch "…"** αν θέλεις να διαγραφεί το branch με το merge.
-
-   ![Φόρμα squash commit](images/10-squash-commit-form.png)
-
-5. Αν δεν το τσέκαρες, μετά το merge το PR εμφανίζεται ως **Merged** και υπάρχει κουμπί **Delete branch** μέσα στο PR.
-
-   ![PR μετά το merge, με το κουμπί Delete branch](images/11-pr-merged.png)
+4. Έλεγξε τον τίτλο και την περιγραφή του squash commit (ο τίτλος παίρνει αυτόματα το `(#αριθμός)` του PR) και πάτησε **Confirm squash and merge**.
+5. Μετά το merge το PR εμφανίζεται ως **Merged** και υπάρχει κουμπί **Delete branch** μέσα στο PR.
 
 Εναλλακτικά, μέσω terminal:
 
 ```powershell
-git push origin --delete feature/ticket-creation
+git push origin --delete feature/eval-suite-105
 ```
 
-Προσοχή: τα `main` και `develop` δεν διαγράφονται ποτέ. Μπορείς να τα προστατέψεις από **Settings → Branches → Protected branches**.
+Προσοχή: τα `main` και `develop` δεν διαγράφονται ποτέ. Προστατεύονται από **Settings → Branches** (branch protection rules ή rulesets).
 
 ### Checklist πριν το PR
 
@@ -340,5 +311,5 @@ git checkout -b feature/όνομα
 git add .
 git commit -m "Μήνυμα"
 git push -u origin feature/όνομα
-# -> Άνοιγμα PR στο Codeberg: feature/όνομα -> develop
+# -> Άνοιγμα PR στο GitHub: feature/όνομα -> develop
 ```
