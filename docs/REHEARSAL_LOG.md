@@ -51,84 +51,84 @@ on the final run.
 
 ## Rehearsal 1
 
-**Date:** _TBD_ · **Timekeeper:** _TBD_ · **`demo_check`:** _TBD_
+**Date:** 2026-11-24 · **Timekeeper:** @AlexZarkalis · **`demo_check`:** PASS
 
 | # | Segment | Presenter | Planned | Actual | Notes |
 |---|---|---|---|---|---|
-| 1 | Objective & stack | @VickyMil-ai | 1′ | | |
-| 2 | Clarification flow | @VickyMil-ai | 2′ | | |
-| 3 | Policy citation & version conflict | @vaggelismpomponis | 2′ | | |
-| 4 | Outage detection & link to outage | @AlexZarkalis | 2′ | | |
-| 5 | Human approval & restart resume | @stef-fot | 2′ | | |
-| 6 | LangSmith tracing & evaluation | @stef-fot | 1′ | | |
-| | **Total** | | **10′** | | |
+| 1 | Objective & stack | @VickyMil-ai | 1′ | 1′00″ | Presented SupplyGuard AI 5-service stack & Deep Agents orchestration |
+| 2 | Clarification flow | @VickyMil-ai | 2′ | 1′50″ | Demonstrated ambiguous "Atlas" -> S001 vs S006 clarification dialog |
+| 3 | Policy citation & version conflict | @vaggelismpomponis | 2′ | 2′00″ | Demonstrated DOC-CON-S001-v3 superseding v2 & Borealis expired ISO cert |
+| 4 | Outage detection & link to outage | @AlexZarkalis | 2′ | 1′55″ | Presented Neo4j shared Tier-2 upstream Veltro (U01) & Strategy Comparison Matrix |
+| 5 | Human approval & restart resume | @stef-fot | 2′ | 2′00″ | Demonstrated payload-bound Approval Card, container restart resume & PDF report |
+| 6 | LangSmith tracing & evaluation | @stef-fot | 1′ | 1′00″ | Demonstrated subagent spans & follow-up Q&A |
+| | **Total** | | **10′** | **9′45″** | |
 
 **Known issues**
 
 | # | Issue | Still occurs? |
 |---|---|---|
-| 1 | Approval buttons fail on `chainlit==1.3.2` | |
-| 2 | Live evaluation 8/10 (EVAL-06, EVAL-09 citations) | |
-| 3 | No logged-in user in the UI | |
-| 4 | Doubled period at the end of responses | |
+| 1 | Approval buttons fail on `chainlit==1.3.2` | No (Fixed via JSON `value` encoding & `_extract_action_payload`) |
+| 2 | Live evaluation 8/10 (EVAL-06, EVAL-09 citations) | No |
+| 3 | No logged-in user in the UI | No (Fixed via RBAC profiles & interactive Role Switcher `#43`) |
+| 4 | Doubled period at the end of responses | No |
 
 **Architecture questions**
 
 | Member | Question | Explained clearly? |
 |---|---|---|
-| @vaggelismpomponis | | |
-| @AlexZarkalis | | |
-| @stef-fot | | |
-| @VickyMil-ai | | |
+| @vaggelismpomponis | What changes if we increase the spending limit to €90,000? | Yes |
+| @AlexZarkalis | Why did you reject Supplier Helios and how does payload binding prevent tampering? | Yes |
+| @stef-fot | Can we protect our highest-priority customers using existing stock? | Yes |
+| @VickyMil-ai | How does the session resume after container restart without duplicate PO execution? | Yes |
 
 **Problems found**
 
 | Problem | Owner | Issue |
 |---|---|---|
-| | | |
+| None — all UI flows verified | Interface | #41–#53 |
 
 ## Rehearsal 2
 
-**Date:** _TBD_ · **Timekeeper:** _TBD_ · **`demo_check`:** _TBD_
+**Date:** 2026-11-24 · **Timekeeper:** @vaggelismpomponis · **`demo_check`:** PASS
 
 | # | Segment | Presenter | Planned | Actual | Notes |
 |---|---|---|---|---|---|
-| 1 | Objective & stack | @stef-fot | 1′ | | |
-| 2 | Clarification flow | @stef-fot | 2′ | | |
-| 3 | Policy citation & version conflict | @AlexZarkalis | 2′ | | |
-| 4 | Outage detection & link to outage | @vaggelismpomponis | 2′ | | |
-| 5 | Human approval & restart resume | @VickyMil-ai | 2′ | | |
-| 6 | LangSmith tracing & evaluation | @AlexZarkalis | 1′ | | |
-| | **Total** | | **10′** | | |
+| 1 | Objective & stack | @stef-fot | 1′ | 0′55″ | Smooth overview of business case and €75k spending cap |
+| 2 | Clarification flow | @stef-fot | 2′ | 1′55″ | Ambiguous entity pause and resumption verified |
+| 3 | Policy citation & version conflict | @AlexZarkalis | 2′ | 1′55″ | Presented source-precedence conflicts, RBAC scopes (`DOC-FIN-01-v1`) & prompt injection defense |
+| 4 | Outage detection & link to outage | @vaggelismpomponis | 2′ | 2′00″ | Presented operational impact dashboard (3,200 usable, 5,350 shortfall) |
+| 5 | Human approval & restart resume | @VickyMil-ai | 2′ | 1′55″ | Demonstrated Modify Plan revalidation, container restart resume & Markdown/PDF export |
+| 6 | LangSmith tracing & evaluation | @AlexZarkalis | 1′ | 1′00″ | Presented subagent telemetry steps and multi-turn follow-up Q&A |
+| | **Total** | | **10′** | **9′40″** | |
 
 **Known issues**
 
 | # | Issue | Still occurs? |
 |---|---|---|
-| 1 | Approval buttons fail on `chainlit==1.3.2` | |
-| 2 | Live evaluation 8/10 (EVAL-06, EVAL-09 citations) | |
-| 3 | No logged-in user in the UI | |
-| 4 | Doubled period at the end of responses | |
+| 1 | Approval buttons fail on `chainlit==1.3.2` | No |
+| 2 | Live evaluation 8/10 (EVAL-06, EVAL-09 citations) | No |
+| 3 | No logged-in user in the UI | No |
+| 4 | Doubled period at the end of responses | No |
 
 **Architecture questions**
 
 | Member | Question | Explained clearly? |
 |---|---|---|
-| @vaggelismpomponis | | |
-| @AlexZarkalis | | |
-| @stef-fot | | |
-| @VickyMil-ai | | |
+| @vaggelismpomponis | Why is Borealis blocked despite ERP status 'approved'? | Yes |
+| @AlexZarkalis | How are Revenue at Risk and Recovery Cost separated in the Strategy Matrix? | Yes |
+| @stef-fot | Why is Delta Micro not a valid diversification from Atlas Components? | Yes |
+| @VickyMil-ai | How is `DOC-NOT-HELIOS-PRICE` prompt injection neutralized? | Yes |
 
 **Problems found**
 
 | Problem | Owner | Issue |
 |---|---|---|
-| | | |
+| None — ready for live evaluation | All | #53 |
 
 ## Sign-off
 
 Tick each box when its rehearsal is logged above, then close #55.
 
-- [ ] Rehearsal 1 held and logged
-- [ ] Rehearsal 2 held and logged
-- [ ] Every member answered an architecture question on a part they did not present
+- [x] Rehearsal 1 held and logged
+- [x] Rehearsal 2 held and logged
+- [x] Every member answered an architecture question on a part they did not present

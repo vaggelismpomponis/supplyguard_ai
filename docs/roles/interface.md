@@ -53,20 +53,20 @@
 
 ## Role checklist
 
-- [ ] Συμφωνημένα contracts UI ↔ Deep Agents
-- [ ] Chainlit RBAC authentication με 3 ρόλους (Procurement, Finance, Guest)
-- [ ] Scoped retrieval φίλτρα συνδεδεμένα με το ενεργό session
-- [ ] Live progress step telemetry ανά subagent
-- [ ] Clarification dialogs για ελλιπή ή ασαφή στοιχεία
-- [ ] Operational impact dashboard (διαθέσιμο vs δεσμευμένο/καραντίνα, ακάλυπτη ζήτηση)
-- [ ] Strategy Comparison Matrix (διαχωρισμός Recovery Cost vs Revenue at Risk)
-- [ ] Strict Approval Card με ακριβές payload και προστασία διπλού κλικ
-- [ ] Restart resilience: απρόσκοπτο resume της αναμονής έγκρισης μετά από restart
-- [ ] Post-approval receipt και εξαγωγή Incident Report
-- [ ] Multi-turn follow-up συνομιλία από την αποθηκευμένη μνήμη της υπόθεσης
-- [ ] Συμμετοχή στις πρόβες του live demo (≥2)
-- [ ] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
-- [ ] Μπορώ να εξηγήσω ολόκληρη τη ροή του UI στο demo
+- [x] Συμφωνημένα contracts UI ↔ Deep Agents
+- [x] Chainlit RBAC authentication με 3 ρόλους (Procurement, Finance, Guest)
+- [x] Scoped retrieval φίλτρα συνδεδεμένα με το ενεργό session
+- [x] Live progress step telemetry ανά subagent
+- [x] Clarification dialogs για ελλιπή ή ασαφή στοιχεία
+- [x] Operational impact dashboard (διαθέσιμο vs δεσμευμένο/καραντίνα, ακάλυπτη ζήτηση)
+- [x] Strategy Comparison Matrix (διαχωρισμός Recovery Cost vs Revenue at Risk)
+- [x] Strict Approval Card με ακριβές payload και προστασία διπλού κλικ
+- [x] Restart resilience: απρόσκοπτο resume της αναμονής έγκρισης μετά από restart
+- [x] Post-approval receipt και εξαγωγή Incident Report
+- [x] Multi-turn follow-up συνομιλία από την αποθηκευμένη μνήμη της υπόθεσης
+- [x] Συμμετοχή στις πρόβες του live demo (≥2)
+- [x] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
+- [x] Μπορώ να εξηγήσω ολόκληρη τη ροή του UI στο demo
 
 ## Backup
 Ορίζεται στο `CONTRIBUTING_LOG.md`. Προτείνεται: Quality.
