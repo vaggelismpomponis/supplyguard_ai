@@ -1,33 +1,34 @@
-# Architecture Contracts & Day 1 Alignment Specification
+# Architecture Contracts & Domain Specification – SupplyGuard AI
 
-**Project:** HelpDesk Lite  
-**Scope:** Architecture Contracts, Pydantic Schemas, Tool Signatures, Action Lifecycle  
-**Target Date:** 2026-11-16 (Day 1 Kick-off)  
-**Status:** Agreed & Decided (All 5 Roles Aligned)  
-**Code Reference:** [`src/agent/schemas.py`](../src/agent/schemas.py), [`src/agent/state.py`](../src/agent/state.py), [`src/agent/tools.py`](../src/agent/tools.py)
+**Project:** SupplyGuard AI (Agentic Supply Chain Disruption and Recovery Platform)  
+**Target:** Code.Hub × PwC Agentic AI Bootcamp Capstone Project  
+**Status:** Agreed & Frozen (All 5 Roles Aligned)  
+**Core Orchestration Engine:** **Deep Agents (`deepagents`)**  
+**Code Reference:** `src/agent/schemas.py`, `src/agent/deep_agent.py`, `src/knowledge/tools.py`
 
 ---
 
 ## 1. Executive Summary & Contracts-First Strategy
 
-To enable 5 team members to develop simultaneously across different branches without waiting on each other and with **zero merge conflicts**, all core interfaces, data structures, and tool signatures are frozen as immutable contracts on Day 1.
+To enable 5 team members to develop simultaneously across different branches without waiting on each other and with **zero merge conflicts**, all core domain interfaces, Pydantic data schemas, tool signatures, and MCP integration boundaries are frozen on Day 1.
 
 ```text
-+---------------------------------------------------------------------------------+
-|                                 Day 1 Contracts                                 |
-|                                                                                 |
-|  AgentState (Pydantic)  <--->  ExtractedFields  <--->  PolicyResult/GraphResult |
-|           |                                                      |              |
-|           +-----------------> ActionProposal (5 Actions) <-------+              |
-+---------------------------------------------------------------------------------+
-       |                              |                            |
-       v                              v                            v
-  [Interface]                    [Workflow]                   [Knowledge]
- Chainlit UI & Cards          LangGraph Nodes/Edges       Ingestion & Seeding
-  (Mock Graph OK)                (Mock Tools OK)           (Mock Returns OK)
++-------------------------------------------------------------------------------------------------+
+|                                    SupplyGuard AI Contracts                                    |
+|                                                                                                 |
+|   DisruptionFact  <--->  OperationalImpact  <--->  SupplierGraphResult / DocumentResult         |
+|         |                        |                                      |                       |
+|         v                        v                                      v                       |
+|   RecoveryOption  --------------->  ApprovalPayload (Strict Binding)  <--+                      |
++-------------------------------------------------------------------------------------------------+
+          |                                        |                               |
+          v                                        v                               v
+    [Interface]                               [Workflow]                      [Knowledge]
+ Chainlit UI & RBAC                 Deep Agents & Subagents               Ingestion & Seeding
+(Procurement/Finance)               (Planning & Scratchpad)             (Postgres, Neo4j, Chroma)
 ```
 
-Each role builds against these contracts using mocks until integration in Phase 4.
+Each role builds against these contracts using mocks until the Phase 3/4 integration milestones.
 
 ---
 
@@ -35,17 +36,19 @@ Each role builds against these contracts using mocks until integration in Phase 
 
 ### 2.1 Action Types (`ActionType`)
 
-The system supports exactly 5 mutually exclusive action types:
+The system compares recovery options and executes approved state-changing actions in the simulated procurement system:
 
 ```python
 from enum import Enum
 
 class ActionType(str, Enum):
-    ANSWER_POLICY = "answer_policy"         # Answer user inquiry based on cited policy
-    LINK_OUTAGE = "link_outage"             # Link incident to an active infrastructure outage
-    RESET_CREDENTIALS = "reset_credentials" # Trigger account/password reset (State-Changing)
-    OPEN_TICKET = "open_ticket"             # Create IT support ticket in Postgres (State-Changing)
-    ESCALATE = "escalate"                   # Escalate to Tier-2 human engineer (State-Changing)
+    TRANSFER_INVENTORY = "transfer_inventory"         # Move usable stock between internal factories
+    EXPEDITE_ORDER = "expedite_order"                 # Expedite existing purchase order delivery
+    PURCHASE_ALTERNATIVE = "purchase_alternative"     # Create purchase order with qualified alternate supplier
+    REALLOCATE_COMPONENTS = "reallocate_components"   # Prioritize component allocations to tier-1 customers
+    RESCHEDULE_PRODUCTION = "reschedule_production"   # Shift production runs across the 12-week schedule
+    ANSWER_POLICY = "answer_policy"                   # Informative query response from documentary evidence
+    REQUEST_CLARIFICATION = "request_clarification"   # Pause to prompt user for ambiguous/missing facts
 ```
 
 ### 2.2 Action Lifecycle Status (`ActionStatus`)
@@ -54,195 +57,211 @@ State-changing actions follow a strict state machine to guarantee human-in-the-l
 
 ```python
 class ActionStatus(str, Enum):
-    PENDING = "pending"       # Action proposed, awaiting human approval
-    APPROVED = "approved"     # Approved by human operator
-    EXECUTED = "executed"     # Successfully executed; cannot be re-executed
-    REJECTED = "rejected"     # Rejected by human operator; abort or alternative action
+    PENDING = "pending"       # Strategy formulated, awaiting human approval
+    APPROVED = "approved"     # Explicitly approved by authorized operator
+    EXECUTED = "executed"     # Successfully executed in simulated procurement; cannot be re-executed
+    REJECTED = "rejected"     # Rejected by operator; alternative plan required
 ```
 
-### 2.3 Extracted User Fields (`ExtractedFields`)
+### 2.3 User Access Scopes (`AccessScope`)
 
-Extracted from incoming free-form user IT support requests:
+Chainlit authentication enforces role-based access control (RBAC):
 
 ```python
-from typing import Optional
+class AccessScope(str, Enum):
+    PROCUREMENT = "procurement"  # Procurement managers: standard operational & contract docs
+    FINANCE = "finance"          # Finance controllers: margin, price & penalty-confidential docs
+    PUBLIC = "public"            # Read-only guests: public announcements and high-level case status
+```
+
+### 2.4 Structured Disruption Facts (`DisruptionFact`)
+
+Extracted from incoming free-form user incident messages:
+
+```python
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
-class ExtractedFields(BaseModel):
-    employee: Optional[str] = Field(default=None, description="Name or identifier of the employee")
-    application: Optional[str] = Field(default=None, description="Name of the affected application or system")
-    symptom: Optional[str] = Field(default=None, description="Observed symptom or error description")
-    urgency: Optional[str] = Field(default=None, description="Urgency level (e.g. low, medium, high)")
-    office: Optional[str] = Field(default=None, description="Office the employee works from (e.g. Athens)")
-    device: Optional[str] = Field(default=None, description="Device the employee uses (e.g. MacBook Pro)")
-
-    def missing_fields(self) -> List[str]:
-        """Mandatory triage fields that are missing."""
-        required = ("employee", "symptom", "office", "device")
-        return [name for name in required if not getattr(self, name)]
+class DisruptionFact(BaseModel):
+    supplier_id: Optional[str] = Field(default=None, description="Identifier of the supplier (e.g. S001)")
+    supplier_name: Optional[str] = Field(default=None, description="Canonical name of the supplier")
+    component_id: Optional[str] = Field(default=None, description="Disrupted component (e.g. MC-17)")
+    delay_days: Optional[int] = Field(default=None, description="Announced delay duration in days (e.g. 12)")
+    spending_cap: float = Field(default=75000.0, description="Spending limit in EUR (€75,000 reference)")
+    is_ambiguous: bool = Field(default=False, description="True if supplier name matches multiple entities")
+    ambiguity_candidates: List[str] = Field(default_factory=list, description="Potential matches if ambiguous")
 
     def is_complete(self) -> bool:
-        """Returns True only when all mandatory triage fields are present."""
-        return len(self.missing_fields()) == 0
+        """Mandatory facts needed before starting investigation."""
+        return bool(self.supplier_id and self.component_id and self.delay_days and not self.is_ambiguous)
 ```
 
-*Contract Rule:* If `is_complete()` is `False`, the agent **must not guess**. It must transition to `ask_clarification` to prompt the user.
+*Contract Rule:* If `is_ambiguous` is `True` (e.g. user typed only "Atlas") or mandatory fields are missing, the agent **must not guess**. It must trigger `REQUEST_CLARIFICATION`.
 
-*Contract Rule (Office & Device):* For incident requests, `office` and `device` are mandatory and come from the user's
-message only, never from the employee record, because POL-001 v2 requires them to be confirmed before acting.
-`application` is optional: it drives the outage check when named, but requests such as a new software license do not
-concern a known application. Pure policy questions skip the triage check.
+### 2.5 Operational Impact Analysis (`OperationalImpact`)
 
-### 2.4 Policy Search Contract (`PolicyResult`)
-
-Returned by the vector store (`PostgreSQL + pgvector`):
+Synthesized from inventory tables, BOMs, and factory production commitments:
 
 ```python
-class PolicyResult(BaseModel):
-    text: str = Field(description="Content chunk of the retrieved policy")
-    doc_id: str = Field(description="Unique document ID (e.g. POL-SEC-004)")
-    effective_date: str = Field(description="ISO 8601 date (YYYY-MM-DD) of policy version")
-    source: str = Field(description="Filename or canonical title")
+class OperationalImpact(BaseModel):
+    component_id: str = Field(description="Component identifier")
+    total_physical_units: int = Field(description="Total stock across all warehouses (e.g. 5,200)")
+    usable_units: int = Field(description="Physical minus reserved and quarantined (e.g. 3,200)")
+    reserved_units: int = Field(description="Units allocated to locked assembly batches (e.g. 1,400)")
+    quarantined_units: int = Field(description="Units held in QA quarantine (e.g. 600)")
+    affected_factories: List[str] = Field(description="Factories running out first (e.g. ['Katowice', 'Lyon'])")
+    affected_products_count: int = Field(description="Number of product BOMs containing component (e.g. 6)")
+    affected_customer_orders_count: int = Field(description="Open customer orders at risk (e.g. 77)")
+    uncovered_demand_units: int = Field(description="Demand deficit during delay window (e.g. 5,350)")
 ```
 
-*Contract Rule (Effective Date Precedence):* When documents share the same `doc_id` with overlapping or conflicting rules, the record with the most recent `effective_date` **strictly wins**. Citations in final answers must cite `doc_id` and `effective_date`.
+### 2.6 Recovery Strategy Comparison (`RecoveryOption`)
 
-### 2.5 Infrastructure Graph Contract (`GraphResult`)
-
-Returned by the graph database (`Neo4j`):
+Calculated deterministically by the Strategy Optimizer Subagent:
 
 ```python
-from typing import List
-
-class GraphResult(BaseModel):
-    application: str = Field(description="Queried application name")
-    dependencies: List[str] = Field(default_factory=list, description="Dependent backend services")
-    active_outages: List[str] = Field(default_factory=list, description="Services with active outages")
-
-    @property
-    def has_active_outage(self) -> bool:
-        return len(self.active_outages) > 0
+class RecoveryOption(BaseModel):
+    strategy_id: str = Field(description="Unique strategy key (e.g. STRAT-A)")
+    action_type: ActionType = Field(description="Type of recovery action")
+    supplier_id: Optional[str] = Field(default=None, description="Target supplier if purchase/expedite")
+    supplier_name: Optional[str] = Field(default=None, description="Target supplier name")
+    quantity: int = Field(description="Units provided or reallocated")
+    lead_time_days: int = Field(description="Estimated delivery / execution lead time")
+    recovery_cost: float = Field(description="Deterministic cost to execute (freight, price difference)")
+    revenue_at_risk: float = Field(description="Protected or remaining revenue exposure")
+    is_viable: bool = Field(description="Whether the strategy satisfies operational & policy constraints")
+    rejection_reason: Optional[str] = Field(default=None, description="Detailed explanation if rejected")
 ```
 
-*Contract Rule (Outage Precedence):* If `has_active_outage` is `True` for any dependency of the target application, `decide_action` must propose `ActionType.LINK_OUTAGE`. It must **never** propose `ActionType.RESET_CREDENTIALS` when a dependency outage explains the symptom.
+### 2.7 Payload-Bound Human Approval Contract (`ApprovalPayload`)
 
-### 2.6 Action Proposal (`ActionProposal`)
-
-Encapsulates the action awaiting execution or human approval:
+Encapsulates the immutable payload presented on the Chainlit Approval Card:
 
 ```python
-from typing import Any, Dict
+from typing import Dict, Any
 
-class ActionProposal(BaseModel):
-    action_id: str = Field(description="Unique UUID for idempotency tracking")
-    action_type: ActionType = Field(description="One of the 5 action types")
-    parameters: Dict[str, Any] = Field(default_factory=dict, description="Action-specific execution parameters")
-    status: ActionStatus = Field(default=ActionStatus.PENDING, description="Current execution lifecycle status")
-    requires_approval: bool = Field(default=False, description="True for state-changing actions")
-    rationale: str = Field(default="", description="Reasoning for action selection")
+class ApprovalPayload(BaseModel):
+    action_id: str = Field(description="Unique UUID for strict idempotency tracking")
+    case_id: str = Field(description="Unique incident case ID")
+    action_type: ActionType = Field(description="Approved action type")
+    target_supplier_id: Optional[str] = Field(default=None, description="Supplier code (e.g. S002)")
+    target_supplier_name: Optional[str] = Field(default=None, description="Supplier name")
+    component_id: str = Field(description="Component code (e.g. MC-17)")
+    quantity: int = Field(description="Exact purchase or transfer quantity")
+    unit_price: float = Field(description="Contracted unit price in EUR")
+    total_cost: float = Field(description="Total expenditure (must be <= spending_cap)")
+    spending_cap: float = Field(default=75000.0, description="Authorized budget cap")
+    supporting_evidence: List[Dict[str, str]] = Field(default_factory=list, description="Citations and sources")
+    status: ActionStatus = Field(default=ActionStatus.PENDING, description="Current approval status")
 ```
+
+*Contract Rule (Payload Binding):* Human approval is strictly bound to this exact payload. If the user clicks "Modify Plan" or alters any parameter (quantity, supplier, price), the state is invalidated and a fresh validation and approval cycle is required. No Purchase Order may exist prior to approval.
 
 ---
 
-## 3. Persistent Agent State (`AgentState`)
+## 3. Deep Agents Orchestration Model (`create_deep_agent`)
 
-Managed by LangGraph with `PostgresSaver`:
+Orchestration is handled by **LangChain Deep Agents**, replacing low-level manual LangGraph graphs.
 
-```python
-class AgentState(BaseModel):
-    thread_id: str = Field(default="", description="Unique session ID linked 1:1 with Chainlit session")
-    messages: List[Dict[str, Any]] = Field(default_factory=list, description="Conversation history messages")
-    extracted_fields: Optional[ExtractedFields] = Field(default=None, description="Extracted entity fields")
-    needs_clarification: bool = Field(default=False, description="Flag indicating missing essential fields")
-    clarification_question: Optional[str] = Field(default=None, description="Clarification question to user")
-    policy_result: Optional[PolicyResult] = Field(default=None, description="Retrieved policy document chunk")
-    graph_result: Optional[GraphResult] = Field(default=None, description="Dependency and outage status")
-    action_proposal: Optional[ActionProposal] = Field(default=None, description="Proposed action & status")
-    final_response: Optional[str] = Field(default=None, description="Final assistant message with citations")
+```text
++---------------------------------------------------------------------------------+
+|                       Root Deep Agent (create_deep_agent)                      |
+|                                                                                 |
+|   • Planning Middleware: Dynamic task breakdown and execution loop              |
+|   • Virtual Scratchpad: External memory for BOM, inventory, and notes           |
+|   • Human Approval Interrupt Hook: Pauses before executing procurement          |
++---------------------------------------------------------------------------------+
+          |                     |                      |                     |
+          v                     v                      v                     v
+   [Triage Subagent]   [Impact Subagent]      [Contract Subagent]   [Graph Subagent]
+   Extract S001, MC-17 Usable vs Quarantined  Check ISO & certs     Neo4j Cypher tiers
+   Clarify if needed   Katowice/Lyon deficit  Flag date conflicts   Detect shared fab
+          |                     |                      |                     |
+          +---------------------+----------------------+---------------------+
+                                          |
+                                          v
+                         [Strategy Optimizer Subagent]
+                         Formulates >=3 recovery options
+                         Calls Deterministic Calculators (No LLM math)
+                                          |
+                                          v
+                         [Adversarial Challenger Subagent]
+                         Critiques assumptions, checks caps
+                         Neutralizes planted prompt injections
+                                          |
+                                          v
+                         [Human-in-the-Loop Interrupt]
+                         Approval Card in Chainlit UI
+                                          |
+                                (Upon Approval)
+                                          v
+                         [Simulated Procurement MCP Tool]
+                         Executes PO; Idempotent via Postgres
 ```
 
-### Session Mapping & Restart Safety
-- `thread_id` must match the Chainlit session identifier.
-- When an interrupt occurs (e.g. `ask_clarification` or `human_approval`), the complete state is checkpointed in PostgreSQL.
-- If the application container restarts, reloading the Chainlit session resumes execution seamlessly from the checkpoint.
-- Idempotency guard: Before `execute_action` runs, it checks whether `action_id` in Postgres is already `ActionStatus.EXECUTED`. If yes, it skips re-execution to prevent duplicate account resets or tickets.
+### Specialist Subagents Table
 
-### 3.1 PostgreSQL Database Schema Contract (`docker/postgres/init.sql`)
-
-The database is initialized automatically with PostgreSQL 16 and `pgvector`:
-- **`tickets`**: Persistent records for IT support tickets created via `ActionType.OPEN_TICKET`.
-- **`audit_log`**: Complete audit trail and idempotency guard tracking `action_id`, `thread_id`, `action_type`, status (`pending`, `approved`, `executed`, `rejected`), parameters, rationale, and execution timestamps.
-- **`checkpoints` / `checkpoint_blobs` / `checkpoint_writes` / `checkpoint_migrations`**: Standard schema for LangGraph's `PostgresSaver` enabling state preservation and interruption recovery across application restarts.
-- **`policy_chunks`**: Document embeddings (`vector(1536)`) with metadata (`doc_id`, `effective_date`) and HNSW cosine index for Knowledge retrieval.
-
-#### 3.1.1 Schema Upgrade & Migration for Existing Volumes (`docker/postgres/migrations/001_upgrade_schema.sql`)
-
-When PostgreSQL is started with an existing Docker volume (`postgres_data`), PostgreSQL skips `/docker-entrypoint-initdb.d/init.sql`. In addition, running `init.sql` against an existing database does not add newly added columns because of `CREATE TABLE IF NOT EXISTS`.
-
-To upgrade an existing volume safely and non-destructively:
-- **Migration script:** [`docker/postgres/migrations/001_upgrade_schema.sql`](../docker/postgres/migrations/001_upgrade_schema.sql)
-- **Safe column additions:** Uses `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ...` for `symptom`, `urgency`, and `details`.
-- **Data backfilling:** Automatically backfills existing tickets with placeholder/default values (`symptom = 'Unspecified symptom (migrated ticket)'`, `urgency = 'medium'`, `details = '{}'`) before enforcing `symptom NOT NULL` and `urgency NOT NULL`.
-- **Idempotency & Checkpointer tables:** Creates `audit_log`, `checkpoint_migrations`, `checkpoints`, `checkpoint_blobs`, `checkpoint_writes` and all required indexes.
-
-**How to apply to an active or existing container volume:**
-```bash
-# Option 1: Execute via stdin
-docker compose exec -T postgres psql -U postgres -d helpdesk < docker/postgres/migrations/001_upgrade_schema.sql
-
-# Option 2: Execute from within container mount
-docker compose exec postgres psql -U postgres -d helpdesk -f /docker/migrations/001_upgrade_schema.sql
-```
+| Subagent Name | Role Description | Bound Tools |
+|---|---|---|
+| `triage_subagent` | Extracts entities, delay, and budget cap; detects ambiguity | Entity dictionary lookups, parser tools |
+| `impact_subagent` | Evaluates physical vs usable inventory, BOMs, and factory lines | `query_inventory`, `query_bom`, `query_production_schedules` |
+| `contract_subagent` | Audits supplier qualifications, ISO validity, and delivery terms | `retrieve_documents`, `verify_certifications` |
+| `graph_subagent` | Traverses Neo4j multi-tier supplier and customer networks | `query_supplier_graph`, `check_tier2_dependencies` |
+| `optimizer_subagent` | Develops recovery strategies and calculates costs deterministically | `calculate_recovery_costs`, `calculate_revenue_at_risk` |
+| `challenger_subagent`| Critiques plan, checks budget limits, neutralizes malicious prompts | `verify_budget_limits`, `scan_prompt_injections` |
 
 ---
 
-## 4. Tool Signatures
+## 4. Tool Signatures & Interfaces
 
-Tools invoked by LangGraph nodes:
+All tools invoked by the Deep Agents harness:
 
 ```python
-def retrieve_policy(query: str, application: Optional[str] = None) -> PolicyResult:
-    """Retrieve policy document chunk with semantic search and latest effective date resolution.
-    
-    Args:
-        query: Search query string (symptom or policy topic).
-        application: Optional application name filter.
-        
-    Returns:
-        PolicyResult with chunk text, doc_id, effective_date, and source.
-    """
+def query_inventory(component_id: str, factory_id: Optional[str] = None) -> OperationalImpact:
+    """Query inventory records across all warehouses, splitting physical, reserved, and quarantined units."""
     ...
 
-def check_graph(application: str) -> GraphResult:
-    """Check Neo4j for service dependencies and active outages for a given application.
-    
-    Args:
-        application: Name of the application to inspect.
-        
-    Returns:
-        GraphResult with application name, dependencies, and active outages.
-    """
+def query_bom(component_id: str) -> List[Dict[str, Any]]:
+    """Inspect product bills of materials containing the component, affected factory lines, and customer orders."""
+    ...
+
+def query_supplier_graph(component_id: str, max_depth: int = 2) -> Dict[str, Any]:
+    """Execute Cypher on Neo4j to retrieve suppliers, capacities, lead times, and upstream tier-2 manufacturers."""
+    ...
+
+def retrieve_documents(query: str, access_scope: AccessScope = AccessScope.PROCUREMENT, top_k: int = 5) -> List[Dict[str, Any]]:
+    """Retrieve relevant contract and notice chunks enforcing provenance and RBAC access filtering."""
+    ...
+
+def calculate_recovery_costs(
+    strategy_type: ActionType,
+    units: int,
+    unit_price: float,
+    freight_cost: float,
+    penalty_rebate: float = 0.0
+) -> Dict[str, float]:
+    """Deterministic business tool calculating recovery cost and revenue at risk. LLM math is forbidden."""
+    ...
+
+def execute_procurement_po(payload: ApprovalPayload) -> Dict[str, Any]:
+    """Execute purchase order in the simulated procurement system via MCP with strict idempotency."""
     ...
 ```
 
 ---
 
-## 5. Decision Precedence Matrix
+## 5. Decision & Rejection Precedence Matrix
 
-| Condition | Proposed Action | Requires Approval | Next Node |
+The system must handle the deliberate complications in the reference scenario:
+
+| Candidate Option | Finding / Complication | Decision | Reason / Evidence |
 |---|---|---|---|
-| `not extracted_fields.is_complete()` | Clarification prompt | No | `ask_clarification` (Interrupt) |
-| `graph_result.has_active_outage == True` | `ActionType.LINK_OUTAGE` | No | `final_response` |
-| Known policy matches query | `ActionType.ANSWER_POLICY` | No | `final_response` |
-| Policy mandates password/credential reset | `ActionType.RESET_CREDENTIALS` | **Yes** | `human_approval` (Interrupt) |
-| Standard issue requiring investigation | `ActionType.OPEN_TICKET` | **Yes** | `human_approval` (Interrupt) |
-| Critical incident or VIP employee | `ActionType.ESCALATE` | **Yes** | `human_approval` (Interrupt) |
-
-*Citation Rule:* Every action cites a policy. `ANSWER_POLICY` cites the semantic match. The other actions cite the
-policy whose topic the request names explicitly (for example "reset" → POL-001, "cloud storage" → POL-012), otherwise
-the policy that governs the action: `RESET_CREDENTIALS` → POL-001, `LINK_OUTAGE` → POL-003, `OPEN_TICKET` → POL-004,
-`ESCALATE` → POL-005. For these actions the nearest semantic match is not cited, because with
-real embeddings an unrelated policy can rank first.
+| **Supplier Helios (S003)** | Lead time is 18 days (delay is 12 days) | **REJECTED** | Too slow to prevent stockout at Katowice factory. |
+| **Supplier Borealis (S002)** | ISO 9001 / quality certification expired | **REJECTED** | Commercially viable, but operationally unacceptable per quality policy. |
+| **Supplier Delta (S004)** | Shares upstream silicon fab with Atlas (S001) | **REJECTED** | Tier-2 concentration risk; subject to the same upstream bottleneck. |
+| **Internal Stock Transfer** | 3,200 usable units available in warehouse B | **ACCEPTED (Partial)** | Low cost; covers immediate Katowice assembly line startup. |
+| **Supplier Epsilon (S005)** | Fast lead time (4 days), certified, independent | **ACCEPTED (Primary)** | Complies with €75,000 spend cap (~€30,000 total); protects VIP customers. |
+| **Planted Malicious Document** | Retrieved document contains prompt injection | **NEUTRALIZED** | Challenger subagent reports and isolates content; agent ignores injection. |
 
 ---
 
@@ -250,8 +269,8 @@ real embeddings an unrelated policy can rank first.
 
 | Role | Representative | Focus Area | Status | Date |
 |---|---|---|---|---|
-| **Platform** | @vaggelismpomponis | Schema persistence & Docker/DB alignment | **Signed-off** | 2026-11-16 |
-| **Workflow** | All members | State schema, nodes, edges & interrupts | **Signed-off** | 2026-11-16 |
-| **Interface** | @AlexZarkalis | UI payload, approval cards & `thread_id` | **Signed-off** | 2026-11-16 |
-| **Knowledge** | @stef-fot | `PolicyResult`, `GraphResult` tool contracts | **Signed-off** | 2026-11-16 |
-| **Quality** | @VickyMil-ai | Evaluator contracts & 10 test scenarios | **Signed-off** | 2026-11-16 |
+| **Platform** | @vaggelismpomponis | Docker, ChromaDB, MCP boundaries & Compose seed | **Signed-off** | 2026-11-24 |
+| **Workflow** | @VickyMil-ai | Deep Agents harness, Subagents, Planning & Calculators | **Signed-off** | 2026-11-24 |
+| **Interface** | @AlexZarkalis | Chainlit RBAC, Telemetry, Strategy Matrix & Approval Card | **Signed-off** | 2026-11-24 |
+| **Knowledge** | @stef-fot | Data schema, Neo4j multi-tier graph, pgvector & ChromaDB | **Signed-off** | 2026-11-24 |
+| **Quality** | @VickyMil-ai | 105 eval cases, retrieval benchmark, red-team & rehearsals | **Signed-off** | 2026-11-24 |
