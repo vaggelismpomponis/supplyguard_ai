@@ -1,10 +1,12 @@
 services:
-  # PostgreSQL with pgvector extension enabled
+  # ------------------------------------------------------------------------------
+  # 1. PostgreSQL with pgvector extension enabled
+  # ------------------------------------------------------------------------------
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: helpdesk_postgres
+    container_name: supplyguard_postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
+      POSTGRES_DB: ${POSTGRES_DB:-supplyguard}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_password}
     ports:
@@ -14,17 +16,20 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - ./docker/postgres/migrations:/docker/migrations:ro
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-helpdesk}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-supplyguard}" ]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
+      - supplyguard_network
       - helpdesk_network
 
-  # Neo4j Graph Database
+  # ------------------------------------------------------------------------------
+  # 2. Neo4j Graph Database 5.26+ (Multi-tier Supply Chain Graph)
+  # ------------------------------------------------------------------------------
   neo4j:
     image: neo4j:5.26.0
-    container_name: helpdesk_neo4j
+    container_name: supplyguard_neo4j
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_secure_password}
       NEO4J_server_bolt_advertised__address: ":${NEO4J_BOLT_PORT:-7687}"
@@ -40,14 +45,63 @@ services:
       retries: 12
       start_period: 30s
     networks:
+      - supplyguard_network
       - helpdesk_network
 
-  # Automated Knowledge Ingestion & Seeding Service (Postgres pgvector + Neo4j)
+  # ------------------------------------------------------------------------------
+  # 3. ChromaDB Vector Store (Document Corpus & Benchmark Store)
+  # ------------------------------------------------------------------------------
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    container_name: supplyguard_chromadb
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSISTENCE_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=FALSE
+    ports:
+      - "127.0.0.1:${CHROMA_PORT:-8001}:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - supplyguard_network
+      - helpdesk_network
+
+  # ------------------------------------------------------------------------------
+  # 4. External Risk & Disruption Feed Service (Mock HTTP / MCP Feed)
+  # ------------------------------------------------------------------------------
+  external-risk:
+    image: python:3.11-slim
+    container_name: supplyguard_external_risk
+    command: [ "python", "src/support-data/external_service/external_info_service.py", "8080" ]
+    working_dir: /app
+    ports:
+      - "127.0.0.1:${EXTERNAL_RISK_PORT:-8080}:8080"
+    volumes:
+      - ./src/support-data/external_service:/app/src/support-data/external_service:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8080/alerts\")' || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - supplyguard_network
+      - helpdesk_network
+
+  # ------------------------------------------------------------------------------
+  # 5. Automated Compose Ingestion Service (seed) for Synthetic Data Package
+  # ------------------------------------------------------------------------------
   seed:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: helpdesk_seed
+    container_name: supplyguard_seed
     command: [ "python", "scripts/seed.py" ]
     restart: "no"
     env_file:
@@ -56,26 +110,31 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB:-helpdesk}
+      - POSTGRES_DB=${POSTGRES_DB:-supplyguard}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres_secure_password}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-helpdesk}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-supplyguard}
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=${NEO4J_USER:-neo4j}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-neo4j_secure_password}
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - EXTERNAL_RISK_URL=http://external-risk:8080
       - PYTHONPATH=/app
     depends_on:
       postgres:
         condition: service_healthy
       neo4j:
         condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      external-risk:
+        condition: service_healthy
     volumes:
       - ./src:/app/src:ro
-      - ./src/data:/app/data:ro
       - ./scripts:/app/scripts:ro
       - ./tests:/app/tests:ro
       - ./docker:/app/docker:ro
-      - ./eval:/app/eval:ro
       - ./.env.example:/app/.env.example:ro
       - ./.gitattributes:/app/.gitattributes:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
@@ -83,14 +142,17 @@ services:
       - ./README.md:/app/README.md:ro
       - ./requirements.txt:/app/requirements.txt:ro
     networks:
+      - supplyguard_network
       - helpdesk_network
 
-  # HelpDesk Lite Application (Chainlit + LangGraph)
+  # ------------------------------------------------------------------------------
+  # 6. SupplyGuard AI Application (Chainlit + Deep Agents Runtime)
+  # ------------------------------------------------------------------------------
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: helpdesk_app
+    container_name: supplyguard_app
     restart: unless-stopped
     stop_grace_period: 15s
     ports:
@@ -101,13 +163,16 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB:-helpdesk}
+      - POSTGRES_DB=${POSTGRES_DB:-supplyguard}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres_secure_password}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-helpdesk}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-supplyguard}
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=${NEO4J_USER:-neo4j}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-neo4j_secure_password}
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - EXTERNAL_RISK_URL=http://external-risk:8080
       - PYTHONPATH=/app
       - APP_PORT=${APP_PORT:-8000}
     depends_on:
@@ -115,16 +180,16 @@ services:
         condition: service_healthy
       neo4j:
         condition: service_healthy
+      chromadb:
+        condition: service_healthy
       seed:
         condition: service_completed_successfully
     volumes:
       - ./chainlit.md:/app/chainlit.md:ro
       - ./src:/app/src:ro
-      - ./src/data:/app/data:ro
       - ./scripts:/app/scripts:ro
       - ./tests:/app/tests:ro
       - ./docker:/app/docker:ro
-      - ./eval:/app/eval:ro
       - ./.env.example:/app/.env.example:ro
       - ./.gitattributes:/app/.gitattributes:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
@@ -138,9 +203,13 @@ services:
       retries: 5
       start_period: 15s
     networks:
+      - supplyguard_network
       - helpdesk_network
 
 networks:
+  supplyguard_network:
+    name: supplyguard_network
+    driver: bridge
   helpdesk_network:
     name: helpdesk_network
     driver: bridge
@@ -148,4 +217,4 @@ networks:
 volumes:
   postgres_data:
   neo4j_data:
-
+  chroma_data:
