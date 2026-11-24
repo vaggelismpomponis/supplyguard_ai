@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS supplier_components (
     lead_time_days INTEGER NOT NULL,
     monthly_capacity_units INTEGER NOT NULL,
     moq_units INTEGER NOT NULL,
-    approved_source BOOLEAN DEFAULT TRUE,
+    approved_source VARCHAR(16) CHECK (approved_source IN ('yes', 'no', 'alternative')),  -- 'alternative' marks the MC-17 alternates
     PRIMARY KEY (supplier_id, component_id)
 );
 
@@ -255,7 +255,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     po_id VARCHAR(64) PRIMARY KEY,
     supplier_id VARCHAR(32) REFERENCES suppliers(supplier_id),
     supplier_name_as_entered VARCHAR(255),
-    component_id VARCHAR(64) REFERENCES components(component_id),
+    component_id VARCHAR(64),  -- raw ERP value, no FK: may be blank or non-canonical (e.g. MC096), see data_quality_manifest.csv
     qty INTEGER NOT NULL,
     unit_price_eur NUMERIC(12, 4) NOT NULL,
     order_date DATE NOT NULL,
@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS shipment_updates (
     shipment_event_id VARCHAR(64) PRIMARY KEY,
     po_id VARCHAR(64) REFERENCES purchase_orders(po_id),
     supplier_id VARCHAR(32) REFERENCES suppliers(supplier_id),
-    component_id VARCHAR(64) REFERENCES components(component_id),
+    component_id VARCHAR(64),  -- raw carrier value, no FK (same planted id problems as purchase_orders)
     status VARCHAR(32) NOT NULL,
     event_date DATE NOT NULL,
     eta DATE,
