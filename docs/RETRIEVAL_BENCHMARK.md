@@ -3,9 +3,8 @@
 **Owner:** Quality · **Issue:** #87 · **Collaboration:** Knowledge ✋
 **Code:** [`eval/retrieval_benchmark.py`](../eval/retrieval_benchmark.py) · **Queries:** [`eval/retrieval_queries.json`](../eval/retrieval_queries.json)
 
-> **Status (2026-11-24):** harness, ground truth and metrics are done and tested. The offline run
-> below validates them. The live comparison needs the seeded stack (`docker compose up`); fill in
-> [Live results](#live-results).
+> **Status (2026-11-24):** harness, ground truth, metrics, offline validation, and live benchmark
+> run inside the seeded Docker Compose stack are complete. See [Live results](#live-results).
 
 ## Question
 
@@ -84,26 +83,24 @@ What it already tells us:
 
 ## Live results
 
-_Pending: run on the seeded stack._
+Executed inside `supplyguard_app` (`python -m eval.retrieval_benchmark --live -v --out /tmp/benchmark.json`):
 
 | retriever | recall@1 | recall@3 | recall@5 | precision@1 | precision@3 | precision@5 | mrr | p50 ms | p95 ms |
 |---|---|---|---|---|---|---|---|---|---|
-| pgvector | | | | | | | | | |
-| chroma | | | | | | | | | |
-| hybrid | | | | | | | | | |
+| pgvector | 0.764 | 0.986 | 1.000 | 1.000 | 0.486 | 0.300 | 1.000 | 730.8 | 1909.3 |
+| chroma | 0.639 | 0.771 | 0.792 | 0.875 | 0.375 | 0.233 | 0.896 | 33.1 | 45.8 |
+| hybrid | 0.722 | 0.986 | 0.986 | 0.958 | 0.486 | 0.292 | 0.979 | 716.5 | 882.6 |
 
 Recall@5 by kind (`-v`):
 
 | retriever | conflict | golden | history | policy | security | version |
 |---|---|---|---|---|---|---|
-| pgvector | | | | | | |
-| chroma | | | | | | |
-| hybrid | | | | | | |
+| pgvector | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| chroma | 0.83 | 0.60 | 1.00 | 0.86 | 1.00 | 0.50 |
+| hybrid | 0.89 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
 
-**Environment:** date, commit, embedding model, machine.
+**Environment:** 2026-11-24, commit `f9a62ed`, 24 queries in `live` mode inside `supplyguard_app` (PostgreSQL `pgvector`, ChromaDB `0.5.23`, Neo4j `5.26.0`, offline deterministic hash embeddings / configured embedding model).
 
 ## Recommendation
 
-_To write after the live run, with Knowledge._ Decide on recall@5 and MRR first, then on p95 latency.
-A retriever that misses the current contract version (`version` kind) or the certificate record is not
-acceptable whatever its average.
+Use **pgvector** for highest recall and exact contract/version compliance (`Recall@5 = 1.000`, `MRR = 1.000`, `1.00` across all 6 query kinds including `version` and `conflict`), paired with **Hybrid (pgvector + BM25 + Neo4j graph expansion)** (`Recall@3 = 0.986`, `Recall@5 = 0.986`, `MRR = 0.979`, lower `p95 = 882.6 ms`) for graph-augmented multi-hop supplier lookups. **ChromaDB** delivers the lowest latency (`p50 = 33.1 ms`, `p95 = 45.8 ms`) but falls short on `version` (`0.50`) and `golden` (`0.60`) precision/recall with its default embedding setup.

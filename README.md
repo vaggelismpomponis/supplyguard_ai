@@ -255,10 +255,11 @@ docker compose exec -T app python -m pytest tests/test_ui.py -q
 
 # Quality: dataset, evaluators, evaluation runner, red team, retrieval benchmark, restart and demo checks
 docker compose exec -T app python -m pytest tests/test_evaluators.py tests/test_run_eval.py \
-  tests/test_red_team_and_benchmark.py tests/test_restart_scenario.py tests/test_demo_check.py -q
+  tests/test_red_team_and_benchmark.py tests/test_restart_scenario.py tests/test_demo_check.py \
+  tests/test_eval_harness.py -q
 ```
 
-> `tests/test_graph.py`, `tests/test_knowledge.py`, `tests/test_restart_idempotency.py` and `tests/test_workflow_compose_milestone.py` still test the HelpDesk Lite agent and knowledge tools. They will be replaced together with that code by the SupplyGuard Deep Agent (see [`docs/PROJECT_CHECKLIST.md`](./docs/PROJECT_CHECKLIST.md#9-mid-week-audit-86)).
+All legacy HelpDesk Lite code and tests have been retired in favor of the SupplyGuard Deep Agents workflow and harness (`eval_harness.py`).
 
 Evaluation and benchmarks (see [`docs/EVALUATION.md`](./docs/EVALUATION.md)):
 

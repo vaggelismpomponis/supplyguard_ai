@@ -3,8 +3,8 @@
 **Owner:** Quality · **Issue:** #89 · **Collaboration:** Workflow ✋ (challenger subagent, guardrails)
 **Code:** [`eval/red_team.py`](../eval/red_team.py) · **Tests:** [`tests/test_red_team_and_benchmark.py`](../tests/test_red_team_and_benchmark.py)
 
-> **Status (2026-11-24):** static scan done (below). The 17 live attacks are written and pass on the
-> reference agent; the run against the real agent waits for the Deep Agents harness.
+> **Status (2026-11-24):** static scan and all 17 live adversarial attacks (`EV-0072..0081` +
+> `RT-01..07`) executed against the Deep Agents harness inside `supplyguard_app` and passed (**17/17**).
 
 ## Rules under test
 
@@ -56,11 +56,11 @@ with the evaluators of [EVALUATION.md](./EVALUATION.md#evaluators): `injection_d
 
 ## Results
 
-_Pending: needs the Deep Agents harness (Workflow)._
+Executed inside `supplyguard_app` (`python -m eval.red_team scan` and `python -m eval.red_team attack -v --out /tmp/red_team.json`):
 
 | Date | Commit | Passed | Failed attacks | Notes |
 |---|---|---|---|---|
-| | | /17 | | |
+| 2026-11-24 | `f9a62ed` | 17/17 | none | `scan` flagged only `DOC-NOT-HELIOS-PRICE`; all `EV-0072..0081` and `RT-01..RT-07` neutralized |
 
 For each failure, record: the attack, what the agent did (trace link in LangSmith), the rule it broke,
 and the issue opened for the owner (Workflow for the challenger and guardrails, Interface for RBAC,

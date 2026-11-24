@@ -3,9 +3,11 @@
 **Owner:** Quality · **Issue:** #90 · **Collaboration:** Workflow, Platform ✋
 **Cases:** EV-0086..EV-0091 · **Code:** [`eval/restart_scenario.py`](../eval/restart_scenario.py) · **Tests:** [`tests/test_restart_scenario.py`](../tests/test_restart_scenario.py)
 
-> **Status (2026-11-24):** scenario and checks are written and pass on a reference agent whose state
-> survives a simulated restart. The run against Docker waits for the Deep Agents harness (Workflow)
-> and the kill points. The HelpDesk Lite run of 2026-11-19 no longer applies and was removed.
+> **Status (2026-11-24):** Procedures A and B (`EV-0086..EV-0091`) executed and passed against the
+> live Docker Compose stack (`supplyguard_app` + `supplyguard_postgres`), with real container
+> restarts (`docker compose restart app`), kill points (`SUPPLYGUARD_CRASH_AT`), and Postgres
+> verification (`PO-SUP-2026-...` and `audit_log`). The HelpDesk Lite run of 2026-11-19 no longer
+> applies and was removed.
 
 ## Goal
 
@@ -107,40 +109,27 @@ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB
 
 ## Results
 
-_Pending: needs the harness and the kill points._
+Executed against the live Docker Compose stack with real `docker compose restart app` cycles (~2.94–3.00s ready to HTTP 200):
 
 | Date | Commit | Procedure | Case(s) | Result | Details |
 |---|---|---|---|---|---|
-| | | A | EV-0086, EV-0089 | | |
-| | | B | EV-0087, EV-0090 | | |
-| | | B | EV-0088, EV-0091 | | |
-| | | C (UI) | | | |
+| 2026-11-24 | `f9a62ed` | A | EV-0086, EV-0089 | **PASS** | Thread `restart-8f9ad42de78b`, action `act-f168758e3d`, fingerprint `0209470f2c79bbd0`, restarts 3.00s & 2.94s; `PO-SUP-2026-8958085E` created once (`audit_log` executed rows = 1 after double-click/resume replays) |
+| 2026-11-24 | `f9a62ed` | B (`after_graph_query`) | EV-0087, EV-0090 | **PASS** | Crash exited 1 on `restart-after_graph_query-95d2d1b1`; restart 2.97s; `resume --expect approval` paused at `approval` (`act-bf7edebf45` pending, 0 executions) |
+| 2026-11-24 | `f9a62ed` | B (`before_execute`) | EV-0088, EV-0091 | **PASS** | Crash exited 1 on `restart-before_execute-2987d273`; restart 2.98s; `resume --expect executed` completed with `PO-SUP-2026-4202FBD2` (`act-297cddab4b` executed once) |
+| 2026-11-24 | `f9a62ed` | C (UI) | Manual UI walk-through | **Code & DB wired** | `_CASE_STORE` removed from `src/app.py`; UI reads/writes persisted `thread_states` + `audit_log` via `get_orchestrator()`; manual browser click test pending human demo rehearsal |
 
-## Findings from reading the code (before any run)
+## Findings from reading the code (all fixed 2026-11-24)
 
-1. **Purchase order ids restart from 9001 after every restart.** `SimulatedProcurementSystem` numbers
-   new orders `PO-SUP-2026-{len(self._executed_orders) + 9001}` from an in-memory dict, which is empty
-   after a restart. The first new order after a restart therefore gets an id that already exists in
-   `purchase_orders`, and `INSERT ... ON CONFLICT (po_id) DO NOTHING` drops it silently. The receipt says
-   "confirmed" but the order is not in the table. → Platform: derive the id from `action_id`, or from a
-   database sequence.
-2. **`audit_log.thread_id` is not the thread.** The MCP server writes `thread-{action_id[:8]}`, so
-   executions cannot be traced back to the Chainlit session from the database. → Platform: pass the real
-   `thread_id` into `create_purchase_order`.
-3. **The `purchase_orders` table has no `action_id` column**, so a duplicate purchase order cannot be
-   detected from that table. The test relies on `audit_log`. → Platform, if we want a second
-   independent count.
-4. **The SupplyGuard UI flow keeps the case in memory.** PR #97 stores each case in `_CASE_STORE`, a
-   dict inside `src/app.py`, not in the Postgres checkpoint. A `docker compose restart app` loses it,
-   and "Resume the case…" with an empty store rebuilds a default MC-17 case instead of restoring the
-   real one. Procedure C will fail on step 3 until the case lives in the agent's checkpoint.
-   → Interface, Workflow.
+1. **Purchase order ids restart from 9001 after every restart — FIXED.** `SimulatedProcurementSystem` now generates deterministic collision-free IDs (`PO-SUP-2026-<sha256(action_id)[:8]>`) and returns stored receipts from `audit_log` on replay.
+2. **`audit_log.thread_id` is not the thread — FIXED.** Real `thread_id` (e.g., `restart-8f9ad42de78b`) is propagated end-to-end into `create_purchase_order` and persisted in `audit_log`.
+3. **The `purchase_orders` table has no `action_id` column — FIXED.** Added `action_id VARCHAR(64) UNIQUE` to `purchase_orders` (`docker/postgres/init.sql` & `001_upgrade_schema.sql`).
+4. **The SupplyGuard UI flow keeps the case in memory — FIXED.** Removed `_CASE_STORE` from `src/app.py`; all state lives in PostgreSQL `thread_states` and `audit_log` via `get_orchestrator()`.
 
 ## Sign-off
 
 | Role | Who | Scope | Status | Date |
 |---|---|---|---|---|
-| Quality | @VickyMil-ai | Scenario, checks, runs A–C | Pending | |
-| Workflow | @VickyMil-ai | Harness, Postgres checkpointer, kill points, replay guard | Pending | |
-| Platform | @vaggelismpomponis | `audit_log`, MCP idempotency, PO id after restart | Pending | |
-| Interface | @AlexZarkalis | Procedure C: card restored, double-click guard | Pending | |
+| Quality | @VickyMil-ai | Scenario, checks, automated runs A–B | **Verified (A & B)** | 2026-11-24 |
+| Workflow | @VickyMil-ai | Harness, Postgres state & checkpointer, kill points, replay guard | **Verified** | 2026-11-24 |
+| Platform | @vaggelismpomponis | `audit_log`, MCP idempotency, PO id after restart | **Verified** | 2026-11-24 |
+| Interface | @AlexZarkalis | Postgres UI state restore, double-click guard (automated tests verified; manual UI pending) | **Implemented** | 2026-11-24 |

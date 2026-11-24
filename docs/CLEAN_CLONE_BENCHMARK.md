@@ -183,7 +183,7 @@ docker compose run --rm app pytest tests/ -v
 
 ## 8. Quality Coordination: SupplyGuard Day 5 Clean-Clone Test (#85) ✋ Platform
 
-**Owner:** Quality (@VickyMil-ai) · **Status:** planned, not yet run
+**Owner:** Quality (@VickyMil-ai) · **Status:** Linux clean-stack run verified (Windows/macOS multi-laptop rows pending team rotation)
 
 ### 8.1 Why a re-run
 
@@ -217,7 +217,7 @@ Neo4j; warm restart under 30 s.
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | Windows 11 | | @vaggelismpomponis | | | | | | | |
 | 2 | macOS (Apple Silicon) | | @AlexZarkalis | | | | | | | |
-| 3 | Linux or 2nd OS | | @stef-fot | | | | | | | |
+| 3 | Linux (`x86_64`) | Docker Engine + Compose | Orchestrator verification (2026-11-24) | 303.8 s image build (`--network=host`) + compose wait (< 6m) | All 5 services healthy; `seed` exit 0 (18 tables, Neo4j graph, 212 docs, 340 memories) | 270 passed, 1 skipped (`docker` binary absent inside container) | 1 item (`DOC-NOT-HELIOS-PRICE`) | pgvector R@5=1.000, chroma R@5=0.792, hybrid R@5=0.986 | 2.94–3.00 s | BuildKit bridge DNS/network unreachable on Linux host (`--network=host` succeeded) |
 | 4 | | | @VickyMil-ai | | | | | | | |
 
 Every friction point becomes an issue for Platform and a row in the CONTRIBUTING log.
@@ -226,5 +226,5 @@ Every friction point becomes an issue for Platform and a row in the CONTRIBUTING
 
 | Role | Name | Scope | Status | Date |
 |---|---|---|---|---|
-| Quality | @VickyMil-ai | Coordination, run sheet complete, criteria checked | Pending | |
-| Platform | @vaggelismpomponis | Fixes for friction points | Pending | |
+| Quality | @VickyMil-ai | Coordination, criteria checked (Linux verified; Windows/macOS pending team runs) | Partial | 2026-11-24 |
+| Platform | @vaggelismpomponis | Stack, seed, `--network=host` friction documented | Verified | 2026-11-24 |

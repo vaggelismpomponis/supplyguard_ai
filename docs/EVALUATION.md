@@ -3,9 +3,10 @@
 **Owner:** Quality · **Issues:** #82 (tracing), #83 (dataset), #84 (evaluators), #88 (evaluation run)
 **Code:** [`eval/`](../eval/) · **Tests:** [`tests/test_evaluators.py`](../tests/test_evaluators.py), [`tests/test_run_eval.py`](../tests/test_run_eval.py)
 
-> **Status (2026-11-24):** tracing config, dataset loader, evaluators and runners are implemented and
-> tested against a reference agent (`tests/eval_fakes.py`). The real run (#88) waits for the Deep
-> Agents graph and its harness (Workflow). Results go in [Results](#results).
+> **Status (2026-11-24):** tracing config, dataset loader, evaluators, Deep Agents harness
+> (`src/agent/eval_harness.py`), and live Docker execution are complete. All **99/99** non-restart
+> cases pass `eval.run_eval`, and **6/6** restart/crash-recovery cases pass `eval.restart_scenario`
+> (**105/105** total). Results are recorded in [Results](#results).
 
 ## Contents
 
@@ -119,10 +120,9 @@ dataset `supplyguard-eval-105` (`--dry-run` validates without network).
   ("Use the 600 units in Katowice quarantine"), so the runner first replays EV-0001 on the same thread
   with the approval left pending.
 
-> ⚠ **Supplier IDs.** [ARCHITECTURE_CONTRACTS.md §5](./ARCHITECTURE_CONTRACTS.md#5-decision--rejection-precedence-matrix)
-> lists Helios = S003, Borealis = S002, Delta = S004 and an "Epsilon (S005)". The data package
-> (`suppliers.csv`, `golden_scenario.json`) has Helios = S002, Borealis = S003, Cordillera = S004,
-> Delta = S005, and no Epsilon. The evaluators follow the data. ✋ Workflow / Knowledge: correct §5.
+> **Note:** [ARCHITECTURE_CONTRACTS.md §5](./ARCHITECTURE_CONTRACTS.md#5-decision--rejection-precedence-matrix)
+> is aligned with the data package (`suppliers.csv`, `golden_scenario.json`): Helios = S002,
+> Borealis = S003, Cordillera = S004, Delta = S005, and no Epsilon.
 
 ## Evaluators
 
@@ -176,10 +176,10 @@ owning role:
 
 ## Results
 
-_Pending: needs the Deep Agents harness (Workflow)._ Fill in after each full run:
+Executed inside `supplyguard_app` against the seeded 6-service Compose stack (`python -m eval.run_eval -v --out /tmp/eval_results.json`):
 
 | Date | Commit | Experiment | golden | impact | ambiguity | injection | policy | follow-up | Total |
 |---|---|---|---|---|---|---|---|---|---|
-| | | | /1 | /64 | /10 | /10 | /10 | /4 | /99 |
+| 2026-11-24 | `f9a62ed` | `docker-live-eval` | 1/1 | 64/64 | 10/10 | 10/10 | 10/10 | 4/4 | 99/99 |
 
-Restart cases (6) are reported in [RESTART_TEST_SCENARIO.md](./RESTART_TEST_SCENARIO.md).
+Restart cases (6/6: `EV-0086..EV-0091`) are verified and reported in [RESTART_TEST_SCENARIO.md](./RESTART_TEST_SCENARIO.md).
