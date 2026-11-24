@@ -51,16 +51,16 @@ Project-wide πρόοδος για την πλατφόρμα **SupplyGuard AI** 
 
 ## 4. UI, Approval Gate & Restart Resilience (Ημ. 6–8)
 
-- [ ] Chainlit RBAC authentication (Procurement Manager, Finance Controller, Read-only Guest)
-- [ ] Dynamic retrieval filtering βάσει του ενεργού ρόλου χρήστη
-- [ ] Telemetry dashboard με live ένδειξη προόδου subagents
-- [ ] Recovery Strategy Comparison Matrix με διακριτές στήλες Recovery Cost και Revenue at Risk
-- [ ] Strict Approval Card με ακριβές payload (προμηθευτής, ποσότητα, τιμή, όριο €75k)
-- [ ] Αποτροπή διπλού κλικ (`asyncio.Lock`) και έλεγχος Modify Plan (επανεπικύρωση)
-- [ ] Container restart resilience (`docker compose restart app`) εν μέσω αναμονής έγκρισης
-- [ ] Απρόσκοπτο resume από το PostgreSQL checkpoint χωρίς απώλεια κατάστασης
-- [ ] Idempotent εκτέλεση: καμία διπλή δημιουργία Purchase Order στο σύστημα προμηθειών
-- [ ] Εξαγωγή δομημένου Incident Report και αποθήκευση approved incident memory
+- [x] Chainlit RBAC authentication (Procurement Manager, Finance Controller, Read-only Guest)
+- [x] Dynamic retrieval filtering βάσει του ενεργού ρόλου χρήστη
+- [x] Telemetry dashboard με live ένδειξη προόδου subagents
+- [x] Recovery Strategy Comparison Matrix με διακριτές στήλες Recovery Cost και Revenue at Risk
+- [x] Strict Approval Card με ακριβές payload (προμηθευτής, ποσότητα, τιμή, όριο €75k)
+- [x] Αποτροπή διπλού κλικ (`asyncio.Lock`) και έλεγχος Modify Plan (επανεπικύρωση)
+- [x] Container restart resilience (`docker compose restart app`) εν μέσω αναμονής έγκρισης
+- [x] Απρόσκοπτο resume από το PostgreSQL checkpoint χωρίς απώλεια κατάστασης
+- [x] Idempotent εκτέλεση: καμία διπλή δημιουργία Purchase Order στο σύστημα προμηθειών
+- [x] Εξαγωγή δομημένου Incident Report και αποθήκευση approved incident memory
 
 ---
 
@@ -102,7 +102,7 @@ Project-wide πρόοδος για την πλατφόρμα **SupplyGuard AI** 
 | Ρόλος | Checklist | Πρόοδος | Owner | Backup |
 |---|---|---|---|---|
 | Platform | [`platform.md`](./roles/platform.md) | 9/9 | @vaggelismpomponis | Workflow |
-| Interface | [`interface.md`](./roles/interface.md) | 0/13 | @AlexZarkalis | Quality |
+| Interface | [`interface.md`](./roles/interface.md) | 13/13 | @AlexZarkalis | Quality |
 | Workflow | [`workflow.md`](./roles/workflow.md) | 0/13 | @VickyMil-ai | Knowledge |
 | Knowledge | [`knowledge.md`](./roles/knowledge.md) | 0/12 | @stef-fot | Platform |
 | Quality | [`quality.md`](./roles/quality.md) | 0/15 | @VickyMil-ai | Interface |

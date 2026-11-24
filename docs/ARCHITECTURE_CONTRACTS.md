@@ -274,3 +274,42 @@ The system must handle the deliberate complications in the reference scenario:
 | **Interface** | @AlexZarkalis | Chainlit RBAC, Telemetry, Strategy Matrix & Approval Card | **Signed-off** | 2026-11-24 |
 | **Knowledge** | @stef-fot | Data schema, Neo4j multi-tier graph, pgvector & ChromaDB | **Signed-off** | 2026-11-24 |
 | **Quality** | @VickyMil-ai | 105 eval cases, retrieval benchmark, red-team & rehearsals | **Signed-off** | 2026-11-24 |
+
+---
+
+## 7. Interface & Chainlit UI Contracts (Issues #41–#53)
+
+### 7.1 Session & `thread_id` Binding Contract
+- **1:1 Deterministic Mapping**: On chat initialization (`@cl.on_chat_start`), `cl.context.session.id` is bound directly to LangGraph / Deep Agents `thread_id` (`cl.user_session.set("thread_id", session_id)`).
+- **Restart & Manual Recovery**:
+  - Automatic checkpoint inspection via `_restore_or_greet(thread_id)` restores any interrupted clarification or pending `ApprovalPayload` upon browser reload or container restart (`docker compose restart app`).
+  - Explicit session recovery via `/resume <thread_id>` or conversational follow-up (*"Resume the case I was reviewing yesterday"*).
+
+### 7.2 Role-Based Access Control (RBAC) & Scoped Retrieval Contract
+Users are authenticated and mapped against `src/support-data/config/users.csv`:
+
+| Role Key | User (`users.csv`) | `AccessScope` | Allowed `document_scopes` | Approval Authority |
+|---|---|---|---|---|
+| `procurement_manager` | Maria Keller (`u-pm-01`) | `procurement` | `public`, `internal`, `procurement` | Up to `€75,000` spending cap |
+| `finance_controller` | Paul Novak (`u-fc-01`) | `finance` | `public`, `internal`, `procurement`, `finance-confidential` | Up to `€90,000` (with Finance Director cap) + `DOC-FIN-01-v1` access |
+| `viewer` | Read Only Guest (`u-ro-01`) | `public` | `public` | Read-only (cannot approve, reject, or modify POs) |
+| `operations_analyst` | Jon Weber (`u-an-01`) | `procurement` | `public`, `internal`, `procurement` | Factory F1 operational analysis & standard approval |
+| `incident_coordinator`| Ines Duarte (`u-ic-01`) | `procurement` | `public`, `internal`, `procurement` | Factory F2/F3 coordination & standard approval |
+
+### 7.3 Subagent Telemetry Step Event Contract
+Each Deep Agent subagent emits a live `cl.Step` progress indicator in the Chainlit UI:
+1. `triage_subagent`: Entity extraction (`supplier_id`, `component_id`, `delay_days`, `spending_cap`) and ambiguity detection.
+2. `impact_subagent`: Warehouse stock breakdown (`on_hand`, `reserved`, `quarantined`, `usable`), factory cover timelines, BOM & customer order exposure.
+3. `contract_subagent`: Scoped documentary evidence retrieval with provenance (`source_id`, `version`, `effective_date`, `access_scope`), source-precedence conflict resolution, and ISO certification validation.
+4. `graph_subagent`: Multi-tier dependency traversal (detecting shared Tier-2 upstream manufacturer `U01 Veltro Semiconductor` between `S001 Atlas` and `S005 Delta`).
+5. `optimizer_subagent`: Deterministic comparison of recovery strategies (`A`–`E`), separating **Recovery Cost (€)** from **Revenue at Risk (€)**.
+6. `challenger_subagent`: Policy guardrail check, spending cap verification (`<= €75,000`), and adversarial prompt-injection neutralization (`DOC-NOT-HELIOS-PRICE`).
+
+### 7.4 Payload-Bound Approval Card & Modify Plan Contract
+- Every approval card binds to an immutable `ApprovalPayload` identified by `action_id` and a SHA-256 `payload_hash` computed over `(case_id, action_type, target_supplier_id, component_id, quantity, unit_price, total_cost, spending_cap)`.
+- Interactive buttons: **✅ Approve**, **❌ Reject**, **✏️ Modify Plan**, guarded by per-action `asyncio.Lock` and immediate action removal to prevent double-click execution.
+- Any modification via **✏️ Modify Plan** or chat command invalidates the prior `action_id` and `payload_hash`, revalidates supplier certification, monthly capacity, and spending cap constraints, and requires a fresh approval cycle.
+
+### 7.5 Post-Approval Procurement Receipt & Report Export Contract
+- Approved actions execute idempotently in the simulated procurement system (`idempotency_key = "{case_id}:{action_id}"`) and emit a structured **Procurement Execution Receipt**.
+- An **Incident Report** is generated in both **Markdown (`.md`)** and **PDF (`.pdf`)** formats and attached to the Chainlit conversation via `cl.File` elements, while an approved resolution summary is persisted to case memory for future cases and multi-turn follow-up Q&A.
