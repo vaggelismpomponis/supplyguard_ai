@@ -1,0 +1,2 @@
+component_id,location_id,lot_id,qty,reason,release_expected
+MC-17,W-KAT,LOT-KAT-0932,600,Failed incoming inspection (solder defect),unknown

@@ -1,0 +1,30 @@
+{
+  "incident_spending_cap_eur": 75000,
+  "raised_cap_eur_with_finance_director_approval": 90000,
+  "approval_tiers_eur": [
+    {
+      "up_to": 25000,
+      "approver": "procurement_manager"
+    },
+    {
+      "up_to": 75000,
+      "approver": "procurement_manager + finance_controller"
+    },
+    {
+      "up_to": 90000,
+      "approver": "finance_director"
+    }
+  ],
+  "transfer_cost_eur_per_unit": 0.12,
+  "transfer_days": 2,
+  "source_precedence": [
+    "contract (latest version)",
+    "qualification record",
+    "supplier notice",
+    "supplier e-mail",
+    "chat"
+  ],
+  "requires_valid_certification": true,
+  "approval_binds_to_payload": true,
+  "scenario_date": "2026-10-19"
+}
