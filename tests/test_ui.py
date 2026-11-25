@@ -130,6 +130,7 @@ class TestInterfaceContracts(unittest.TestCase):
         self.assertIn("on_chat_start", content)
         self.assertNotIn("src.agent.graph", content)
         self.assertNotIn("src.agent.models", content)
+        self.assertNotIn("_persist_checkpoint", content)
 
     def test_architecture_contracts_and_rehearsal_docs_updated(self) -> None:
         contracts = (REPO_ROOT / "docs" / "ARCHITECTURE_CONTRACTS.md").read_text(encoding="utf-8")
@@ -379,6 +380,73 @@ class TestInterfaceFormattingAndHandlers(unittest.IsolatedAsyncioTestCase):
 
         await self.ui_app.on_message(cl.Message(content="Count the tier-1 penalties twice to be safe."))
         self.assertIn("never double-counted", self.sent_messages[-1]["content"])
+
+    async def test_approval_decision_transient_error_preserves_buttons_and_unlocks_retry(self) -> None:
+        import chainlit as cl
+        from unittest import mock
+
+        golden_prompt = (
+            "Supplier Atlas Components has announced a 12-day delay for component MC-17. "
+            "Additional spending must not exceed €75,000."
+        )
+        await self.ui_app.on_message(cl.Message(content=golden_prompt))
+        approval_msg = self.sent_messages[-1]["msg"]
+        approve_action = approval_msg.actions[0]
+        action_id = approve_action.payload["action_id"]
+
+        with mock.patch.object(
+            self.orchestrator,
+            "approve_and_execute",
+            side_effect=RuntimeError("Transient DB timeout"),
+        ):
+            await self.ui_app.on_approve(approve_action)
+
+        self.assertIn("Unable to complete approval decision", self.sent_messages[-1]["content"])
+        self.assertIn("Transient DB timeout", self.sent_messages[-1]["content"])
+        self.assertNotIn(action_id, self.ui_app._handled_actions)
+        self.assertFalse(approval_msg.removed_actions)
+        self.assertFalse(approve_action.removed)
+
+        # Retry succeeds cleanly once transient error clears
+        await self.ui_app.on_approve(approve_action)
+        self.assertEqual(self.orchestrator.get_state("sess-123")["status"], "executed")
+        self.assertIn(action_id, self.ui_app._handled_actions)
+        self.assertTrue(approval_msg.removed_actions)
+
+    async def test_conversational_resume_updates_thread_id(self) -> None:
+        import chainlit as cl
+
+        await self.ui_app.on_message(
+            cl.Message(content="Supplier Atlas Components (S001) announced a 12-day delay on MC-17.")
+        )
+        # Switch to a brand-new session/thread and resume yesterday's case
+        cl.context.session.id = "sess-new-456"
+        cl.user_session.set("thread_id", "sess-new-456")
+        await self.ui_app.on_message(cl.Message(content="Resume the case I was reviewing yesterday."))
+
+        resumed_state = self.orchestrator.get_state("sess-new-456")
+        self.assertIsNotNone(resumed_state)
+        self.assertEqual(resumed_state["thread_id"], "sess-new-456")
+
+    async def test_subagent_steps_do_not_hardcode_mc17_challenger_fields(self) -> None:
+        from src.agent.schemas import DisruptionFact, OperationalImpact
+
+        fact = DisruptionFact(supplier_id="S010", supplier_name="Alpha", component_id="MC-99", delay_days=4)
+        impact = OperationalImpact(component_id="MC-99", affected_products=["P099"], affected_products_count=1)
+        challenger_res = {
+            "budget_audit": {"is_compliant": False, "violations": ["Exceeds spending cap"]},
+            "injection_alerts": [],
+        }
+        await self.ui_app._emit_supplyguard_subagent_steps(
+            fact=fact,
+            impact=impact,
+            findings=[],
+            options=[],
+            challenger_res=challenger_res,
+        )
+        chal_step = self.sent_steps[-1]["output"]
+        self.assertIn("FAIL", chal_step)
+        self.assertNotIn("DOC-NOT-HELIOS-PRICE", chal_step)
 
 
 if __name__ == "__main__":

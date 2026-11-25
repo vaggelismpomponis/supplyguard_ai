@@ -136,6 +136,56 @@ def test_complementary_mcp_write_operations():
     assert sch["status"] == "confirmed"
 
 
+def test_expedite_rejects_unknown_po_id():
+    """Unknown purchase orders must fail closed instead of defaulting expedite_allowed=True."""
+    import pytest
+
+    system = SimulatedProcurementSystem()
+    with pytest.raises(ValueError, match="not found"):
+        system.expedite_purchase_order(
+            action_id=str(uuid.uuid4()),
+            po_id="PO-9999-UNKNOWN",
+            thread_id="thread-unknown",
+        )
+
+
+def test_complementary_ops_restore_from_persisted_store_across_instances():
+    """Verify complementary MCP ops check durable persistence across fresh instances."""
+    action_id = str(uuid.uuid4())
+    sys1 = SimulatedProcurementSystem()
+    stored_ops: dict[str, dict] = {}
+
+    def fake_persist(op_key, **kwargs):
+        stored_ops[op_key] = kwargs["result"]
+
+    def fake_load(op_key):
+        return stored_ops.get(op_key)
+
+    sys1._persist_op = fake_persist  # type: ignore[method-assign]
+    sys1._load_persisted_op = fake_load  # type: ignore[method-assign]
+    res1 = sys1.update_production_schedule(
+        action_id=action_id,
+        product_id="P012",
+        week_start="2026-10-26",
+        planned_units=850,
+        thread_id="thread-restart",
+    )
+    assert not res1["idempotent_replay"]
+
+    sys2 = SimulatedProcurementSystem()
+    sys2._persist_op = fake_persist  # type: ignore[method-assign]
+    sys2._load_persisted_op = fake_load  # type: ignore[method-assign]
+    res2 = sys2.update_production_schedule(
+        action_id=action_id,
+        product_id="P012",
+        week_start="2026-10-26",
+        planned_units=850,
+        thread_id="thread-restart",
+    )
+    assert res2["idempotent_replay"]
+    assert res2["schedule_ref"] == res1["schedule_ref"]
+
+
 def test_get_supplier_risk_integration():
     """Verify supplier risk evaluation integrates regional alerts and upstream dependencies."""
     risk_info = get_supplier_risk_tool("S001")

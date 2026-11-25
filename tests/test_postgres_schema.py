@@ -174,7 +174,17 @@ class TestPostgresUpgradeMigration(unittest.TestCase):
             "incident_memories",
         ):
             self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", self.sql_content)
-        self.assertIn("ALTER TABLE IF EXISTS purchase_orders ADD COLUMN IF NOT EXISTS action_id", self.sql_content)
+        self.assertIn(
+            "ALTER TABLE IF EXISTS purchase_orders ADD COLUMN IF NOT EXISTS action_id VARCHAR(64) UNIQUE;",
+            self.sql_content,
+        )
+        self.assertIn("idx_purchase_orders_action_id_unique", self.sql_content)
+
+    def test_idempotency_loads_ensure_thread_states_table(self):
+        idem_src = (
+            Path(__file__).resolve().parent.parent / "src" / "db" / "idempotency.py"
+        ).read_text(encoding="utf-8")
+        self.assertGreaterEqual(idem_src.count("_ensure_thread_states_table(cur)"), 3)
 
 
 if __name__ == "__main__":
