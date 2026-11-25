@@ -180,6 +180,7 @@ Executed inside `supplyguard_app` against the seeded 6-service Compose stack (`p
 
 | Date | Commit | Experiment | golden | impact | ambiguity | injection | policy | follow-up | Total |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-11-24 | `f9a62ed` | `docker-live-eval` | 1/1 | 64/64 | 10/10 | 10/10 | 10/10 | 4/4 | 99/99 |
+| 2026-11-24 | `a54ed2f` | `docker-live-eval` | 1/1 | 64/64 | 10/10 | 10/10 | 10/10 | 4/4 | 99/99 |
+| 2026-11-25 | `b089166` | `pr-102-review-fixes` | 1/1 | 64/64 | 10/10 | 10/10 | 10/10 | 4/4 | 99/99 |
 
 Restart cases (6/6: `EV-0086..EV-0091`) are verified and reported in [RESTART_TEST_SCENARIO.md](./RESTART_TEST_SCENARIO.md).

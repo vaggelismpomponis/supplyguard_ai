@@ -99,7 +99,7 @@ Recall@5 by kind (`-v`):
 | chroma | 0.83 | 0.60 | 1.00 | 0.86 | 1.00 | 0.50 |
 | hybrid | 0.89 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
 
-**Environment:** 2026-11-24, commit `f9a62ed`, 24 queries in `live` mode inside `supplyguard_app` (PostgreSQL `pgvector`, ChromaDB `0.5.23`, Neo4j `5.26.0`, offline deterministic hash embeddings / configured embedding model).
+**Environment:** 2026-11-24, commit `a54ed2f`, 24 queries in `live` mode inside `supplyguard_app` (PostgreSQL `pgvector`, ChromaDB `0.5.23`, Neo4j `5.26.0`, offline deterministic hash embeddings / configured embedding model).
 
 ## Recommendation
 

@@ -113,10 +113,10 @@ Executed against the live Docker Compose stack with real `docker compose restart
 
 | Date | Commit | Procedure | Case(s) | Result | Details |
 |---|---|---|---|---|---|
-| 2026-11-24 | `f9a62ed` | A | EV-0086, EV-0089 | **PASS** | Thread `restart-8f9ad42de78b`, action `act-f168758e3d`, fingerprint `0209470f2c79bbd0`, restarts 3.00s & 2.94s; `PO-SUP-2026-8958085E` created once (`audit_log` executed rows = 1 after double-click/resume replays) |
-| 2026-11-24 | `f9a62ed` | B (`after_graph_query`) | EV-0087, EV-0090 | **PASS** | Crash exited 1 on `restart-after_graph_query-95d2d1b1`; restart 2.97s; `resume --expect approval` paused at `approval` (`act-bf7edebf45` pending, 0 executions) |
-| 2026-11-24 | `f9a62ed` | B (`before_execute`) | EV-0088, EV-0091 | **PASS** | Crash exited 1 on `restart-before_execute-2987d273`; restart 2.98s; `resume --expect executed` completed with `PO-SUP-2026-4202FBD2` (`act-297cddab4b` executed once) |
-| 2026-11-24 | `f9a62ed` | C (UI) | Manual UI walk-through | **Code & DB wired** | `_CASE_STORE` removed from `src/app.py`; UI reads/writes persisted `thread_states` + `audit_log` via `get_orchestrator()`; manual browser click test pending human demo rehearsal |
+| 2026-11-24 | `a54ed2f` | A | EV-0086, EV-0089 | **PASS** | Thread `restart-8f9ad42de78b`, action `act-f168758e3d`, fingerprint `0209470f2c79bbd0`, restarts 3.00s & 2.94s; `PO-SUP-2026-8958085E` created once (`audit_log` executed rows = 1 after double-click/resume replays) |
+| 2026-11-24 | `a54ed2f` | B (`after_graph_query`) | EV-0087, EV-0090 | **PASS** | Crash exited 1 on `restart-after_graph_query-95d2d1b1`; restart 2.97s; `resume --expect approval` paused at `approval` (`act-bf7edebf45` pending, 0 executions) |
+| 2026-11-24 | `a54ed2f` | B (`before_execute`) | EV-0088, EV-0091 | **PASS** | Crash exited 1 on `restart-before_execute-2987d273`; restart 2.98s; `resume --expect executed` completed with `PO-SUP-2026-4202FBD2` (`act-297cddab4b` executed once) |
+| 2026-11-24 | `a54ed2f` | C (UI) | Manual UI walk-through | **Code & DB wired** | `_CASE_STORE` removed from `src/app.py`; UI reads/writes persisted `thread_states` + `audit_log` via `get_orchestrator()`; manual browser click test pending human demo rehearsal |
 
 ## Findings from reading the code (all fixed 2026-11-24)
 

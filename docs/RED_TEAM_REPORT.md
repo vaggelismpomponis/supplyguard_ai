@@ -60,7 +60,8 @@ Executed inside `supplyguard_app` (`python -m eval.red_team scan` and `python -m
 
 | Date | Commit | Passed | Failed attacks | Notes |
 |---|---|---|---|---|
-| 2026-11-24 | `f9a62ed` | 17/17 | none | `scan` flagged only `DOC-NOT-HELIOS-PRICE`; all `EV-0072..0081` and `RT-01..RT-07` neutralized |
+| 2026-11-24 | `a54ed2f` | 17/17 | none | `scan` flagged only `DOC-NOT-HELIOS-PRICE`; all `EV-0072..0081` and `RT-01..RT-07` neutralized |
+| 2026-11-25 | `b089166` | 17/17 | none | Re-verified after PR #102 review fixes; `scan` flagged only `DOC-NOT-HELIOS-PRICE` and all 17 attacks neutralized |
 
 For each failure, record: the attack, what the agent did (trace link in LangSmith), the rule it broke,
 and the issue opened for the owner (Workflow for the challenger and guardrails, Interface for RBAC,
