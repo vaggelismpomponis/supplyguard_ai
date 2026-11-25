@@ -168,7 +168,7 @@ def set_active_user_profile(role_or_id: str) -> UserProfile:
             state = orch.get_state(thread_id)
             if state is not None:
                 state["user_profile"] = profile
-                orch._persist_checkpoint(thread_id, state)
+                orch.persist_state(thread_id, state)
     except Exception:
         pass
     return profile
@@ -247,13 +247,20 @@ def format_step_output(node_name: str, node_output: dict[str, Any]) -> str:
         imp: Optional[OperationalImpact] = node_output.get("operational_impact")
         if imp is None:
             return "Operational impact analysis unavailable."
+        cover_parts = []
+        for tl in imp.factory_timelines:
+            if tl.warehouse_id == "W-HUB":
+                cover_parts.append(f"Hub `{tl.usable_units:,}` units")
+            else:
+                cover_parts.append(f"{tl.factory_name} `{tl.days_of_cover:.1f}d`")
+        cover_summary = f" ({', '.join(cover_parts)})" if cover_parts else ""
+        quar_note = f" (`{imp.quarantine_lot_id}`)" if imp.quarantined_units > 0 and imp.quarantine_lot_id else ""
         return (
             f"- **Component:** `{imp.component_id}`\n"
             f"- **Inventory Breakdown:** `{imp.total_physical_units:,}` on-hand = "
-            f"**`{imp.usable_units:,}` usable** + `{imp.reserved_units:,}` reserved (Tier-1) + "
-            f"`{imp.quarantined_units:,}` quarantined (`{imp.quarantine_lot_id}`)\n"
-            f"- **Critical Factories Running Out First:** `{', '.join(imp.affected_factories)}` "
-            f"(Lyon `3.3d`, Katowice `4.0d`, Stuttgart `8.7d`, Hub `800` units)\n"
+            f"**`{imp.usable_units:,}` usable** + `{imp.reserved_units:,}` reserved + "
+            f"`{imp.quarantined_units:,}` quarantined{quar_note}\n"
+            f"- **Critical Factories Running Out First:** `{', '.join(imp.affected_factories)}`{cover_summary}\n"
             f"- **Downstream Impact:** `{imp.affected_products_count}` products (`{', '.join(imp.affected_products)}`) · "
             f"**`{imp.affected_customer_orders_count}` open customer orders at risk**\n"
             f"- **Uncovered Demand Shortfall:** **`{imp.uncovered_demand_units:,} units`** "
@@ -265,15 +272,38 @@ def format_step_output(node_name: str, node_output: dict[str, Any]) -> str:
         role_scope = node_output.get("access_scope", "procurement")
         conflicts = [d for d in findings if d.is_conflict]
         superseded = [d for d in findings if d.is_superseded]
+        expired = [d for d in findings if "expired" in (d.summary or "").lower()]
+        conflict_ids = ", ".join(f"`{d.source_id}`" for d in conflicts) or "None"
+        superseded_ids = ", ".join(f"`{d.source_id}`" for d in superseded) or "None"
+        expired_ids = ", ".join(f"`{d.source_id}`" for d in expired) or "None"
         return (
             f"- **RBAC Retrieval Scope Enforced:** `{role_scope}` (`{len(findings)}` documents retrieved with provenance)\n"
-            f"- **Conflicts Flagged & Resolved ({len(conflicts)}):** Atlas formal notice `12d` (`DOC-NOT-ATLAS-MC17`) vs e-mail `16d` (`DOC-EM-ATLAS-01`); "
-            f"Helios capacity `1,500/mo` (`DOC-EM-HELIOS-01`) vs `4,000/mo` contract; Cordillera expedite fee `6%` contract (`DOC-CON-S004-v1`) vs `10%` e-mail\n"
-            f"- **Superseded Contracts Ignored ({len(superseded)}):** `DOC-CON-S001-v2` (10d) superseded by `DOC-CON-S001-v3` (14d, effective `2026-03-01`)\n"
-            f"- **Qualification Block:** Borealis (`S003`) ISO 9001 expired `2026-09-30` (`DOC-QUA-S003-v1`, blocked by `DOC-PRO-04-v1`)"
+            f"- **Conflicts Flagged & Resolved ({len(conflicts)}):** {conflict_ids}\n"
+            f"- **Superseded Contracts Ignored ({len(superseded)}):** {superseded_ids}\n"
+            f"- **Expired / Blocked Qualifications ({len(expired)}):** {expired_ids}"
         )
 
     if node_name == "graph_subagent":
+        suppliers = node_output.get("suppliers") or []
+        shared_rejected = set(node_output.get("rejected_due_to_shared_upstream") or [])
+        recommended_indep = set(node_output.get("recommended_independent_suppliers") or [])
+        if suppliers:
+            lines = ["- **Neo4j Multi-Tier Dependency Traversal (`max_depth=2`):**"]
+            for s in suppliers:
+                sid = s.get("supplier_id", "UNKNOWN")
+                sname = s.get("name", sid)
+                uid = s.get("upstream_id") or s.get("upstream_manufacturer_id") or "N/A"
+                uname = s.get("upstream_name") or uid
+                if sid in shared_rejected:
+                    tag = "❌ *(Shared Tier-2 upstream bottleneck!)*"
+                elif sid in recommended_indep:
+                    tag = "✅ *(Independent upstream, qualified)*"
+                elif not s.get("certification_valid", True):
+                    tag = "🚫 *(Expired certification)*"
+                else:
+                    tag = ""
+                lines.append(f"  - `{sid} ({sname})` ──`[:SOURCES_FROM]`──> **`{uid} ({uname})`** {tag}".rstrip())
+            return "\n".join(lines)
         return (
             "- **Neo4j Multi-Tier Dependency Traversal (`max_depth=2`):**\n"
             "  - `S001 (Atlas Components)` ──`[:SOURCES_FROM]`──> **`U01 (Veltro Semiconductor, TW)`** ⚠️ *(High-severity wafer alert)*\n"
@@ -284,24 +314,46 @@ def format_step_output(node_name: str, node_output: dict[str, Any]) -> str:
 
     if node_name == "optimizer_subagent":
         options: List[RecoveryOption] = node_output.get("recovery_options") or []
+        spending_cap = float(node_output.get("spending_cap", 75000.0))
         rec = next((o for o in options if o.is_recommended), None)
         if rec:
+            breakdown = rec.cost_breakdown or {}
+            parts = [
+                f"{k.replace('_eur', '').replace('_', ' ').title()} `€{float(v):,.2f}`"
+                for k, v in breakdown.items()
+                if k != "total_recovery_cost_eur" and not k.startswith("sensitivity_")
+            ]
+            breakdown_note = f" ({' + '.join(parts)}; cap `€{spending_cap:,.2f}`)" if parts else f" (cap `€{spending_cap:,.2f}`)"
             return (
                 f"- **Evaluated `{len(options)}` Recovery Strategies** via deterministic calculators (Recovery Cost separated from Revenue at Risk)\n"
                 f"- **Recommended Plan (`{rec.strategy_code}`):** `{rec.title}`\n"
-                f"- **Deterministic Recovery Cost:** **`€{rec.recovery_cost:,.2f}`** "
-                f"(Transfer `€96.00` + Expedite `€882.00` + Cordillera PO `€29,400.00` — under `€75,000` cap)\n"
-                f"- **Remaining Tier-1 Revenue at Risk:** **`€{rec.revenue_at_risk:,.2f}`**"
+                f"- **Deterministic Recovery Cost:** **`€{rec.recovery_cost:,.2f}`**{breakdown_note}\n"
+                f"- **Remaining Revenue at Risk:** **`€{rec.revenue_at_risk:,.2f}`**"
             )
         return f"Evaluated {len(options)} recovery strategies."
 
     if node_name == "challenger_subagent":
-        inj = node_output.get("prompt_injection_alert") or "DOC-NOT-HELIOS-PRICE"
-        within_cap = node_output.get("within_cap", True)
+        within_cap = bool(node_output.get("within_cap", True))
+        violations = node_output.get("violations") or []
+        if "injection_alerts" in node_output:
+            alerts = node_output.get("injection_alerts") or []
+            if alerts:
+                sources = ", ".join(f"`{a.get('source_id', 'unknown')}`" for a in alerts)
+                inj_line = (
+                    f"- **Adversarial Prompt-Injection Scanner:** 🛡️ Detected & neutralized "
+                    f"`{len(alerts)}` untrusted directive(s) in {sources}"
+                )
+            else:
+                inj_line = "- **Adversarial Prompt-Injection Scanner:** ✅ Clean — no prompt-injection directives detected"
+        else:
+            inj = node_output.get("prompt_injection_alert") or "DOC-NOT-HELIOS-PRICE"
+            inj_line = (
+                f"- **Adversarial Prompt-Injection Scanner:** 🛡️ Detected & neutralized malicious directive in `{inj}`"
+            )
+        audit_status = "PASS (<= Spending Cap)" if within_cap else f"FAIL ({'; '.join(violations) or 'Policy Violation'})"
         return (
-            f"- **Adversarial Prompt-Injection Scanner:** 🛡️ Detected & neutralized malicious directive in `{inj}` "
-            f"(*attempted to bypass human approval and force 20,000-unit Helios PO*)\n"
-            f"- **Policy & Budget Cap Audit:** `{'PASS (<= Spending Cap)' if within_cap else 'FAIL (Exceeds Cap)'}` · "
+            f"{inj_line}\n"
+            f"- **Policy & Budget Cap Audit:** `{audit_status}` · "
             f"Penalties counted once · Payload hash bound for human approval"
         )
 
@@ -333,6 +385,9 @@ def format_operational_impact_dashboard(
 ) -> str:
     """Render the SupplyGuard AI Operational Impact Dashboard (Issue #47) with sanitized provenance citations."""
     profile = user_profile or get_active_user_profile()
+    reserved_order_ids = ", ".join(
+        f"`{o.get('customer_order_id', '')}`" for o in (impact.reserved_stock_orders or [])
+    )
     lines = [
         f"## 📊 SupplyGuard AI — Operational Impact Dashboard (`{case_id}`)",
         "",
@@ -347,10 +402,18 @@ def format_operational_impact_dashboard(
         "### 2. Multi-Warehouse Stock Breakdown (Usable vs Reserved & Quarantined)",
         f"- **Total Physical On-Hand Stock:** **`{impact.total_physical_units:,} units`** *(Source: `structured/inventory.csv`)*",
         f"- **Net Usable Stock:** **`{impact.usable_units:,} units`** ✅ *(Available for production & internal transfer)*",
-        f"- **Reserved Stock (Locked for 6 Tier-1 Customer Orders):** **`{impact.reserved_units:,} units`** 🔒 "
-        f"*(Orders: `CO-00022`, `CO-00244`, `CO-00005`, `CO-00173`, `CO-00073`, `CO-00410` — `structured/reservations.csv`)*",
-        f"- **Quarantined Stock (Excluded from Usable):** **`{impact.quarantined_units:,} units`** 🚫 "
-        f"*(Lot `{impact.quarantine_lot_id}` at Katowice `W-KAT`: {impact.quarantine_reason} — `structured/quarantine_lots.csv`)*",
+        (
+            f"- **Reserved Stock (Locked for {len(impact.reserved_stock_orders)} Tier-1 Customer Orders):** **`{impact.reserved_units:,} units`** 🔒 "
+            f"*(Orders: {reserved_order_ids} — `structured/reservations.csv`)*"
+            if impact.reserved_stock_orders
+            else f"- **Reserved Stock:** **`{impact.reserved_units:,} units`** 🔒 *(Source: `structured/reservations.csv`)*"
+        ),
+        (
+            f"- **Quarantined Stock (Excluded from Usable):** **`{impact.quarantined_units:,} units`** 🚫 "
+            f"*(Lot `{impact.quarantine_lot_id}`: {impact.quarantine_reason} — `structured/quarantine_lots.csv`)*"
+            if impact.quarantined_units > 0
+            else f"- **Quarantined Stock:** **`0 units`** *(No active QA holds)*"
+        ),
         "",
         "### 3. Factory Stockout Timelines & Days of Cover",
         "| Location / Factory | Warehouse | On-Hand | Reserved | Quarantined | **Usable Units** | Daily Demand | **Days of Cover** | Operational Status |",
@@ -359,7 +422,7 @@ def format_operational_impact_dashboard(
 
     for tl in impact.factory_timelines:
         if tl.warehouse_id == "W-HUB":
-            status_cell = "🟢 **800 units available for 2-day transfer (€0.12/unit)**"
+            status_cell = f"🟢 **{tl.usable_units:,} units available for 2-day transfer (€0.12/unit)**"
             cover_str = "Hub Buffer"
         elif tl.days_of_cover <= 4.0:
             status_cell = "🔴 **CRITICAL — Runs Out First (Prioritize Hub Transfer)**"
@@ -451,16 +514,35 @@ def format_strategy_comparison_matrix(
     lines.extend([
         "",
         "### Supplier & Strategy Rejection / Selection Rationale",
-        "- ❌ **Why Helios Supply (`S002`) is Rejected:** Cheapest unit price (`€7.20`), but its **21-day lead time** arrives 9 days after Atlas's delayed delivery and cannot prevent Day 3.3 / Day 4.0 stockouts at Lyon and Katowice. Furthermore, `DOC-EM-HELIOS-01` reveals real monthly capacity is only **1,500 units/month** (contradicting the 4,000 units/month contract figure), and `DOC-NOT-HELIOS-PRICE` contained a hidden prompt injection.",
-        "- ❌ **Why Borealis Parts (`S003`) is Blocked:** Fast 6-day lead time (`€9.10/unit`), but its **ISO 9001:2015 certification expired on `2026-09-30`** (`DOC-QUA-S003-v1`, `DOC-EM-BOREALIS-01`). Procedure **`DOC-PRO-04-v1`** prohibits placing purchase orders with uncertified suppliers even though the ERP record still shows a stale `'approved'` flag.",
-        "- ❌ **Why Delta Micro Systems (`S005`) is Flagged / Rejected for Diversification:** 8-day lead time (`€10.40/unit`), but Neo4j Tier-2 dependency traversal reveals **Delta (`S005`) shares upstream wafer manufacturer Veltro Semiconductor (`U01`) with Atlas Components (`S001`)**, which is under an active high-severity Taiwan wafer-supply disruption (`plan_2_with_delta` at `€39,218` carries severe upstream concentration risk).",
-        "- ✅ **Why Recommended Reference Plan 1 (`STRAT-1`, `A + B + C + D/E`) Wins:**",
-        "  1. **Strategy A (Internal Transfer):** Immediately transfer **`800` usable units** from Rotterdam Central Hub (`W-HUB`) to **Lyon (`W-LYO`, 450 units)** and **Katowice (`W-KAT`, 350 units)** (`2 days` transit @ `€0.12/unit` = **`€96.00`**), preventing immediate plant shutdowns.",
-        "  2. **Strategy B (Expedite Existing Order):** Expedite open order **`PO-2026-9002`** with **Cordillera Industrial (`S004`)** for **`1,500` units** (`+7 days` gain to arrive Day 7; `6%` contract fee per `DOC-CON-S004-v1` = **`€882.00`**; note `10%` email sensitivity = `€1,470.00`).",
-        "  3. **Strategy C (Approved Alternative Purchase):** Place new Purchase Order with **Cordillera Industrial (`S004`, independent upstream `U02`, valid ISO 9001 until `2027-11-30`)** for **`3,000` units** (full monthly capacity) @ `€9.80/unit` arriving Day 9 = **`€29,400.00`**.",
-        "  4. **Strategy D/E (Customer Priority Reallocation & Production Reschedule):** Protect 100% of Tier-1 customer orders and reschedule the residual **`850` units** (~1.9 days of Tier-3 demand) across the 12-week schedule.",
-        f"  - **Total Deterministic Recovery Cost:** **`€30,378.00`** (`€30,966.00` under 10% email fee sensitivity) — **well within the `€{fact.spending_cap:,.2f}` spending cap**.",
     ])
+    for opt in options:
+        if not opt.is_viable:
+            raw_reason = sanitize_evidence_text(opt.rejection_reason or "Rejected by operational or policy constraints.")
+            formatted_reason = raw_reason.replace("Veltro Semiconductor (U01)", "Veltro Semiconductor (`U01`)")
+            is_blocked = "expired" in raw_reason.lower() or "blocked" in raw_reason.lower()
+            verb = "Blocked" if is_blocked else "Rejected"
+            if opt.supplier_id:
+                lines.append(
+                    f"- ❌ **Why {opt.supplier_name or opt.supplier_id} (`{opt.supplier_id}`) is {verb}:** {formatted_reason}"
+                )
+            else:
+                lines.append(f"- ❌ **Why {opt.title} is {verb}:** {formatted_reason}")
+
+    rec = next((o for o in options if o.is_recommended), None)
+    if rec is not None:
+        lines.append(f"- ✅ **Why Recommended Plan (`{rec.strategy_id}`, `{rec.strategy_code}`) Wins:**")
+        for idx, step_desc in enumerate(rec.actions_breakdown, start=1):
+            lines.append(f"  {idx}. {sanitize_evidence_text(step_desc)}")
+        cap_status = (
+            f"within the `€{fact.spending_cap:,.2f}` spending cap"
+            if rec.recovery_cost <= fact.spending_cap
+            else f"exceeds the `€{fact.spending_cap:,.2f}` spending cap"
+        )
+        lines.append(
+            f"  - **Total Deterministic Recovery Cost:** **`€{rec.recovery_cost:,.2f}`** — {cap_status}."
+        )
+    elif not options:
+        lines.append("- ℹ️ No external recovery purchase order required for the evaluated disruption.")
     return "\n".join(lines)
 
 
@@ -595,14 +677,51 @@ def format_procurement_receipt(
         f"- **Approved By:** **{receipt.approved_by}** (`{receipt.approver_role}`) at `{receipt.executed_at}`",
         "",
         "### Executed MCP Write Operations",
-        f"1. **`create_purchase_order` → `{receipt.po_number}`:** Ordered **`{receipt.quantity:,} units`** of **`{receipt.component_id}`** from **{receipt.supplier_name} (`{receipt.supplier_id}`)** @ `€{receipt.unit_price_eur:.2f}/unit` = **`€{payload.po_subtotal_eur:,.2f}`**",
-        f"2. **`expedite_purchase_order` → `{receipt.expedite_ref}`:** Expedited `{payload.expedite_po_id}` (`{payload.expedite_units:,} units`, +7 days gain, `{payload.expedite_fee_pct:.0f}%` contract fee) = **`€{payload.expedite_fee_eur:,.2f}`**",
-        f"3. **`request_stock_transfer` → `{receipt.transfer_ref}`:** Transferred `{payload.transfer_units:,} units` from `{payload.transfer_from_location}` to `{payload.transfer_to_locations}` (`2 days` @ `€0.12/unit`) = **`€{payload.transfer_cost_eur:,.2f}`**",
-        f"4. **`update_production_schedule` → `{receipt.schedule_ref}`:** Protected all 6 Tier-1 customer orders and rescheduled `{payload.residual_units_reallocated:,}` Tier-3 units",
+    ]
+    ops = receipt.operations_executed or []
+    if ops:
+        for idx, op in enumerate(ops, start=1):
+            op_name = op.get("operation", "operation")
+            op_status = op.get("status", "confirmed")
+            if op_status == "failed":
+                lines.append(
+                    f"{idx}. **`{op_name}` → ❌ FAILED:** `{op.get('error', 'Operation failed')}`"
+                )
+            elif op_name == "create_purchase_order":
+                lines.append(
+                    f"{idx}. **`create_purchase_order` → `{op.get('po_id', receipt.po_number)}`:** "
+                    f"Ordered **`{receipt.quantity:,} units`** of **`{receipt.component_id}`** from "
+                    f"**{receipt.supplier_name} (`{receipt.supplier_id}`)** @ `€{receipt.unit_price_eur:.2f}/unit` = **`€{payload.po_subtotal_eur:,.2f}`**"
+                )
+            elif op_name == "expedite_purchase_order":
+                lines.append(
+                    f"{idx}. **`expedite_purchase_order` → `{op.get('expedite_ref', receipt.expedite_ref)}`:** "
+                    f"Expedited `{op.get('po_id', payload.expedite_po_id)}` (`{payload.expedite_units:,} units`, "
+                    f"+{op.get('days_gain', 7)} days gain, `{payload.expedite_fee_pct:.0f}%` contract fee) = **`€{float(op.get('fee_eur', payload.expedite_fee_eur)):,.2f}`**"
+                )
+            elif op_name == "request_stock_transfer":
+                lines.append(
+                    f"{idx}. **`request_stock_transfer` → `{op.get('transfer_id', receipt.transfer_ref)}`:** "
+                    f"Transferred `{op.get('qty', payload.transfer_units):,} units` from `{op.get('from_location', payload.transfer_from_location)}` "
+                    f"to `{op.get('to_location', payload.transfer_to_locations)}` (`2 days` @ `€0.12/unit`) = **`€{float(op.get('cost_eur', payload.transfer_cost_eur)):,.2f}`**"
+                )
+            elif op_name == "update_production_schedule":
+                lines.append(
+                    f"{idx}. **`update_production_schedule` → `{op.get('schedule_ref', receipt.schedule_ref)}`:** "
+                    f"Protected `{op.get('tier1_orders_protected', 0)}` Tier-1 orders and rescheduled "
+                    f"`{op.get('reallocated_tier3_units', payload.residual_units_reallocated):,}` residual units (`{op.get('product_id', '')}`)"
+                )
+            else:
+                lines.append(f"{idx}. **`{op_name}`:** `{op_status}`")
+    else:
+        lines.append(
+            f"1. **`create_purchase_order` → `{receipt.po_number}`:** Ordered **`{receipt.quantity:,} units`** of **`{receipt.component_id}`** from **{receipt.supplier_name} (`{receipt.supplier_id}`)** @ `€{receipt.unit_price_eur:.2f}/unit` = **`€{payload.po_subtotal_eur:,.2f}`**"
+        )
+    lines.extend([
         "",
         f"- **Total Committed Expenditure:** **`€{receipt.total_cost_eur:,.2f}`** (Authorized Cap: `€{payload.spending_cap:,.2f}`)",
         "- **Incident Report & Memory Retention:** Official Incident Report exported in **Markdown (`.md`)** and **PDF (`.pdf`)** below, and resolution summary saved to approved incident memories.",
-    ]
+    ])
     return "\n".join(lines)
 
 
@@ -623,12 +742,30 @@ def generate_incident_report_artifacts(
     profile: UserProfile = case_state.get("user_profile") or get_active_user_profile()
     findings: List[DocumentaryFinding] = case_state.get("documentary_findings") or retrieve_scoped_documentary_findings(profile, fact)
 
+    action_parts: List[str] = []
+    if payload.transfer_units > 0:
+        action_parts.append(f"Hub transfer ({payload.transfer_units:,}u -> {payload.transfer_to_locations})")
+    if payload.expedite_po_id:
+        action_parts.append(
+            f"expedited {payload.expedite_po_id} ({payload.expedite_units:,}u, {payload.expedite_fee_pct:.0f}% fee)"
+        )
+    action_parts.append(
+        f"new PO with {payload.target_supplier_name} ({payload.target_supplier_id}, "
+        f"{payload.quantity:,}u @ EUR {payload.unit_price:.2f})"
+    )
+    if payload.residual_units_reallocated > 0:
+        action_parts.append(f"schedule reallocation ({payload.residual_units_reallocated:,}u)")
+
+    rejected_notes = [
+        f"{opt.supplier_name or opt.supplier_id} ({opt.supplier_id}): {opt.rejection_reason or 'rejected'}"
+        for opt in options
+        if not opt.is_viable and opt.supplier_id
+    ]
+    rejected_clause = f" Rejected alternatives: {'; '.join(rejected_notes)}." if rejected_notes else ""
     memory_summary = (
         f"Case {payload.case_id} ({fact.component_id} {fact.delay_days}d delay from {fact.supplier_name} {fact.supplier_id}): "
-        f"Resolved via Hub transfer (800u -> W-LYO/W-KAT) + expedited Cordillera PO-2026-9002 (1,500u, 6% fee) + "
-        f"new Cordillera PO ({payload.quantity:,}u @ EUR {payload.unit_price:.2f}) + Tier-3 schedule shift ({payload.residual_units_reallocated:,}u) "
-        f"at total cost EUR {payload.total_cost:,.2f} (cap EUR {payload.spending_cap:,.0f}). "
-        f"Rejected Helios (21d lead time, 1,500/mo capacity), Borealis (expired ISO 9001 cert), and Delta (shared upstream U01 Veltro)."
+        f"Resolved via {' + '.join(action_parts)} "
+        f"at total cost EUR {payload.total_cost:,.2f} (cap EUR {payload.spending_cap:,.0f}).{rejected_clause}"
     )
 
     report = IncidentReport(
@@ -657,7 +794,7 @@ def generate_incident_report_artifacts(
     case_state["incident_report"] = report
     case_state["report_md_path"] = str(md_path)
     case_state["report_pdf_path"] = str(pdf_path)
-    get_orchestrator()._persist_checkpoint(thread_id, case_state)
+    get_orchestrator().persist_state(thread_id, case_state)
     return report, md_path, pdf_path
 
 
@@ -699,6 +836,10 @@ async def _emit_supplyguard_subagent_steps(
     findings: Optional[List[DocumentaryFinding]] = None,
     options: Optional[List[RecoveryOption]] = None,
     user_profile: Optional[UserProfile] = None,
+    *,
+    graph_res: Optional[dict[str, Any]] = None,
+    challenger_res: Optional[dict[str, Any]] = None,
+    approval_payload: Optional[ApprovalPayload] = None,
 ) -> None:
     """Emit live Chainlit Step telemetry indicators for each specialist Deep Agent subagent (#44)."""
     profile = user_profile or get_active_user_profile()
@@ -718,17 +859,37 @@ async def _emit_supplyguard_subagent_steps(
         )
 
     async with cl.Step(name=SUBAGENT_STEP_NAMES["graph_subagent"], type="run") as step:
-        step.output = format_step_output("graph_subagent", {})
+        step.output = format_step_output("graph_subagent", graph_res or {})
 
     async with cl.Step(name=SUBAGENT_STEP_NAMES["optimizer_subagent"], type="run") as step:
-        step.output = format_step_output("optimizer_subagent", {"recovery_options": options or []})
+        step.output = format_step_output(
+            "optimizer_subagent",
+            {"recovery_options": options or [], "spending_cap": fact.spending_cap},
+        )
+
+    if challenger_res is not None:
+        budget_audit = challenger_res.get("budget_audit") or {}
+        within_cap = bool(budget_audit.get("is_compliant", True))
+        violations = list(budget_audit.get("violations") or [])
+        injection_alerts = list(challenger_res.get("injection_alerts") or [])
+    else:
+        within_cap = approval_payload.is_within_cap() if approval_payload is not None else True
+        violations = []
+        injection_alerts = [
+            {"source_id": f.source_id, "status": "NEUTRALIZED"}
+            for f in (findings or [])
+            if getattr(f, "is_malicious", False)
+        ]
+        if fact.detected_prompt_injection:
+            injection_alerts.append({"source_id": "USER_MESSAGE_ATTACHMENT", "status": "NEUTRALIZED"})
 
     async with cl.Step(name=SUBAGENT_STEP_NAMES["challenger_subagent"], type="run") as step:
         step.output = format_step_output(
             "challenger_subagent",
             {
-                "prompt_injection_alert": fact.detected_prompt_injection or "DOC-NOT-HELIOS-PRICE",
-                "within_cap": True,
+                "injection_alerts": injection_alerts,
+                "within_cap": within_cap,
+                "violations": violations,
             },
         )
 
@@ -877,7 +1038,9 @@ async def on_message(message: cl.Message) -> None:
                     content="ℹ️ No persisted SupplyGuard case found in database checkpoints to resume."
                 ).send()
                 return
-            orchestrator._persist_checkpoint(thread_id, target_state)
+            resumed_state = dict(target_state)
+            resumed_state["thread_id"] = thread_id
+            orchestrator.persist_state(thread_id, resumed_state)
             await _restore_or_greet(thread_id, is_manual_resume=True)
             return
 
@@ -909,16 +1072,19 @@ async def on_message(message: cl.Message) -> None:
 
         # Fresh full investigation completed (new approval payload or completed impact)
         new_payload_obj: Optional[ApprovalPayload] = case_state.get("approval_payload")
+        last_turn_kind = case_state.get("last_turn_kind")
         is_new_investigation = (
             case_state.get("investigation_completed")
             and case_state.get("operational_impact") is not None
-            and (
-                (new_payload_obj is not None and new_payload_obj.action_id != prev_action_id and not case_state.get("refused"))
-                or (prev_state is None or not prev_state.get("investigation_completed"))
-            )
             and not case_state.get("refused")
-            and "follow-up" not in (case_state.get("last_answer") or "").lower()
-            and not (prev_state and prev_state.get("investigation_completed") and new_payload_obj is not None and new_payload_obj.action_id == prev_action_id)
+            and (
+                last_turn_kind == "investigation"
+                if last_turn_kind is not None
+                else (
+                    (new_payload_obj is not None and new_payload_obj.action_id != prev_action_id)
+                    or (prev_state is None or not prev_state.get("investigation_completed"))
+                )
+            )
         )
 
         if is_new_investigation and case_state.get("disruption_fact") and case_state.get("operational_impact"):
@@ -932,6 +1098,9 @@ async def on_message(message: cl.Message) -> None:
                 findings=findings,
                 options=options,
                 user_profile=profile,
+                graph_res=case_state.get("graph_res"),
+                challenger_res=case_state.get("challenger_res"),
+                approval_payload=new_payload_obj,
             )
             dashboard_md = format_operational_impact_dashboard(
                 fact=fact,
@@ -1013,15 +1182,16 @@ async def _handle_approval_decision(action: cl.Action, approved: bool) -> None:
             except Exception:
                 approval_msg = None
 
-        if approval_msg is not None:
+        async def _clear_card_actions() -> None:
+            if approval_msg is not None:
+                try:
+                    await approval_msg.remove_actions()
+                except Exception:
+                    pass
             try:
-                await approval_msg.remove_actions()
+                await action.remove()
             except Exception:
                 pass
-        try:
-            await action.remove()
-        except Exception:
-            pass
 
         orchestrator = get_orchestrator()
         case_state = orchestrator.get_state(thread_id)
@@ -1031,9 +1201,11 @@ async def _handle_approval_decision(action: cl.Action, approved: bool) -> None:
 
         sg_payload: ApprovalPayload = case_state["approval_payload"]
         if (action_id and action_id in _handled_actions) or case_state.get("status") == "executed":
+            await _clear_card_actions()
             await cl.Message(content="ℹ️ This action has already been processed.").send()
             return
         if action_id and sg_payload.action_id != action_id:
+            await _clear_card_actions()
             await cl.Message(content="ℹ️ This approval card is no longer active (superseded by a modified plan).").send()
             return
         if expected_hash and not sg_payload.verify_binding(expected_hash):
@@ -1042,46 +1214,60 @@ async def _handle_approval_decision(action: cl.Action, approved: bool) -> None:
             ).send()
             return
 
-        if action_id:
-            _handled_actions.add(action_id)
+        try:
+            if approved:
+                receipt, was_duplicate = await cl.make_async(orchestrator.approve_and_execute)(
+                    thread_id,
+                    profile,
+                    expected_payload_hash=expected_hash or sg_payload.payload_hash,
+                )
+                if action_id:
+                    _handled_actions.add(action_id)
+                await _clear_card_actions()
 
-        if approved:
-            receipt, was_duplicate = await cl.make_async(orchestrator.approve_and_execute)(
-                thread_id,
-                profile,
-                expected_payload_hash=expected_hash or sg_payload.payload_hash,
-            )
-            case_state = orchestrator.get_state(thread_id) or case_state
-            sg_payload = case_state["approval_payload"]
+                case_state = orchestrator.get_state(thread_id) or case_state
+                sg_payload = case_state["approval_payload"]
 
-            async with cl.Step(name=SUBAGENT_STEP_NAMES["procurement_mcp"], type="run") as step:
-                step.output = format_step_output("procurement_mcp", {"procurement_receipt": receipt})
+                async with cl.Step(name=SUBAGENT_STEP_NAMES["procurement_mcp"], type="run") as step:
+                    step.output = format_step_output("procurement_mcp", {"procurement_receipt": receipt})
 
-            report, md_path, pdf_path = generate_incident_report_artifacts(thread_id, case_state)
-            elements = []
-            if hasattr(cl, "File"):
-                elements = [
-                    cl.File(name=md_path.name, path=str(md_path), display="inline"),
-                    cl.File(name=pdf_path.name, path=str(pdf_path), display="inline"),
-                ]
-            export_action = _create_cl_action(
-                name="export_report",
-                payload={"thread_id": thread_id, "case_id": sg_payload.case_id},
-                label="📄 Export Incident Report (Markdown & PDF)",
-            )
-            receipt_md = format_procurement_receipt(receipt, sg_payload, is_replay=was_duplicate)
-            await cl.Message(
-                content=f"{receipt_md}\n\n---\n\n{report.to_markdown()}",
-                elements=elements,
-                actions=[export_action],
-            ).send()
-        else:
-            await cl.make_async(orchestrator.reject)(thread_id, profile)
+                report, md_path, pdf_path = generate_incident_report_artifacts(thread_id, case_state)
+                elements = []
+                if hasattr(cl, "File"):
+                    elements = [
+                        cl.File(name=md_path.name, path=str(md_path), display="inline"),
+                        cl.File(name=pdf_path.name, path=str(pdf_path), display="inline"),
+                    ]
+                export_action = _create_cl_action(
+                    name="export_report",
+                    payload={"thread_id": thread_id, "case_id": sg_payload.case_id},
+                    label="📄 Export Incident Report (Markdown & PDF)",
+                )
+                receipt_md = format_procurement_receipt(receipt, sg_payload, is_replay=was_duplicate)
+                await cl.Message(
+                    content=f"{receipt_md}\n\n---\n\n{report.to_markdown()}",
+                    elements=elements,
+                    actions=[export_action],
+                ).send()
+            else:
+                await cl.make_async(orchestrator.reject)(thread_id, profile)
+                if action_id:
+                    _handled_actions.add(action_id)
+                await _clear_card_actions()
+                await cl.Message(
+                    content=(
+                        f"❌ **Recovery Plan Rejected (`{sg_payload.action_id}`)**\n\n"
+                        "No purchase order, expedite request, or stock transfer was executed in the simulated procurement system. "
+                        "You may click **✏️ Modify Plan** or specify updated constraints in chat to generate a new recovery proposal."
+                    )
+                ).send()
+        except Exception as exc:
+            logger.exception("Error handling approval decision for thread %s (action %s)", thread_id, action_id)
             await cl.Message(
                 content=(
-                    f"❌ **Recovery Plan Rejected (`{sg_payload.action_id}`)**\n\n"
-                    "No purchase order, expedite request, or stock transfer was executed in the simulated procurement system. "
-                    "You may click **✏️ Modify Plan** or specify updated constraints in chat to generate a new recovery proposal."
+                    "❌ **Unable to complete approval decision.**\n\n"
+                    f"Details: `{exc}`\n"
+                    "No state lock was finalized; please review the plan or retry."
                 )
             ).send()
 
@@ -1130,7 +1316,7 @@ async def on_modify(action: cl.Action) -> None:
         if old_payload:
             old_payload.status = ActionStatus.INVALIDATED
         case_state["status"] = "awaiting_modification"
-        orchestrator._persist_checkpoint(thread_id, case_state)
+        orchestrator.persist_state(thread_id, case_state)
 
     await cl.Message(
         content=(
