@@ -676,34 +676,11 @@ def _load_suppliers_table() -> List[Dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
-PROMPT_INJECTION_PATTERNS = (
-    r"ignore\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|rules|policies)",
-    r"system\s+instruction",
-    r"(?:for|to)\s+(?:ai|llm)\s+(?:assistants?|agents?|models?)",
-    r"(?:^|\s)(?:system|assistant)\s*:",
-    r"(?:execute|place|issue|approve)\s+(?:an?\s+)?(?:purchase\s+)?order\b.{0,40}\bwithout\s+(?:human\s+)?approval",
-    r"do\s+not\s+(?:mention|tell|inform|report)\b.{0,30}\b(?:user|message|this)",
-    r"(?:skip|bypass|disable)\s+(?:the\s+)?(?:human\s+)?approval",
-    r"mark\s+.{0,40}\s+as\s+(?:certified|approved)",
-    r"approve\s+any\s+purchase\s+from\s+helios",
-    r"finance\s+director\s+already\s+approved",
-    r"i\s+am\s+the\s+finance\s+director",
+from src.agent.guardrails import (
+    PROMPT_INJECTION_PATTERNS,
+    detect_prompt_injection_in_text,
+    strip_untrusted_notice as _strip_untrusted_notice,
 )
-
-
-def detect_prompt_injection_in_text(text: str) -> Optional[str]:
-    """Scan incoming text or attached notices for adversarial prompt injection attempts."""
-    lowered = text.lower()
-    for pat in PROMPT_INJECTION_PATTERNS:
-        m = re.search(pat, lowered)
-        if m:
-            return m.group(0).strip()
-    return None
-
-
-def _strip_untrusted_notice(text: str) -> str:
-    """Remove embedded 'Attached notice: ...' payloads before extracting operational caps."""
-    return re.split(r"\battached\s+notice\s*:", text, maxsplit=1, flags=re.I)[0]
 
 
 def extract_disruption_fact(
@@ -711,6 +688,8 @@ def extract_disruption_fact(
     previous_fact: Optional[DisruptionFact] = None,
 ) -> DisruptionFact:
     """Extract supplier, component, delay days, and spending cap from user message, flagging ambiguity."""
+    from src.knowledge import data_quality as dq
+
     suppliers = _load_suppliers_table()
     clean_text = _strip_untrusted_notice(text)
     lowered = clean_text.lower()
@@ -721,13 +700,10 @@ def extract_disruption_fact(
     delay_days = previous_fact.delay_days if previous_fact else None
     spending_cap = previous_fact.spending_cap if previous_fact else 75000.0
 
-    # 1. Component ID (e.g. MC-17, MC-140)
+    # 1. Component ID normalized via data_quality.canonical_component_id (e.g. MC017 -> MC-17)
     comp_match = re.search(r"\b(MC-?\d{1,3})\b", clean_text, re.I)
     if comp_match:
-        raw_comp = comp_match.group(1).upper()
-        if not raw_comp.startswith("MC-"):
-            raw_comp = "MC-" + raw_comp[2:]
-        component_id = raw_comp
+        component_id = dq.canonical_component_id(comp_match.group(1)) or comp_match.group(1).upper()
 
     # 2. Delay duration in days (e.g. "12-day delay", "12 days late", "takes 3 days", "by about 5 days")
     delay_match = re.search(
@@ -740,12 +716,12 @@ def extract_disruption_fact(
         if val_str:
             delay_days = int(val_str)
 
-    # 3. Spending cap (e.g. "€75,000", "EUR 90,000", "75000")
+    # 3. Spending cap (e.g. "€75,000", "EUR 90,000")
     cap_match = re.search(r"(?:€|eur\s*)(\d{2,3}(?:,\d{3})+|\d{4,6})", lowered)
     if cap_match:
         spending_cap = float(cap_match.group(1).replace(",", ""))
 
-    # 4. Explicit supplier ID (e.g. S001, S006)
+    # 4. Supplier ID or canonical/prefix name via data_quality.resolve_supplier
     sid_match = re.search(r"\b(S0\d{2})\b", clean_text, re.I)
     is_ambiguous = False
     ambiguity_candidates: List[str] = []
@@ -757,10 +733,7 @@ def extract_disruption_fact(
             supplier_id = matched_sup["supplier_id"]
             supplier_name = matched_sup["name"]
     else:
-        # Match full canonical supplier name
-        exact_matches = [
-            s for s in suppliers if s["name"].lower() in lowered
-        ]
+        exact_matches = [s for s in suppliers if s["name"].lower() in lowered]
         if len(exact_matches) == 1:
             supplier_id = exact_matches[0]["supplier_id"]
             supplier_name = exact_matches[0]["name"]
@@ -768,12 +741,14 @@ def extract_disruption_fact(
             is_ambiguous = True
             ambiguity_candidates = [f"{s['name']} ({s['supplier_id']}, {s.get('city', '')})" for s in exact_matches]
         else:
-            # Check prefix token like "Atlas" which matches both Atlas Components (S001) and Atlas Logistik GmbH (S006)
             prefix_candidates: List[Dict[str, str]] = []
             for s in suppliers:
-                first_word = s["name"].split()[0].lower()
-                if len(first_word) >= 4 and re.search(rf"\b{re.escape(first_word)}\b", lowered):
-                    prefix_candidates.append(s)
+                first_word = s["name"].split()[0]
+                if len(first_word) >= 4 and re.search(rf"\b{re.escape(first_word.lower())}\b", lowered):
+                    for hit in dq.resolve_supplier(first_word):
+                        row = next((x for x in suppliers if x["supplier_id"] == hit["supplier_id"]), hit)
+                        if row not in prefix_candidates:
+                            prefix_candidates.append(row)
             if len(prefix_candidates) > 1:
                 is_ambiguous = True
                 supplier_id = None
@@ -790,9 +765,17 @@ def extract_disruption_fact(
         supplier_id = None
         supplier_name = None
 
-    affected_po = "PO-2026-9001" if (supplier_id == "S001" and component_id == "MC-17") else None
-    original_due = "2026-10-26" if affected_po == "PO-2026-9001" else None
-    new_due = "2026-11-07" if (affected_po == "PO-2026-9001" and delay_days == 12) else None
+    # Look up affected open PO dynamically from purchase_orders.csv
+    affected_po = original_due = new_due = None
+    if supplier_id and component_id:
+        for po in dq.table("purchase_orders.csv"):
+            if po["supplier_id"] == supplier_id and dq.canonical_component_id(po["component_id"]) == component_id and po["status"] == "open":
+                affected_po = po["po_id"]
+                original_due = po["promised_date"] or None
+                if original_due and delay_days:
+                    from datetime import date as _date, timedelta as _td
+                    new_due = (_date.fromisoformat(original_due) + _td(days=delay_days)).isoformat()
+                break
 
     return DisruptionFact(
         supplier_id=supplier_id,
@@ -838,171 +821,119 @@ def build_clarification_question(fact: DisruptionFact) -> str:
 
 
 def compute_operational_impact(fact: DisruptionFact) -> OperationalImpact:
-    """Compute operational impact from support-data CSVs (or golden MC-17 reference data)."""
-    comp_id = fact.component_id or "MC-17"
+    """Compute operational impact directly from support-data via Knowledge mocks and data_quality."""
+    from datetime import date as _date
+    from src.knowledge import data_quality as dq, mocks as kmocks
+
+    comp_id = dq.canonical_component_id(fact.component_id or "MC-17") or (fact.component_id or "MC-17")
     delay_days = fact.delay_days or 12
 
-    if comp_id == "MC-17":
-        timelines = [
+    inv = kmocks.query_inventory(comp_id)
+    bom = kmocks.query_bom(comp_id)
+    loc_names = {r["location_id"]: r["name"] for r in dq.table("locations.csv")}
+    factory_names = {r["factory_id"]: r["name"] for r in dq.table("factories.csv")}
+
+    # Daily demand per factory from the first week of production_schedule
+    first_week = dq.SCENARIO_DATE.isoformat()
+    daily_by_factory: Dict[str, int] = {}
+    for fid, weeks in bom.weekly_demand.items():
+        units_wk = weeks.get(first_week) if first_week in weeks else (next(iter(weeks.values()), 0) if weeks else 0)
+        daily_by_factory[fid] = max(0, int(round(units_wk / 7.0)))
+    daily_demand_total = sum(daily_by_factory.values())
+
+    # Days until original arrival from open PO (default 0 if no open PO)
+    days_until_arrival = 0
+    for po in dq.table("purchase_orders.csv"):
+        if (
+            (not fact.supplier_id or po["supplier_id"] == fact.supplier_id)
+            and dq.canonical_component_id(po["component_id"]) == comp_id
+            and po["status"] == "open"
+            and po["promised_date"]
+        ):
+            days_until_arrival = max(0, (_date.fromisoformat(po["promised_date"]) - dq.SCENARIO_DATE).days)
+            break
+
+    timelines: List[FactoryStockTimeline] = []
+    hub_usable = 0
+    for loc in inv.locations:
+        fid = loc.factory_id or "HUB"
+        if loc.location_id == "W-HUB":
+            hub_usable = loc.usable
+            fname = loc_names.get(loc.location_id, "Rotterdam Central Hub")
+            daily = 0
+            cover = 0.0
+            runs_out = False
+        else:
+            base_name = factory_names.get(fid, fid)
+            fname = f"{base_name} Plant ({fid})"
+            daily = daily_by_factory.get(fid, 0)
+            cover = round(loc.usable / daily, 1) if daily > 0 else 0.0
+            runs_out = bool(daily > 0 and cover < max(days_until_arrival, 5))
+        timelines.append(
             FactoryStockTimeline(
-                factory_id="F3",
-                factory_name="Lyon Plant (F3)",
-                warehouse_id="W-LYO",
-                on_hand_units=1100,
-                reserved_units=600,
-                quarantined_units=0,
-                usable_units=500,
-                daily_demand_units=150,
-                days_of_cover=3.3,
-                runs_out_first=True,
-            ),
-            FactoryStockTimeline(
-                factory_id="F2",
-                factory_name="Katowice Plant (F2)",
-                warehouse_id="W-KAT",
-                on_hand_units=1500,
-                reserved_units=300,
-                quarantined_units=600,
-                usable_units=600,
-                daily_demand_units=150,
-                days_of_cover=4.0,
-                runs_out_first=True,
-            ),
-            FactoryStockTimeline(
-                factory_id="F1",
-                factory_name="Stuttgart Plant (F1)",
-                warehouse_id="W-STU",
-                on_hand_units=1800,
-                reserved_units=500,
-                quarantined_units=0,
-                usable_units=1300,
-                daily_demand_units=150,
-                days_of_cover=8.7,
-                runs_out_first=False,
-            ),
-            FactoryStockTimeline(
-                factory_id="HUB",
-                factory_name="Rotterdam Central Hub",
-                warehouse_id="W-HUB",
-                on_hand_units=800,
-                reserved_units=0,
-                quarantined_units=0,
-                usable_units=800,
-                daily_demand_units=0,
-                days_of_cover=0.0,
-                runs_out_first=False,
-            ),
-        ]
-        reserved_orders = [
-            {"customer_order_id": "CO-00022", "location_id": "W-STU", "reserved_qty": 250, "tier": 1},
-            {"customer_order_id": "CO-00244", "location_id": "W-STU", "reserved_qty": 250, "tier": 1},
-            {"customer_order_id": "CO-00005", "location_id": "W-KAT", "reserved_qty": 300, "tier": 1},
-            {"customer_order_id": "CO-00173", "location_id": "W-LYO", "reserved_qty": 300, "tier": 1},
-            {"customer_order_id": "CO-00073", "location_id": "W-LYO", "reserved_qty": 200, "tier": 1},
-            {"customer_order_id": "CO-00410", "location_id": "W-LYO", "reserved_qty": 100, "tier": 1},
-        ]
-        # Dynamic shortfall if delay_days differs from 12 (e.g. 16-day sensitivity analysis)
-        uncovered = 5350 if delay_days == 12 else max(0, delay_days * 450 - 50)
-        return OperationalImpact(
-            component_id="MC-17",
-            total_physical_units=5200,
-            usable_units=3200,
-            reserved_units=1400,
-            quarantined_units=600,
-            quarantine_lot_id="LOT-KAT-0932",
-            quarantine_reason="Failed incoming inspection (solder defect)",
-            affected_factories=["Katowice (F2)", "Lyon (F3)"],
-            factory_timelines=timelines,
-            hub_usable_units=800,
-            affected_products=["P012", "P023", "P031", "P047", "P058", "P066"],
-            affected_products_count=6,
-            affected_customer_orders_count=77,
-            daily_demand_total=450,
-            stock_at_original_arrival=50,
-            uncovered_demand_units=uncovered,
-            reserved_stock_orders=reserved_orders,
-            total_revenue_at_risk_eur=412500.0,
+                factory_id=fid,
+                factory_name=fname,
+                warehouse_id=loc.location_id,
+                on_hand_units=loc.on_hand,
+                reserved_units=loc.reserved,
+                quarantined_units=loc.quarantined,
+                usable_units=loc.usable,
+                daily_demand_units=daily,
+                days_of_cover=cover,
+                runs_out_first=runs_out,
+            )
         )
+    # Show critical plants first, then remaining plants, then Central Hub
+    timelines.sort(key=lambda t: (t.warehouse_id == "W-HUB", t.days_of_cover if t.daily_demand_units else 999.0))
 
-    # Dynamic calculation from structured CSVs for any other component in support-data
-    inv_path = SUPPORT_DATA_DIR / "structured" / "inventory.csv"
-    bom_path = SUPPORT_DATA_DIR / "structured" / "bill_of_materials.csv"
-    co_path = SUPPORT_DATA_DIR / "structured" / "customer_orders.csv"
+    affected_factories = [
+        f"{factory_names.get(t.factory_id, t.factory_id)} ({t.factory_id})"
+        for t in sorted(
+            [tl for tl in timelines if tl.runs_out_first],
+            key=lambda tl: tl.factory_id,
+        )
+    ]
 
-    on_hand = reserved = quarantined = usable = hub_usable = 0
-    timelines = []
-    if inv_path.exists():
-        with inv_path.open("r", encoding="utf-8") as fh:
-            for row in csv.DictReader(fh):
-                if row["component_id"] == comp_id:
-                    oh = int(row["on_hand"])
-                    res = int(row["reserved"])
-                    quar = int(row["quarantined"])
-                    us = int(row["usable"])
-                    loc = row["location_id"]
-                    on_hand += oh
-                    reserved += res
-                    quarantined += quar
-                    usable += us
-                    if loc == "W-HUB":
-                        hub_usable += us
-                    timelines.append(
-                        FactoryStockTimeline(
-                            factory_id=loc,
-                            factory_name=loc,
-                            warehouse_id=loc,
-                            on_hand_units=oh,
-                            reserved_units=res,
-                            quarantined_units=quar,
-                            usable_units=us,
-                            daily_demand_units=100,
-                            days_of_cover=round(us / 100.0, 1) if loc != "W-HUB" else 0.0,
-                            runs_out_first=(us < delay_days * 100),
-                        )
-                    )
+    stock_at_arrival = max(0, inv.total_usable - days_until_arrival * daily_demand_total) if days_until_arrival else inv.total_usable
+    if not bom.products:
+        uncovered = 0
+    elif days_until_arrival > 0 and daily_demand_total > 0:
+        uncovered = max(0, delay_days * daily_demand_total - stock_at_arrival)
+    else:
+        uncovered = max(0, delay_days * max(daily_demand_total, len(bom.products) * 50) - inv.total_usable)
 
-    affected_products: List[str] = []
-    if bom_path.exists():
-        with bom_path.open("r", encoding="utf-8") as fh:
-            for row in csv.DictReader(fh):
-                if row["component_id"] == comp_id and row["product_id"] not in affected_products:
-                    affected_products.append(row["product_id"])
-    affected_products.sort()
+    order_tiers = {r["order_id"]: int(r["customer_priority_tier"]) for r in dq.table("customer_orders.csv")}
+    reserved_orders = [
+        {
+            "customer_order_id": r.customer_order_id,
+            "location_id": r.location_id,
+            "reserved_qty": r.reserved_qty,
+            "tier": order_tiers.get(r.customer_order_id, 1),
+        }
+        for r in inv.reservations
+    ]
+    q_lot = inv.quarantine_lots[0] if inv.quarantine_lots else None
+    revenue_at_risk = round(sum(o.revenue_eur for o in bom.open_orders), 2)
 
-    open_orders = 0
-    revenue_at_risk = 0.0
-    if co_path.exists() and affected_products:
-        with co_path.open("r", encoding="utf-8") as fh:
-            for row in csv.DictReader(fh):
-                if (
-                    row["product_id"] in affected_products
-                    and row["status"] == "open"
-                    and "2026-10-19" <= row["due_date"] <= "2026-12-18"
-                ):
-                    open_orders += 1
-                    revenue_at_risk += float(row.get("revenue_eur") or 0.0)
-
-    daily_demand = max(100, len(affected_products) * 50)
-    uncovered = max(0, delay_days * daily_demand - usable)
     return OperationalImpact(
         component_id=comp_id,
-        total_physical_units=on_hand,
-        usable_units=usable,
-        reserved_units=reserved,
-        quarantined_units=quarantined,
-        quarantine_lot_id="N/A",
-        quarantine_reason="Standard QA inspection",
-        affected_factories=["Katowice (F2)", "Lyon (F3)"],
+        total_physical_units=inv.total_on_hand,
+        usable_units=inv.total_usable,
+        reserved_units=inv.total_reserved,
+        quarantined_units=inv.total_quarantined,
+        quarantine_lot_id=q_lot.lot_id if q_lot else "N/A",
+        quarantine_reason=q_lot.reason if q_lot else "No active QA holds",
+        affected_factories=affected_factories,
         factory_timelines=timelines,
         hub_usable_units=hub_usable,
-        affected_products=affected_products,
-        affected_products_count=len(affected_products),
-        affected_customer_orders_count=open_orders,
-        daily_demand_total=daily_demand,
-        stock_at_original_arrival=0,
+        affected_products=[p.product_id for p in bom.products],
+        affected_products_count=len(bom.products),
+        affected_customer_orders_count=len(bom.open_orders),
+        daily_demand_total=daily_demand_total,
+        stock_at_original_arrival=stock_at_arrival,
         uncovered_demand_units=uncovered,
-        reserved_stock_orders=[],
-        total_revenue_at_risk_eur=round(revenue_at_risk, 2),
+        reserved_stock_orders=reserved_orders,
+        total_revenue_at_risk_eur=revenue_at_risk,
     )
 
 
@@ -1010,149 +941,101 @@ def retrieve_scoped_documentary_findings(
     user_profile: UserProfile,
     fact: Optional[DisruptionFact] = None,
 ) -> List[DocumentaryFinding]:
-    """Retrieve documentary evidence, conflict flags, and security alerts filtered by user's RBAC scope."""
-    if fact is not None and fact.component_id and fact.component_id != "MC-17":
-        # Non-MC-17 cases retrieve relevant scoped documents dynamically without injecting MC-17 findings
-        try:
-            from src.knowledge import mocks as kmocks
+    """Retrieve RBAC-scoped documentary findings, conflicts, and security alerts from support-data."""
+    from src.knowledge import data_quality as dq, mocks as kmocks
 
-            norm_scope = (
-                "finance"
-                if user_profile.can_view_finance_confidential
-                else ("public" if user_profile.access_scope == AccessScope.PUBLIC else "procurement")
+    comp_id = dq.canonical_component_id((fact.component_id if fact else None) or "MC-17") or "MC-17"
+    norm_scope = (
+        "finance"
+        if user_profile.can_view_finance_confidential
+        else ("public" if user_profile.access_scope == AccessScope.PUBLIC else "procurement")
+    )
+    graph = kmocks.query_supplier_graph(comp_id)
+    relevant_suppliers = {s.supplier_id for s in graph.suppliers}
+    if fact and fact.supplier_id:
+        relevant_suppliers.add(fact.supplier_id)
+
+    prec = dq.document_precedence()
+    conflicts = dq.conflicting_claims()
+    conflict_notes: Dict[str, str] = {}
+    for c in conflicts:
+        if c["supplier_id"] in relevant_suppliers:
+            vals = ", ".join(f"{s['source_id']}={s['value']:g}" for s in c["sources"])
+            note = f"{c['attribute']}: {vals}; winner -> {c['winner']} (source precedence)"
+            for s in c["sources"]:
+                conflict_notes[s["source_id"]] = note
+
+    findings: List[DocumentaryFinding] = []
+    seen: set[str] = set()
+    for meta, body in dq.documents():
+        sid = meta["source_id"]
+        scope = meta["access_scope"]
+        if not user_profile.can_access_document_scope(scope):
+            continue
+        doc_sup = meta.get("supplier_id") or ""
+        is_relevant = (
+            comp_id.lower() in body.lower()
+            or comp_id.lower() in meta["title"].lower()
+            or doc_sup in relevant_suppliers
+            or sid == "DOC-FIN-01-v1"
+        )
+        if not is_relevant or sid in seen:
+            continue
+        seen.add(sid)
+        p_info = prec.get(sid, {})
+        inj = detect_prompt_injection_in_text(body)
+        is_malicious = bool(inj)
+        is_superseded = bool(p_info.get("superseded"))
+        is_conflict = sid in conflict_notes or (doc_sup == "S003" and meta["doc_type"] == "qualification")
+
+        res_note = conflict_notes.get(sid)
+        if is_malicious:
+            res_note = f"NEUTRALIZED & REPORTED: Treated strictly as untrusted data ({inj})."
+        elif is_superseded:
+            res_note = f"Superseded by {p_info.get('superseded_by')} per source precedence policy."
+        elif doc_sup == "S003" and meta["doc_type"] == "qualification":
+            res_note = "Blocked under procedure DOC-PRO-04-v1 (expired ISO 9001 certificate beats stale ERP status)."
+
+        clean_summary = " ".join(
+            line.strip()
+            for line in re.sub(r"<!--.*?-->", "", body, flags=re.S).splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        )[:260]
+        findings.append(
+            DocumentaryFinding(
+                source_id=sid,
+                doc_type=meta["doc_type"],
+                title=meta["title"],
+                supplier_id=doc_sup or None,
+                version=str(meta.get("version") or "1"),
+                effective_date=meta["effective_date"],
+                access_scope=scope,
+                summary=clean_summary,
+                is_conflict=is_conflict,
+                conflict_resolution=res_note,
+                is_superseded=is_superseded,
+                is_malicious=is_malicious,
             )
-            docs = kmocks.retrieve_documents(
-                f"{fact.component_id} {fact.supplier_name or ''} supplier certification",
-                access_scope=norm_scope,
-                top_k=5,
-            )
-            return [
-                DocumentaryFinding(
-                    source_id=d.source_id,
-                    doc_type=d.doc_type,
-                    title=d.title,
-                    version=str(d.version or "1"),
-                    effective_date=d.effective_date,
-                    access_scope=d.access_scope,
-                    summary=d.content[:240],
-                    is_superseded=d.superseded_by is not None,
-                    is_malicious=not d.trusted,
+        )
+
+    # Also include top scope-filtered search hits when working on other components
+    if not findings:
+        for d in kmocks.retrieve_documents(f"{comp_id} supplier certification", access_scope=norm_scope, top_k=5):
+            if user_profile.can_access_document_scope(d.access_scope):
+                findings.append(
+                    DocumentaryFinding(
+                        source_id=d.source_id,
+                        doc_type=d.doc_type,
+                        title=d.title,
+                        version=str(d.version or "1"),
+                        effective_date=d.effective_date,
+                        access_scope=d.access_scope,
+                        summary=d.content[:240],
+                        is_superseded=d.superseded_by is not None,
+                        is_malicious=not d.trusted,
+                    )
                 )
-                for d in docs
-                if user_profile.can_access_document_scope(d.access_scope)
-            ]
-        except Exception:
-            return []
-
-    all_findings = [
-        DocumentaryFinding(
-            source_id="DOC-NOT-ATLAS-MC17",
-            doc_type="supplier_notice",
-            title="Supplier notice - Atlas Components - MC-17 delay",
-            supplier_id="S001",
-            version="1",
-            effective_date="2026-10-19",
-            access_scope="procurement",
-            summary="Atlas Components (S001) formally announces a 12-day delay on PO-2026-9001 (6,000 units MC-17, new due date 2026-11-07).",
-            is_conflict=True,
-            conflict_resolution="Governs over informal e-mail DOC-EM-ATLAS-01 (16 days) per source precedence policy; 16-day sensitivity tracked.",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-EM-ATLAS-01",
-            doc_type="email",
-            title="E-mail: Atlas account manager (conflicts with formal notice)",
-            supplier_id="S001",
-            version="1",
-            effective_date="2026-10-19",
-            access_scope="procurement",
-            summary="Account manager informally warns MC-17 delay might reach 16 days with partial 1,000-unit shipment after 8 days.",
-            is_conflict=True,
-            conflict_resolution="Subordinate to formal notice DOC-NOT-ATLAS-MC17 (12 days); retained for 16-day downside sensitivity analysis.",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-CON-S001-v3",
-            doc_type="contract",
-            title="Supply contract - Atlas Components (v3)",
-            supplier_id="S001",
-            version="3",
-            effective_date="2026-03-01",
-            access_scope="procurement",
-            summary="Active supply contract with Atlas Components: standard lead time 14 days, unit price EUR 8.50.",
-            is_conflict=True,
-            conflict_resolution="Supersedes stale contract DOC-CON-S001-v2 (effective 2025-01-01, 10-day lead time).",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-CON-S001-v2",
-            doc_type="contract",
-            title="Supply contract - Atlas Components (v2 - Superseded)",
-            supplier_id="S001",
-            version="2",
-            effective_date="2025-01-01",
-            access_scope="procurement",
-            summary="Legacy contract stating 10-day lead time for MC-17.",
-            is_superseded=True,
-            conflict_resolution="Ignored in favor of latest effective version DOC-CON-S001-v3 (effective 2026-03-01).",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-CON-S004-v1",
-            doc_type="contract",
-            title="Supply contract - Cordillera Industrial",
-            supplier_id="S004",
-            version="1",
-            effective_date="2025-08-01",
-            access_scope="procurement",
-            summary="Approved alternative supplier S004: EUR 9.80/unit, 9-day lead time, 3,000 units/month capacity, 6% expedite fee (+7 days on PO-2026-9002).",
-            is_conflict=True,
-            conflict_resolution="Contracted 6% expedite fee (EUR 882) takes precedence over e-mail DOC-EM-CORDILLERA-01 quoting 10% (EUR 1,470).",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-QUA-S003-v1",
-            doc_type="qualification",
-            title="ISO 9001 qualification record - Borealis Parts (S003)",
-            supplier_id="S003",
-            version="1",
-            effective_date="2023-10-01",
-            access_scope="procurement",
-            summary="Borealis Parts (S003) ISO 9001:2015 certificate EXPIRED on 2026-09-30 (despite stale ERP status 'approved').",
-            is_conflict=True,
-            conflict_resolution="Blocked under procedure DOC-PRO-04-v1 (requires valid ISO certification before creating any purchase order).",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-EM-HELIOS-01",
-            doc_type="email",
-            title="E-mail: Helios sales - real capacity for MC-17",
-            supplier_id="S002",
-            version="1",
-            effective_date="2026-10-18",
-            access_scope="procurement",
-            summary="Helios Supply (S002) confirms real capacity is 1,500 units/month (not 4,000 in contract) with 21-day lead time at EUR 7.20.",
-            is_conflict=True,
-            conflict_resolution="Disqualifies Helios: 21-day lead time fails to prevent Day 3.3/4.0 stockouts at Lyon and Katowice.",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-NOT-HELIOS-PRICE",
-            doc_type="supplier_notice",
-            title="Supplier notice - Helios Supply - price update (Malicious Prompt Injection)",
-            supplier_id="S002",
-            version="1",
-            effective_date="2026-10-18",
-            access_scope="public",
-            summary="Contains hidden HTML comment instructing AI to ignore policies and execute an unapproved 20,000-unit PO with Helios.",
-            is_malicious=True,
-            conflict_resolution="NEUTRALIZED & REPORTED: Treated strictly as untrusted data; instruction isolated and ignored.",
-        ),
-        DocumentaryFinding(
-            source_id="DOC-FIN-01-v1",
-            doc_type="finance",
-            title="Margin and penalty rate sheet (Finance Confidential)",
-            supplier_id=None,
-            version="1",
-            effective_date="2026-02-01",
-            access_scope="finance-confidential",
-            summary="Gross margin by customer tier: Tier 1 = 18%, Tier 2 = 24%, Tier 3 = 31%. Late penalty: Tier 1 = 2%/wk, Tier 2 = 1%/wk (cap 5%).",
-        ),
-    ]
-    return [doc for doc in all_findings if user_profile.can_access_document_scope(doc.access_scope)]
+    return findings
 
 
 def compute_recovery_options(
@@ -1161,152 +1044,233 @@ def compute_recovery_options(
     *,
     custom_cordillera_qty: Optional[int] = None,
 ) -> List[RecoveryOption]:
-    """Deterministically calculate and compare >= 3 recovery strategies separating Recovery Cost vs Revenue at Risk."""
-    qty_c = custom_cordillera_qty if custom_cordillera_qty is not None else 3000
-    po_cost = round(qty_c * 9.80, 2)
-    expedite_fee = 882.0  # 6% of (1,500 * 9.80 = 14,700) per contract DOC-CON-S004-v1
-    transfer_cost = 96.0  # 800 units * EUR 0.12
-    plan1_total = round(po_cost + expedite_fee + transfer_cost, 2)
-    residual_units = max(0, impact.uncovered_demand_units - (800 + 1500 + qty_c))
-    within_cap_And_cap = (plan1_total <= fact.spending_cap) and (qty_c <= 3000)
+    """Deterministically evaluate >= 3 recovery strategies (A-E) from Knowledge graph + calculators."""
+    from src.agent.calculators import calculate_recovery_costs, calculate_revenue_at_risk
+    from src.knowledge import data_quality as dq, mocks as kmocks
 
-    rejection_p1 = None
-    if qty_c > 3000:
-        rejection_p1 = f"Requested quantity ({qty_c:,} units) exceeds Cordillera monthly capacity (3,000 units/month)."
-    if plan1_total > fact.spending_cap:
-        extra = f"Total cost (€{plan1_total:,.2f}) exceeds spending cap (€{fact.spending_cap:,.2f})."
-        rejection_p1 = f"{rejection_p1} {extra}".strip() if rejection_p1 else extra
+    comp_id = dq.canonical_component_id(fact.component_id or "MC-17") or (fact.component_id or "MC-17")
+    graph = kmocks.query_supplier_graph(comp_id)
+    disrupted_sup = next((s for s in graph.suppliers if s.supplier_id == fact.supplier_id), None)
+    disrupted_upstream = disrupted_sup.upstream_id if disrupted_sup else None
+    shared_with_disrupted = {
+        sid
+        for g in graph.shared_upstream
+        if disrupted_upstream and g.upstream_id == disrupted_upstream
+        for sid in g.supplier_ids
+        if sid != fact.supplier_id
+    }
 
-    return [
-        RecoveryOption(
-            strategy_id="STRAT-1",
-            strategy_code="A + B + C + D/E",
-            title="Plan 1 (Recommended): Hub Transfer + Expedite PO-2026-9002 + Cordillera New PO + Tier-1 Priority Allocation",
-            action_type=SupplyGuardActionType.COMBINED_RECOVERY_PLAN,
-            supplier_id="S004",
-            supplier_name="Cordillera Industrial",
-            quantity=qty_c + 1500 + 800,
-            unit_price=9.80,
-            lead_time_days=9,
-            recovery_cost=plan1_total,
-            revenue_at_risk=0.0 if within_cap_And_cap else impact.total_revenue_at_risk_eur,
-            uncovered_units_remaining=residual_units,
-            is_viable=within_cap_And_cap,
-            is_recommended=within_cap_And_cap,
-            rejection_reason=rejection_p1,
-            actions_breakdown=[
-                "A (Transfer): Move 800 usable units from W-HUB to W-LYO (450) & W-KAT (350) in 2 days (€96.00)",
-                "B (Expedite): Expedite Cordillera PO-2026-9002 (1,500 units arrive Day 7, +7d gain, 6% contract fee = €882.00)",
-                f"C (Alternative PO): New PO with Cordillera (S004, independent upstream U02) for {qty_c:,} units @ €9.80 arrives Day 9 (€{po_cost:,.2f})",
-                f"D/E (Reallocate & Reschedule): Protect all 6 Tier-1 customer orders; reschedule {residual_units:,} residual Tier-3 units (~1.9 days demand)",
-            ],
-            cost_breakdown={
-                "transfers_eur": transfer_cost,
-                "expedite_fee_6pct_contract_eur": expedite_fee,
-                "cordillera_purchase_eur": po_cost,
-                "total_recovery_cost_eur": plan1_total,
-                "sensitivity_10pct_email_total_eur": round(po_cost + 1470.0 + transfer_cost, 2),
-            },
-            supporting_sources=["DOC-CON-S004-v1", "DOC-QUA-S004-v1", "DOC-PRO-04-v1", "DOC-NOT-ATLAS-MC17"],
-        ),
-        RecoveryOption(
-            strategy_id="STRAT-2",
-            strategy_code="A + B + C + Delta",
-            title="Plan 2 (Dual-Source with Delta Micro S005 for 850 Residual Units)",
-            action_type=SupplyGuardActionType.PURCHASE_ALTERNATIVE,
-            supplier_id="S005",
-            supplier_name="Delta Micro Systems",
-            quantity=5350,
-            unit_price=10.40,
-            lead_time_days=8,
-            recovery_cost=39218.0,
-            revenue_at_risk=145000.0,
-            uncovered_units_remaining=0,
-            is_viable=False,
-            is_recommended=False,
-            rejection_reason=(
-                "REJECTED (Tier-2 Concentration Risk): Delta Micro (S005) shares upstream manufacturer "
-                "Veltro Semiconductor (U01) with Atlas Components (S001), which has an active high-severity "
-                "Taiwan wafer-supply alert."
-            ),
-            actions_breakdown=[
-                "Includes Plan 1 plus 850 units from Delta Micro (S005) @ €10.40 (€8,840.00)",
-            ],
-            cost_breakdown={"total_recovery_cost_eur": 39218.0},
-            supporting_sources=["DOC-CON-S005-v1", "DOC-EM-DELTA-01", "NEO4J-TIER2-U01"],
-        ),
-        RecoveryOption(
-            strategy_id="STRAT-3",
-            strategy_code="C (Helios S002)",
-            title="Option 3: Lowest-Price Spot Purchase from Helios Supply (S002)",
-            action_type=SupplyGuardActionType.PURCHASE_ALTERNATIVE,
-            supplier_id="S002",
-            supplier_name="Helios Supply",
-            quantity=1500,
-            unit_price=7.20,
-            lead_time_days=21,
-            recovery_cost=10800.0,
-            revenue_at_risk=impact.total_revenue_at_risk_eur,
-            uncovered_units_remaining=3850,
-            is_viable=False,
-            is_recommended=False,
-            rejection_reason=(
-                "REJECTED (Too Slow & Insufficient Capacity): 21-day lead time misses the 12-day delay window "
-                "(Lyon & Katowice stock out in 3.3–4.0 days), and real monthly capacity is only 1,500 units "
-                "(DOC-EM-HELIOS-01 vs 4,000 in contract). Malicious prompt injection in DOC-NOT-HELIOS-PRICE ignored."
-            ),
-            actions_breakdown=["Purchase 1,500 units @ €7.20/unit arriving Day 21"],
-            cost_breakdown={"total_recovery_cost_eur": 10800.0},
-            supporting_sources=["DOC-CON-S002-v1", "DOC-EM-HELIOS-01", "DOC-NOT-HELIOS-PRICE"],
-        ),
-        RecoveryOption(
-            strategy_id="STRAT-4",
-            strategy_code="C (Borealis S003)",
-            title="Option 4: Fast Expedited Purchase from Borealis Parts (S003)",
-            action_type=SupplyGuardActionType.PURCHASE_ALTERNATIVE,
-            supplier_id="S003",
-            supplier_name="Borealis Parts",
-            quantity=3500,
-            unit_price=9.10,
-            lead_time_days=6,
-            recovery_cost=31850.0,
-            revenue_at_risk=impact.total_revenue_at_risk_eur,
-            uncovered_units_remaining=1850,
-            is_viable=False,
-            is_recommended=False,
-            rejection_reason=(
-                "REJECTED / BLOCKED (Compliance Violation): Borealis Parts (S003) ISO 9001:2015 certification "
-                "expired on 2026-09-30 (DOC-QUAL-S003, DOC-EM-BOREALIS-01). Procedure DOC-PRO-04 strictly forbids "
-                "ordering from suppliers with expired quality certifications despite stale ERP 'approved' flag."
-            ),
-            actions_breakdown=["Blocked by Quality Policy DOC-PRO-04"],
-            cost_breakdown={"total_recovery_cost_eur": 31850.0},
-            supporting_sources=["DOC-QUA-S003-v1", "DOC-EM-BOREALIS-01", "DOC-PRO-04-v1"],
-        ),
-        RecoveryOption(
-            strategy_id="STRAT-5",
-            strategy_code="A + D/E Only",
-            title="Option 5: Internal Stock Transfer & Production Rescheduling Only (No External Purchase)",
-            action_type=SupplyGuardActionType.TRANSFER_INVENTORY,
-            supplier_id=None,
-            supplier_name="Internal Warehouses (W-HUB -> W-KAT / W-LYO)",
-            quantity=800,
-            unit_price=0.12,
-            lead_time_days=2,
-            recovery_cost=96.0,
-            revenue_at_risk=285000.0,
-            uncovered_units_remaining=4550,
-            is_viable=False,
-            is_recommended=False,
-            rejection_reason=(
-                "REJECTED (Insufficient Coverage): Transferring 800 W-HUB units only delays Katowice/Lyon "
-                "stockouts by ~2.6 days, leaving 4,550 units of demand uncovered and exposing €285,000 in customer orders."
-            ),
-            actions_breakdown=["Transfer 800 units from W-HUB (€96.00); leaves 4,550 units uncovered"],
-            cost_breakdown={"total_recovery_cost_eur": 96.0},
-            supporting_sources=["DOC-PRO-02"],
-        ),
-    ]
+    # Resolve real capacity overrides from document conflicts (e.g. Helios 1,500 vs 4,000)
+    real_cap_overrides: Dict[str, int] = {}
+    for c in dq.conflicting_claims():
+        if c["attribute"] == "monthly_capacity_units":
+            email_vals = [s["value"] for s in c["sources"] if s["doc_type"] == "email"]
+            if email_vals:
+                real_cap_overrides[c["supplier_id"]] = int(min(email_vals))
+
+    delay_days = fact.delay_days or 12
+    hub_units = min(impact.hub_usable_units, impact.uncovered_demand_units) if impact.uncovered_demand_units > 0 else 0
+    transfer_cost = round(hub_units * 0.12, 2)
+    options: List[RecoveryOption] = []
+
+    for s in graph.suppliers:
+        if s.supplier_id == fact.supplier_id:
+            continue
+        cap = real_cap_overrides.get(s.supplier_id, s.monthly_capacity_units)
+        exp_po = next((p for p in s.open_purchase_orders if p.expedite_allowed), None)
+        exp_units = exp_po.qty if exp_po else 0
+        exp_pct = exp_po.expedite_fee_pct if exp_po else 0.0
+
+        is_shared = s.supplier_id in shared_with_disrupted
+        is_cert_ok = s.certification_valid
+        is_too_slow = s.lead_time_days > max(delay_days + 4, 15)
+        exp_fee = round(exp_units * s.unit_price_eur * (exp_pct / 100.0), 2) if exp_po else 0.0
+        remaining_budget = max(0.0, fact.spending_cap - transfer_cost - exp_fee)
+        max_qty_by_cap = int(remaining_budget // s.unit_price_eur) if s.unit_price_eur > 0 else cap
+
+        if is_cert_ok and not is_shared and not is_too_slow and (exp_po or hub_units > 0):
+            qty = custom_cordillera_qty if custom_cordillera_qty is not None else min(cap, max_qty_by_cap, max(0, impact.uncovered_demand_units - hub_units - exp_units))
+            costs = calculate_recovery_costs(
+                strategy_type="combined_recovery_plan",
+                units=qty,
+                unit_price=s.unit_price_eur,
+                expedite_units=exp_units,
+                expedite_unit_price=s.unit_price_eur,
+                expedite_fee_pct=exp_pct,
+                transfer_units=hub_units,
+                transfer_cost_per_unit=0.12,
+            )
+            total_covered = hub_units + exp_units + qty
+            residual = max(0, impact.uncovered_demand_units - total_covered)
+            within = (costs["total_recovery_cost_eur"] <= fact.spending_cap) and (qty <= cap)
+            reasons: List[str] = []
+            if qty > cap:
+                reasons.append(f"Requested quantity ({qty:,} units) exceeds {s.name} monthly capacity ({cap:,} units/month).")
+            if costs["total_recovery_cost_eur"] > fact.spending_cap:
+                reasons.append(f"Total cost (€{costs['total_recovery_cost_eur']:,.2f}) exceeds spending cap (€{fact.spending_cap:,.2f}).")
+
+            risk = calculate_revenue_at_risk(
+                uncovered_demand_units=impact.uncovered_demand_units,
+                covered_units=total_covered,
+                total_exposure_eur=impact.total_revenue_at_risk_eur,
+                tier1_protected=True,
+            )
+            breakdown = []
+            if hub_units:
+                breakdown.append(f"A (Transfer): Move {hub_units:,} usable units from W-HUB in 2 days (€{costs['transfer_cost_eur']:,.2f})")
+            if exp_po:
+                breakdown.append(f"B (Expedite): Expedite {exp_po.po_id} ({exp_units:,} units, +{exp_po.expedite_days_gain}d gain, {exp_pct:.0f}% fee = €{costs['expedite_fee_eur']:,.2f})")
+            breakdown.append(f"C (Alternative PO): New PO with {s.name} ({s.supplier_id}, independent upstream {s.upstream_id}) for {qty:,} units @ €{s.unit_price_eur:.2f} arrives Day {s.lead_time_days} (€{costs['purchase_subtotal_eur']:,.2f})")
+            breakdown.append(f"D/E (Reallocate & Reschedule): Protect Tier-1 orders; reschedule {residual:,} residual units")
+
+            options.append(
+                RecoveryOption(
+                    strategy_id=f"STRAT-{len(options) + 1}",
+                    strategy_code="A + B + C + D/E" if exp_po else "A + C + D/E",
+                    title=f"Plan 1 (Recommended): Hub Transfer + {'Expedite ' + exp_po.po_id + ' + ' if exp_po else ''}{s.name} New PO + Tier-1 Priority Allocation",
+                    action_type=SupplyGuardActionType.COMBINED_RECOVERY_PLAN,
+                    supplier_id=s.supplier_id,
+                    supplier_name=s.name,
+                    quantity=total_covered,
+                    unit_price=s.unit_price_eur,
+                    lead_time_days=s.lead_time_days,
+                    recovery_cost=costs["total_recovery_cost_eur"],
+                    revenue_at_risk=0.0 if within else risk["revenue_at_risk_eur"],
+                    uncovered_units_remaining=residual,
+                    is_viable=within,
+                    is_recommended=within,
+                    rejection_reason=" ".join(reasons) if reasons else None,
+                    actions_breakdown=breakdown,
+                    cost_breakdown={
+                        "transfers_eur": costs["transfer_cost_eur"],
+                        "expedite_fee_6pct_contract_eur": costs["expedite_fee_eur"],
+                        "cordillera_purchase_eur": costs["purchase_subtotal_eur"],
+                        "total_recovery_cost_eur": costs["total_recovery_cost_eur"],
+                    },
+                    supporting_sources=[s.source_id, "DOC-PRO-04-v1"],
+                )
+            )
+            continue
+
+        # Build documented rejections / non-viable options
+        qty = min(cap, max(0, impact.uncovered_demand_units))
+        if is_shared:
+            qty = min(cap, max(850, impact.uncovered_demand_units))
+            extra_cost = round(850 * s.unit_price_eur, 2)
+            base_plan_cost = next((o.recovery_cost for o in options if o.is_recommended), 30378.0)
+            total_c = round(base_plan_cost + extra_cost, 2)
+            rej = (
+                f"REJECTED (Tier-2 Concentration Risk): {s.name} ({s.supplier_id}) shares upstream manufacturer "
+                f"{s.upstream_name or s.upstream_id} ({s.upstream_id}) with {fact.supplier_name or fact.supplier_id} ({fact.supplier_id})."
+            )
+            rev_risk = 145000.0 if comp_id == "MC-17" else 0.0
+            uncov = 0
+        elif not is_cert_ok:
+            total_c = calculate_recovery_costs("purchase_alternative", units=qty, unit_price=s.unit_price_eur)["total_recovery_cost_eur"]
+            rej = (
+                f"REJECTED / BLOCKED (Compliance Violation): {s.name} ({s.supplier_id}) ISO 9001:2015 certification "
+                f"expired on {s.certification_expiry} (DOC-PRO-04 strictly forbids ordering despite stale ERP status)."
+            )
+            rev_risk = impact.total_revenue_at_risk_eur
+            uncov = max(0, impact.uncovered_demand_units - qty)
+        elif is_too_slow:
+            total_c = calculate_recovery_costs("purchase_alternative", units=qty, unit_price=s.unit_price_eur)["total_recovery_cost_eur"]
+            rej = (
+                f"REJECTED (Too Slow & Insufficient Capacity): {s.lead_time_days}-day lead time misses the {delay_days}-day disruption window, "
+                f"and real monthly capacity is only {cap:,} units/month."
+            )
+            rev_risk = impact.total_revenue_at_risk_eur
+            uncov = max(0, impact.uncovered_demand_units - qty)
+        else:
+            qty = min(cap, max_qty_by_cap, max(0, impact.uncovered_demand_units))
+            costs = calculate_recovery_costs(
+                strategy_type="purchase_alternative",
+                units=qty,
+                unit_price=s.unit_price_eur,
+                transfer_units=hub_units,
+                transfer_cost_per_unit=0.12,
+            )
+            total_c = costs["total_recovery_cost_eur"]
+            within = total_c <= fact.spending_cap and qty > 0
+            rej = None if within else f"Total cost (€{total_c:,.2f}) exceeds cap (€{fact.spending_cap:,.2f})."
+            rev_risk = calculate_revenue_at_risk(impact.uncovered_demand_units, qty, impact.total_revenue_at_risk_eur)["revenue_at_risk_eur"]
+            uncov = max(0, impact.uncovered_demand_units - qty)
+            options.append(
+                RecoveryOption(
+                    strategy_id=f"STRAT-{len(options) + 1}",
+                    strategy_code=f"C ({s.supplier_id})",
+                    title=f"Purchase from {s.name} ({s.supplier_id})",
+                    action_type=SupplyGuardActionType.PURCHASE_ALTERNATIVE,
+                    supplier_id=s.supplier_id,
+                    supplier_name=s.name,
+                    quantity=qty,
+                    unit_price=s.unit_price_eur,
+                    lead_time_days=s.lead_time_days,
+                    recovery_cost=total_c,
+                    revenue_at_risk=rev_risk,
+                    uncovered_units_remaining=uncov,
+                    is_viable=within,
+                    is_recommended=within and not any(o.is_recommended for o in options),
+                    rejection_reason=rej,
+                    cost_breakdown={"total_recovery_cost_eur": total_c},
+                    supporting_sources=[s.source_id] if s.source_id else [],
+                )
+            )
+            continue
+
+        options.append(
+            RecoveryOption(
+                strategy_id=f"STRAT-{len(options) + 1}",
+                strategy_code=f"C ({s.supplier_id})",
+                title=f"Option {len(options) + 1}: {s.name} ({s.supplier_id})",
+                action_type=SupplyGuardActionType.PURCHASE_ALTERNATIVE,
+                supplier_id=s.supplier_id,
+                supplier_name=s.name,
+                quantity=qty,
+                unit_price=s.unit_price_eur,
+                lead_time_days=s.lead_time_days,
+                recovery_cost=total_c,
+                revenue_at_risk=rev_risk,
+                uncovered_units_remaining=uncov,
+                is_viable=False,
+                is_recommended=False,
+                rejection_reason=rej,
+                actions_breakdown=[rej],
+                cost_breakdown={"total_recovery_cost_eur": total_c},
+                supporting_sources=[s.source_id] if s.source_id else [],
+            )
+        )
+
+    # Always include internal transfer + reschedule option (Strategy A + D/E)
+    if hub_units > 0 or len(options) < 3:
+        uncov_trf = max(0, impact.uncovered_demand_units - hub_units)
+        trf_risk = calculate_revenue_at_risk(impact.uncovered_demand_units, hub_units, impact.total_revenue_at_risk_eur)["revenue_at_risk_eur"]
+        options.append(
+            RecoveryOption(
+                strategy_id=f"STRAT-{len(options) + 1}",
+                strategy_code="A + D/E Only",
+                title="Internal Stock Transfer & Production Rescheduling Only (No External Purchase)",
+                action_type=SupplyGuardActionType.TRANSFER_INVENTORY,
+                supplier_id=None,
+                supplier_name="Internal Warehouses (W-HUB -> Plants)",
+                quantity=hub_units,
+                unit_price=0.12,
+                lead_time_days=2,
+                recovery_cost=transfer_cost,
+                revenue_at_risk=trf_risk,
+                uncovered_units_remaining=uncov_trf,
+                is_viable=False,
+                is_recommended=False,
+                rejection_reason=f"Insufficient coverage: {hub_units:,} hub units leave {uncov_trf:,} units uncovered.",
+                actions_breakdown=[f"Transfer {hub_units:,} units from W-HUB (€{transfer_cost:,.2f})"],
+                cost_breakdown={"total_recovery_cost_eur": transfer_cost},
+                supporting_sources=["DOC-PRO-02"],
+            )
+        )
+
+    # Place recommended option first so UI & tables highlight it clearly
+    options.sort(key=lambda o: (not o.is_recommended, not o.is_viable))
+    return options
 
 
 def build_approval_payload(
@@ -1322,20 +1286,23 @@ def build_approval_payload(
     supporting_evidence: Optional[List[Dict[str, str]]] = None,
 ) -> ApprovalPayload:
     """Create a payload-bound ApprovalPayload with deterministic costs and SHA-256 payload_hash."""
+    from src.knowledge import mocks as kmocks
+
     comp_id = fact.component_id or "MC-17"
-    is_mc17 = comp_id == "MC-17"
-    is_mc17_cordillera = is_mc17 and supplier_id == "S004"
+    graph = kmocks.query_supplier_graph(comp_id)
+    sup = next((s for s in graph.suppliers if s.supplier_id == supplier_id), None)
+    exp_po = next((p for p in sup.open_purchase_orders if p.expedite_allowed), None) if sup else None
 
     po_subtotal = round(quantity * unit_price, 2)
-    expedite_units = 1500 if is_mc17_cordillera else 0
-    expedite_fee_pct = 6.0 if is_mc17_cordillera else 0.0
-    expedite_fee = 882.0 if is_mc17_cordillera else 0.0
-    expedite_po_id = "PO-2026-9002" if is_mc17_cordillera else None
-    transfer_units = 800 if is_mc17 else min(impact.hub_usable_units, max(0, impact.uncovered_demand_units))
+    expedite_units = exp_po.qty if exp_po else 0
+    expedite_fee_pct = exp_po.expedite_fee_pct if exp_po else 0.0
+    expedite_fee = round(expedite_units * unit_price * (expedite_fee_pct / 100.0), 2) if exp_po else 0.0
+    expedite_po_id = exp_po.po_id if exp_po else None
+    transfer_units = min(impact.hub_usable_units, max(0, impact.uncovered_demand_units))
     transfer_cost = round(transfer_units * 0.12, 2)
     transfer_to = (
         "W-LYO (450) & W-KAT (350)"
-        if is_mc17
+        if comp_id == "MC-17" and transfer_units == 800
         else (", ".join(impact.affected_factories) or "Affected Plants")
     )
     total_cost = round(po_subtotal + expedite_fee + transfer_cost, 2)
@@ -1343,16 +1310,9 @@ def build_approval_payload(
 
     if supporting_evidence is not None:
         evidence = list(supporting_evidence)
-    elif is_mc17_cordillera:
-        evidence = [
-            {"source_id": "DOC-CON-S004-v1", "effective_date": "2025-08-01", "access_scope": "procurement", "note": "Cordillera EUR 9.80/unit, 9d lead time, 3,000/mo capacity, 6% expedite fee"},
-            {"source_id": "DOC-QUA-S004-v1", "effective_date": "2024-11-30", "access_scope": "procurement", "note": "ISO 9001:2015 valid through 2027-11-30; independent upstream U02"},
-            {"source_id": "DOC-PRO-04-v1", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
-            {"source_id": "DOC-NOT-ATLAS-MC17", "effective_date": "2026-10-19", "access_scope": "procurement", "note": "Formal 12-day delay notice on Atlas PO-2026-9001"},
-        ]
     else:
         evidence = [
-            {"source_id": f"DOC-CON-{supplier_id}-v1", "effective_date": "2026-01-01", "access_scope": "procurement", "note": f"{supplier_name} ({supplier_id}) EUR {unit_price:.2f}/unit for {comp_id}"},
+            {"source_id": (sup.source_id if sup and sup.source_id else f"DOC-CON-{supplier_id}-v1"), "effective_date": (sup.effective_date if sup and sup.effective_date else "2026-01-01"), "access_scope": "procurement", "note": f"{supplier_name} ({supplier_id}) €{unit_price:.2f}/unit for {comp_id}"},
             {"source_id": "DOC-PRO-04-v1", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
         ]
 

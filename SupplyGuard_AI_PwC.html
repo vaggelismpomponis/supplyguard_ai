@@ -126,6 +126,9 @@ code{font-family:var(--mono);font-size:.86em;background:var(--grey-100);padding:
 .shot-card{background:var(--grey-50);border-top:4px solid var(--orange);border-right:1px solid var(--grey-200);border-bottom:1px solid var(--grey-200);border-left:1px solid var(--grey-200);display:flex;flex-direction:column}
 .shot-frame{background:#121426;padding:6px;border-bottom:1px solid var(--grey-200)}
 .shot-frame img{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;background:#121426}
+.video-layout{display:grid;grid-template-columns:760px 1fr;gap:24px;align-items:stretch;margin-top:22px}
+.video-frame{background:#121426;padding:6px;border-top:4px solid var(--orange);border-right:1px solid var(--grey-200);border-bottom:1px solid var(--grey-200);border-left:1px solid var(--grey-200);display:flex;align-items:center}
+.video-frame video{display:block;width:100%;aspect-ratio:16/9;background:#000}
 .shot-cap{padding:12px 16px 14px}
 .shot-cap h3{font-family:var(--sans);font-weight:700;font-size:16px;color:var(--black);margin-bottom:4px}
 .shot-cap p{font-size:13.5px;line-height:1.38;color:var(--ink);max-width:none}
@@ -852,7 +855,42 @@ body.notes-on #notes-panel{display:block}
   </div>
 </section>
 
-<!-- 17. CLOSING & Q&A -->
+<!-- 17. LIVE DEMO VIDEO -->
+<section class="slide" aria-label="Live application 30-second demo">
+  <aside class="notes">
+    About 35 seconds. Play the 30-second screen recording of SupplyGuard AI running end-to-end: triage clarification on Atlas, 6-subagent investigation, deterministic matrix and SHA-256 payload-bound approval execution.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Live application · 30-second demo</div>
+  <h2 class="headline reveal" style="--i:0">30s walkthrough: <code>MC-17</code></h2>
+  <div class="video-layout">
+    <div class="video-frame reveal" style="--i:1">
+      <video controls preload="metadata" playsinline>
+        <source src="docs/supplyguard_demo_30s.mp4" type="video/mp4" />
+      </video>
+    </div>
+    <div class="col" style="gap:14px;justify-content:center">
+      <div class="picoblock picoblock--bar reveal" style="--i:2">
+        <h3>1 · Triage &amp; telemetry</h3>
+        <p>Prompts operator to disambiguate <code>Atlas</code>, then streams all 6 subagents live.</p>
+      </div>
+      <div class="picoblock picoblock--panel reveal" style="--i:3">
+        <h3>2 · Deterministic matrix</h3>
+        <p>Separates <code>Recovery Cost (€)</code> from <code>Revenue at Risk (€)</code> under the €75k cap.</p>
+      </div>
+      <div class="picoblock picoblock--tint reveal" style="--i:4">
+        <h3>3 · SHA-256 HITL approval</h3>
+        <p>Presents provenance citations and executes the approved PO idempotently once.</p>
+      </div>
+    </div>
+  </div>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: Recorded walkthrough of SupplyGuard AI running in Docker Compose (docs/supplyguard_demo_30s.mp4).</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 18. CLOSING & Q&A -->
 <section class="slide slide--hero" aria-label="Thank you and questions">
   <aside class="notes">
     About 30 seconds, then open the floor for questions and discussion.
@@ -1003,7 +1041,10 @@ body.notes-on #notes-panel{display:block}
   }
   function show(n) {
     idx = Math.max(0, Math.min(slides.length - 1, n));
-    slides.forEach((s, i) => s.classList.toggle("active", i === idx));
+    slides.forEach((s, i) => {
+      s.classList.toggle("active", i === idx);
+      if (i !== idx) s.querySelectorAll("video").forEach((v) => v.pause());
+    });
     Array.from(dotsBox.children).forEach((d, i) => d.classList.toggle("on", i === idx));
     counter.textContent = idx + 1 + " / " + slides.length;
     play(slides[idx]);
@@ -1069,7 +1110,7 @@ body.notes-on #notes-panel{display:block}
   document.getElementById("prev").addEventListener("click", () => show(idx - 1));
   function onKey(e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.target.closest && e.target.closest("button") && [" ", "Enter"].includes(e.key)) return;
+    if (e.target.closest && e.target.closest("button,video") && [" ", "Enter"].includes(e.key)) return;
     if (["ArrowRight", "PageDown", " "].includes(e.key)) { show(idx + 1); e.preventDefault(); }
     else if (["ArrowLeft", "PageUp"].includes(e.key)) { show(idx - 1); e.preventDefault(); }
     else if (e.key === "Home") show(0);
@@ -1082,7 +1123,7 @@ body.notes-on #notes-panel{display:block}
     if (hashSlide() >= 0 && hashSlide() !== idx) show(hashSlide());
   });
   deck.addEventListener("click", (e) => {
-    if (!e.target.closest("a,button")) show(idx + 1);
+    if (!e.target.closest("a,button,video")) show(idx + 1);
   });
   let x0 = null;
   stage.addEventListener("touchstart", (e) => (x0 = e.touches[0].clientX), { passive: true });

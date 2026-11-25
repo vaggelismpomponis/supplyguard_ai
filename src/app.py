@@ -60,8 +60,16 @@ def _is_real_chainlit_runtime() -> bool:
     return bool(getattr(cl, "__file__", None))
 
 
+def _cl_has(attr: str) -> bool:
+    """Safely check Chainlit attribute existence without tripping Chainlit's lazy KeyError."""
+    try:
+        return hasattr(cl, attr)
+    except (AttributeError, KeyError):
+        return False
+
+
 # Register PostgreSQL Chainlit DataLayer (users, role-scoped chat history, steps, elements)
-if hasattr(cl, "data_layer"):
+if _cl_has("data_layer"):
     @cl.data_layer
     def get_supplyguard_data_layer() -> Optional[Any]:
         if not _is_real_chainlit_runtime():
@@ -367,7 +375,7 @@ async def authenticate_credentials(username: str, password: str) -> Optional[Any
     return _build_chainlit_user(profile)
 
 
-if hasattr(cl, "password_auth_callback"):
+if _cl_has("password_auth_callback"):
     @cl.password_auth_callback
     async def password_auth_callback(username: str, password: str) -> Optional[Any]:
         """Chainlit password login callback verified against `app_users`."""
@@ -1212,7 +1220,7 @@ async def on_chat_start() -> None:
     await _restore_or_greet(thread_id, is_manual_resume=False)
 
 
-if hasattr(cl, "on_chat_resume"):
+if _cl_has("on_chat_resume"):
     @cl.on_chat_resume
     async def on_chat_resume(thread: dict[str, Any]) -> None:
         """Restore an operator's persisted SupplyGuard case when selecting a thread from history."""
@@ -1248,6 +1256,32 @@ if hasattr(cl, "on_chat_resume"):
 # ==============================================================================
 # 9. Conversational Message Handler & Investigation Pipeline
 # ==============================================================================
+
+
+async def _send_exported_report(
+    thread_id: str,
+    case_state: dict[str, Any],
+    *,
+    include_markdown: bool = False,
+) -> None:
+    """Generate Markdown/PDF incident report artifacts and send them to Chainlit."""
+    report, md_path, pdf_path = generate_incident_report_artifacts(thread_id, case_state)
+    elements = (
+        [
+            cl.File(name=md_path.name, path=str(md_path), display="inline"),
+            cl.File(name=pdf_path.name, path=str(pdf_path), display="inline"),
+        ]
+        if _cl_has("File")
+        else []
+    )
+    body = (
+        f"📄 **Incident Report Exported (`{report.report_id}`)**\n\n"
+        f"- **Markdown Artifact:** `{md_path.name}`\n"
+        f"- **PDF Artifact:** `{pdf_path.name}`"
+    )
+    if include_markdown:
+        body = f"{body}\n\n{report.to_markdown()}"
+    await cl.Message(content=body, elements=elements).send()
 
 
 @cl.on_message
@@ -1309,22 +1343,7 @@ async def on_message(message: cl.Message) -> None:
         if not case_state:
             await cl.Message(content="ℹ️ No active incident case found for your account/role to export yet.").send()
             return
-        report, md_path, pdf_path = generate_incident_report_artifacts(thread_id, case_state)
-        elements = []
-        if hasattr(cl, "File"):
-            elements = [
-                cl.File(name=md_path.name, path=str(md_path), display="inline"),
-                cl.File(name=pdf_path.name, path=str(pdf_path), display="inline"),
-            ]
-        await cl.Message(
-            content=(
-                f"📄 **Incident Report Exported (`{report.report_id}`)**\n\n"
-                f"- **Markdown Report:** `{md_path.name}`\n"
-                f"- **PDF Report:** `{pdf_path.name}`\n\n"
-                f"{report.to_markdown()}"
-            ),
-            elements=elements,
-        ).send()
+        await _send_exported_report(thread_id, case_state, include_markdown=True)
         return
 
     # 4. Route through unified SupplyGuardOrchestrator
@@ -1686,18 +1705,4 @@ async def on_export_report(action: cl.Action) -> None:
     if not case_state:
         await cl.Message(content="ℹ️ No completed case found for your account/role to export.").send()
         return
-    report, md_path, pdf_path = generate_incident_report_artifacts(thread_id, case_state)
-    elements = []
-    if hasattr(cl, "File"):
-        elements = [
-            cl.File(name=md_path.name, path=str(md_path), display="inline"),
-            cl.File(name=pdf_path.name, path=str(pdf_path), display="inline"),
-        ]
-    await cl.Message(
-        content=(
-            f"📄 **Incident Report Exported (`{report.report_id}`)**\n\n"
-            f"- **Markdown Artifact:** `{md_path.name}`\n"
-            f"- **PDF Artifact:** `{pdf_path.name}`"
-        ),
-        elements=elements,
-    ).send()
+    await _send_exported_report(thread_id, case_state, include_markdown=False)
