@@ -593,3 +593,123 @@ _PROCUREMENT_SYSTEM = SimulatedProcurementSystem()
 def get_procurement_system() -> SimulatedProcurementSystem:
     """Return the singleton instance of SimulatedProcurementSystem."""
     return _PROCUREMENT_SYSTEM
+
+
+# ==============================================================================
+# FastMCP Server Definition (CodeHub 46-mcp-server pattern)
+# ==============================================================================
+
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:  # pragma: no cover - optional when mcp package is absent
+    FastMCP = None  # type: ignore[assignment,misc]
+
+
+def build_fastmcp_server() -> Any:
+    """Build the FastMCP server exposing SupplyGuard procurement and risk tools."""
+    if FastMCP is None:
+        return None
+    server = FastMCP("supplyguard-procurement")
+
+    @server.tool()
+    def create_purchase_order(
+        action_id: str,
+        supplier_id: str,
+        component_id: str,
+        quantity: int,
+        unit_price: float,
+        delivery_date: Optional[str] = None,
+        thread_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Execute an approved purchase order in the simulated procurement system."""
+        return get_procurement_system().create_purchase_order(
+            action_id=action_id,
+            supplier_id=supplier_id,
+            component_id=component_id,
+            quantity=quantity,
+            unit_price=unit_price,
+            delivery_date=delivery_date,
+            thread_id=thread_id,
+        ).model_dump()
+
+    @server.tool()
+    def expedite_purchase_order(
+        action_id: str,
+        po_id: str,
+        days_gain: int = 7,
+        fee_pct: float = 6.0,
+        thread_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Expedite an existing open purchase order idempotently."""
+        return get_procurement_system().expedite_purchase_order(
+            action_id=action_id,
+            po_id=po_id,
+            days_gain=days_gain,
+            fee_pct=fee_pct,
+            thread_id=thread_id,
+        )
+
+    @server.tool()
+    def request_stock_transfer(
+        action_id: str,
+        component_id: str,
+        from_location: str,
+        to_location: str,
+        qty: int,
+        thread_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Request an internal stock transfer between warehouse locations."""
+        return get_procurement_system().request_stock_transfer(
+            action_id=action_id,
+            component_id=component_id,
+            from_location=from_location,
+            to_location=to_location,
+            qty=qty,
+            thread_id=thread_id,
+        )
+
+    @server.tool()
+    def update_production_schedule(
+        action_id: str,
+        product_id: str,
+        week_start: str,
+        planned_units: int,
+        thread_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Update a factory production schedule slot idempotently."""
+        return get_procurement_system().update_production_schedule(
+            action_id=action_id,
+            product_id=product_id,
+            week_start=week_start,
+            planned_units=planned_units,
+            thread_id=thread_id,
+        )
+
+    @server.tool()
+    def get_supplier_risk(
+        supplier_id: str,
+        supplier_name: Optional[str] = None,
+        country: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Fetch external geopolitical and logistics risk alerts for a supplier."""
+        return get_procurement_system().get_supplier_risk(
+            supplier_id=supplier_id,
+            supplier_name=supplier_name,
+            country=country,
+        ).model_dump()
+
+    @server.tool()
+    def check_inventory_balance(component_id: str) -> Dict[str, Any]:
+        """Check on-hand, reserved, quarantined, and usable stock for a component."""
+        return get_procurement_system().check_inventory_balance(component_id=component_id)
+
+    return server
+
+
+mcp = build_fastmcp_server()
+
+
+if __name__ == "__main__":
+    if mcp is None:
+        raise RuntimeError("mcp package is required to run the FastMCP server.")
+    mcp.run(transport="stdio")

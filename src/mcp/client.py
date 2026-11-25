@@ -12,9 +12,14 @@ Provides tools usable by Deep Agents or workflow nodes:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from pathlib import Path
+import sys
+from typing import Any, Dict, List, Optional
+
 from src.core.contracts import PurchaseOrderReceipt, SupplierRiskInfo
 from src.mcp.procurement_server import get_procurement_system
+
+SERVER_PATH = Path(__file__).resolve().parent / "procurement_server.py"
 
 
 def create_purchase_order_tool(
@@ -115,3 +120,49 @@ def check_inventory_balance_tool(component_id: str) -> Dict[str, Any]:
     """Check inventory usable, reserved, quarantined stock for a component."""
     system = get_procurement_system()
     return system.check_inventory_balance(component_id=component_id)
+
+
+def build_mcp_client() -> Any:
+    """Build a MultiServerMCPClient configured for SupplyGuard procurement stdio transport."""
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+
+    return MultiServerMCPClient(
+        {
+            "supplyguard-procurement": {
+                "transport": "stdio",
+                "command": sys.executable,
+                "args": [str(SERVER_PATH)],
+            }
+        }
+    )
+
+
+async def load_mcp_tools() -> List[Any]:
+    """Discover tools over MCP stdio when langchain_mcp_adapters is installed, else return local tools."""
+    try:
+        client = build_mcp_client()
+        return list(await client.get_tools())
+    except Exception:
+        return list(SUPPLYGUARD_MCP_TOOLS)
+
+
+def _build_structured_tools() -> List[Any]:
+    try:
+        from langchain_core.tools import StructuredTool
+    except ImportError:
+        return []
+    funcs = (
+        create_purchase_order_tool,
+        expedite_purchase_order_tool,
+        request_stock_transfer_tool,
+        update_production_schedule_tool,
+        get_supplier_risk_tool,
+        check_inventory_balance_tool,
+    )
+    return [
+        StructuredTool.from_function(func=fn, name=fn.__name__, description=(fn.__doc__ or "").strip())
+        for fn in funcs
+    ]
+
+
+SUPPLYGUARD_MCP_TOOLS: List[Any] = _build_structured_tools()
