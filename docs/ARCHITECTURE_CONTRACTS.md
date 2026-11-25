@@ -289,16 +289,17 @@ The system must handle the deliberate complications in the reference scenario (`
 
 ---
 
-## 7. Interface & Chainlit UI Contracts (Issues #41–#53)
+## 7. Interface & Chainlit UI Contracts (Issues #41–#53) — Auth & History
 
-### 7.1 Session & `thread_id` Binding Contract
-- **1:1 Deterministic Mapping**: On chat initialization (`@cl.on_chat_start`), `cl.context.session.id` is bound directly to LangGraph / Deep Agents `thread_id` (`cl.user_session.set("thread_id", session_id)`).
-- **Restart & Manual Recovery**:
-  - Automatic checkpoint inspection via `_restore_or_greet(thread_id)` restores any interrupted clarification or pending `ApprovalPayload` upon browser reload or container restart (`docker compose restart app`).
-  - Explicit session recovery via `/resume <thread_id>` or conversational follow-up (*"Resume the case I was reviewing yesterday"*).
+### 7.1 Session, `thread_id` & Chat History Binding Contract
+- **1:1 Deterministic Mapping**: On chat initialization (`@cl.on_chat_start`), `cl.context.session.thread_id` (falling back to `cl.context.session.id`) is bound directly to the Deep Agents `thread_id` (`cl.user_session.set("thread_id", thread_id)`).
+- **Authenticated Chat History & Sidebar Persistence (`@cl.data_layer` + `@cl.on_chat_resume`)**:
+  - `SupplyGuardDataLayer` (`BaseDataLayer` backed by PostgreSQL `chat_users`, `chat_threads`, `chat_steps`, `chat_elements`, `chat_feedbacks`) persists conversation history and `.md`/`.pdf` Incident Report elements across restarts.
+  - Sidebar listing (`list_threads`) and resumption (`@cl.on_chat_resume`, `/resume <thread_id>`, conversational resume, `/export`) enforce **both** `owner_user_id == current_user.user_id` **and** `owner_role == current_user.role`, preventing cross-user or cross-role leakage if a user's role changes.
+  - Resuming a thread **never** mutates or elevates the authenticated session's `UserProfile` from persisted `case_state["user_profile"]`; authorization is always evaluated against the live authenticated user record.
 
-### 7.2 Role-Based Access Control (RBAC) & Scoped Retrieval Contract
-Users are authenticated and mapped against `src/support-data/config/users.csv`:
+### 7.2 Authentication, RBAC & Scoped Retrieval Contract
+Users sign in through Chainlit's `@cl.password_auth_callback` verified against PostgreSQL `app_users` (seeded from `src/support-data/config/users.csv` with salted `scrypt` password hashes and JWT cookies signed with `CHAINLIT_AUTH_SECRET`). Self-service role switching (`/role`, `switch_role` buttons) is disabled in authenticated sessions — switching roles requires logging out and authenticating as the target account:
 
 | Role Key | User (`users.csv`) | `AccessScope` | Allowed `document_scopes` | Approval Authority |
 |---|---|---|---|---|

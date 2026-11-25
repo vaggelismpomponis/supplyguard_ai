@@ -186,6 +186,8 @@ services:
     volumes:
       - ./chainlit.md:/app/chainlit.md:ro
       - ./.chainlit/config.toml:/app/.chainlit/config.toml:ro
+      - ./public:/app/public:ro
+      - chat_files_data:/app/data/reports
       - ./src:/app/src:ro
       - ./scripts:/app/scripts:ro
       - ./eval:/app/eval:ro
@@ -216,3 +218,4 @@ volumes:
   postgres_data:
   neo4j_data:
   chroma_data:
+  chat_files_data:

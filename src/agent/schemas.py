@@ -138,6 +138,8 @@ class UserProfile(BaseModel):
         default_factory=lambda: ["F1", "F2", "F3"],
         description="Permitted factory IDs",
     )
+    username: Optional[str] = Field(default=None, description="Login username for authenticated sessions")
+    email: Optional[str] = Field(default=None, description="Operator email for login and audit attribution")
 
     @property
     def can_approve(self) -> bool:
@@ -615,13 +617,18 @@ def load_users_from_csv() -> Dict[str, UserProfile]:
                     primary_scope = AccessScope.PROCUREMENT
                 else:
                     primary_scope = AccessScope.PUBLIC
+                user_id = row["user_id"].strip()
+                username = (row.get("username") or user_id).strip()
+                email = (row.get("email") or f"{username}@supplyguard.eu").strip()
                 prof = UserProfile(
-                    user_id=row["user_id"].strip(),
+                    user_id=user_id,
                     name=row["name"].strip(),
                     role=role,
                     access_scope=primary_scope,
                     document_scopes=scopes,
                     factory_access=factories,
+                    username=username,
+                    email=email,
                 )
                 profiles[prof.role] = prof
                 profiles[prof.user_id] = prof

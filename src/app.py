@@ -35,6 +35,7 @@ import chainlit as cl
 
 from src.agent.deep_agent import get_orchestrator
 from src.agent.schemas import (
+    AccessScope,
     ActionStatus,
     ApprovalPayload,
     DisruptionFact,
@@ -53,16 +54,93 @@ from src.agent.schemas import (
 
 logger = logging.getLogger(__name__)
 
-# Disable Chainlit's built-in SQLAlchemy/asyncpg DataLayer auto-detection from DATABASE_URL
-# since persistence is handled by SupplyGuard's PostgreSQL thread_states, audit_log, and PostgresSaver.
-try:
-    _dl = getattr(cl, "data_layer", None)
-    if _dl is not None:
-        @cl.data_layer
-        def _disable_chainlit_default_data_layer() -> None:
+
+def _is_real_chainlit_runtime() -> bool:
+    """Return True when running inside real Chainlit rather than unit-test module stubs."""
+    return bool(getattr(cl, "__file__", None))
+
+
+# Register PostgreSQL Chainlit DataLayer (users, role-scoped chat history, steps, elements)
+if hasattr(cl, "data_layer"):
+    @cl.data_layer
+    def get_supplyguard_data_layer() -> Optional[Any]:
+        if not _is_real_chainlit_runtime():
             return None
-except (AttributeError, KeyError):
-    pass
+        try:
+            from src.db.connection import is_postgres_available
+            if not is_postgres_available():
+                return None
+            from src.db.chainlit_data_layer import SupplyGuardDataLayer
+            return SupplyGuardDataLayer()
+        except Exception as exc:
+            logger.warning("SupplyGuardDataLayer unavailable; chat history persistence disabled: %s", exc)
+            return None
+
+
+# Register authenticated element download endpoint and safe subagent avatar fallback
+if _is_real_chainlit_runtime():
+    try:
+        from chainlit.auth import get_current_user as _cl_get_current_user
+        from chainlit.server import app as _cl_fastapi_app, get_avatar as _cl_get_avatar
+        from fastapi import (
+            APIRouter as _FastAPIRouter,
+            Depends as _FastAPIDepends,
+            HTTPException as _HTTPException,
+            Response as _FastAPIResponse,
+        )
+
+        if not getattr(_cl_fastapi_app.state, "supplyguard_elements_route_registered", False):
+            async def download_persisted_element(
+                thread_id: str,
+                element_id: str,
+                current_user: Any = _FastAPIDepends(_cl_get_current_user),
+            ) -> Any:
+                if current_user is None:
+                    raise _HTTPException(status_code=401, detail="Unauthorized")
+                from src.db.chainlit_data_layer import load_element_content_for_user
+
+                loaded = await asyncio.to_thread(
+                    load_element_content_for_user,
+                    thread_id,
+                    element_id,
+                    current_user.identifier,
+                )
+                if loaded is None:
+                    raise _HTTPException(status_code=404, detail="Element not found or unauthorized")
+                raw, mime, safe_name = loaded
+                return _FastAPIResponse(
+                    content=raw,
+                    media_type=mime,
+                    headers={
+                        "Content-Disposition": f'attachment; filename="{safe_name}"',
+                        "X-Content-Type-Options": "nosniff",
+                    },
+                )
+
+            async def resolve_step_avatar(avatar_id: str) -> Any:
+                """Normalize step/subagent names containing `&` or parentheses cleanly instead of returning HTTP 400."""
+                if ".." in avatar_id or "/" in avatar_id or "\\" in avatar_id:
+                    raise _HTTPException(status_code=400, detail="Invalid avatar_id")
+                safe_id = re.sub(r"[^a-zA-Z0-9_ .-]+", "_", avatar_id).strip() or "default"
+                return await _cl_get_avatar(safe_id)
+
+            _custom_router = _FastAPIRouter()
+            _custom_router.add_api_route(
+                "/api/elements/{thread_id}/{element_id}",
+                download_persisted_element,
+                methods=["GET"],
+            )
+            _custom_router.add_api_route(
+                "/avatars/{avatar_id:path}",
+                resolve_step_avatar,
+                methods=["GET"],
+            )
+            # Insert before Chainlit's router and catch-all `/{full_path:path}` SPA route
+            for idx, route in enumerate(_custom_router.routes):
+                _cl_fastapi_app.router.routes.insert(idx, route)
+            _cl_fastapi_app.state.supplyguard_elements_route_registered = True
+    except Exception as exc:
+        logger.debug("Skipping Chainlit element route registration: %s", exc)
 
 # ==============================================================================
 # 1. Subagent Telemetry Step Registry (Issue #44)
@@ -149,21 +227,66 @@ def sanitize_evidence_text(text: str) -> str:
 
 
 # ==============================================================================
-# 2. Role-Based Access Control (RBAC) Management (Issue #43)
+# 2. Authentication & Role-Based Access Control (RBAC) Management
 # ==============================================================================
 
 
+def _profile_from_chainlit_user(auth_user: Any) -> UserProfile:
+    """Build or refresh a `UserProfile` from an authenticated Chainlit `User` / `PersistedUser`."""
+    meta = dict(getattr(auth_user, "metadata", None) or {})
+    ident = str(getattr(auth_user, "identifier", "") or meta.get("username") or meta.get("user_id") or "").strip()
+    target_uid = str(meta.get("user_id") or ident).strip()
+
+    try:
+        from src.db.connection import is_postgres_available
+        if _is_real_chainlit_runtime() and is_postgres_available():
+            from src.db.auth import get_user_by_id
+            db_profile = get_user_by_id(target_uid or ident)
+            if db_profile is None:
+                raise PermissionError("Authenticated user account is disabled or no longer exists.")
+            return db_profile
+    except PermissionError:
+        raise
+    except Exception as exc:
+        logger.debug("Live user refresh unavailable, using authenticated metadata: %s", exc)
+
+    role = str(meta.get("role") or "viewer").strip()
+    base = _USER_PROFILES.get(target_uid) or _USER_PROFILES.get(role)
+    doc_scopes = [str(s).strip() for s in (meta.get("document_scopes") or (base.document_scopes if base else ["public"])) if str(s).strip()]
+    factories = [str(f).strip() for f in (meta.get("factory_access") if meta.get("factory_access") is not None else (base.factory_access if base else [])) if str(f).strip()]
+    scope_val = str(meta.get("access_scope") or "").strip().lower()
+    if scope_val == AccessScope.FINANCE.value or role == "finance_controller" or "finance-confidential" in doc_scopes:
+        primary_scope = AccessScope.FINANCE
+    elif scope_val == AccessScope.PROCUREMENT.value or "procurement" in doc_scopes:
+        primary_scope = AccessScope.PROCUREMENT
+    else:
+        primary_scope = AccessScope.PUBLIC
+
+    return UserProfile(
+        user_id=target_uid or (base.user_id if base else "u-ro-01"),
+        name=str(getattr(auth_user, "display_name", None) or meta.get("display_name") or (base.name if base else ident)),
+        role=role,
+        access_scope=primary_scope,
+        document_scopes=doc_scopes or ["public"],
+        factory_access=factories,
+        username=str(meta.get("username") or ident or target_uid),
+        email=str(meta.get("email") or "").strip() or None,
+    )
+
+
 def resolve_user_profile(role_or_id: Optional[str] = None) -> UserProfile:
-    """Resolve an operator's RBAC UserProfile from role key, user_id, or environment default."""
-    key = (role_or_id or os.getenv("SUPPLYGUARD_DEFAULT_ROLE", "procurement_manager")).strip().lower()
+    """Resolve an operator's UserProfile from role key or user_id (non-auth helpers/tests only)."""
+    key = (role_or_id or os.getenv("SUPPLYGUARD_DEFAULT_ROLE", "viewer")).strip().lower()
     alias_map = {
         "procurement": "procurement_manager",
         "procurement_manager": "procurement_manager",
         "maria": "procurement_manager",
+        "maria.keller": "procurement_manager",
         "u-pm-01": "procurement_manager",
         "finance": "finance_controller",
         "finance_controller": "finance_controller",
         "paul": "finance_controller",
+        "paul.novak": "finance_controller",
         "u-fc-01": "finance_controller",
         "guest": "viewer",
         "viewer": "viewer",
@@ -173,54 +296,82 @@ def resolve_user_profile(role_or_id: Optional[str] = None) -> UserProfile:
         "u-ro-01": "viewer",
         "analyst": "operations_analyst",
         "operations_analyst": "operations_analyst",
+        "jon.weber": "operations_analyst",
         "u-an-01": "operations_analyst",
         "coordinator": "incident_coordinator",
         "incident_coordinator": "incident_coordinator",
+        "ines.duarte": "incident_coordinator",
         "u-ic-01": "incident_coordinator",
     }
     target = alias_map.get(key, key)
-    return _USER_PROFILES.get(target, _USER_PROFILES["procurement_manager"])
+    return _USER_PROFILES.get(target, _USER_PROFILES["viewer"])
 
 
 def get_active_user_profile() -> UserProfile:
-    """Return the active RBAC UserProfile stored in the Chainlit user session."""
+    """Return the verified UserProfile bound to the authenticated Chainlit session."""
+    auth_user = None
+    try:
+        auth_user = cl.user_session.get("user")
+    except Exception:
+        auth_user = None
+
+    if auth_user is not None:
+        profile = _profile_from_chainlit_user(auth_user)
+        try:
+            cl.user_session.set("user_profile", profile)
+            cl.user_session.set("user_role", profile.role)
+            if profile.email:
+                cl.user_session.set("user_email", profile.email)
+        except Exception:
+            pass
+        return profile
+
+    if _is_real_chainlit_runtime():
+        raise PermissionError("Authentication required: please log in with an authorized SupplyGuard account.")
+
+    # Stubbed test session fallback (only outside real Chainlit runtime)
     try:
         prof = cl.user_session.get("user_profile")
         if isinstance(prof, UserProfile):
             return prof
-        role_key = cl.user_session.get("user_role")
-        if role_key:
-            resolved = resolve_user_profile(str(role_key))
-            cl.user_session.set("user_profile", resolved)
-            return resolved
     except Exception:
         pass
-    default_prof = resolve_user_profile()
-    try:
-        cl.user_session.set("user_profile", default_prof)
-        cl.user_session.set("user_role", default_prof.role)
-    except Exception:
-        pass
-    return default_prof
+    raise PermissionError("No authenticated user in session.")
 
 
-def set_active_user_profile(role_or_id: str) -> UserProfile:
-    """Switch the active session's RBAC UserProfile and persist to active thread state if present."""
-    profile = resolve_user_profile(role_or_id)
-    try:
-        cl.user_session.set("user_profile", profile)
-        cl.user_session.set("user_role", profile.role)
-        cl.user_session.set("user_email", f"{profile.user_id}@supplyguard.eu")
-        thread_id = cl.user_session.get("thread_id")
-        if thread_id:
-            orch = get_orchestrator()
-            state = orch.get_state(thread_id)
-            if state is not None:
-                state["user_profile"] = profile
-                orch.persist_state(thread_id, state)
-    except Exception:
-        pass
-    return profile
+def _build_chainlit_user(profile: UserProfile) -> Any:
+    """Construct a `cl.User` instance with verified RBAC role and scope metadata."""
+    ident = (profile.username or profile.user_id).strip()
+    meta = {
+        "user_id": profile.user_id,
+        "username": ident,
+        "email": profile.email,
+        "display_name": profile.name,
+        "role": profile.role,
+        "access_scope": profile.access_scope.value,
+        "document_scopes": list(profile.document_scopes),
+        "factory_access": list(profile.factory_access),
+    }
+    if hasattr(cl, "User"):
+        return cl.User(identifier=ident, display_name=profile.name, metadata=meta)
+    from types import SimpleNamespace
+    return SimpleNamespace(identifier=ident, display_name=profile.name, metadata=meta)
+
+
+async def authenticate_credentials(username: str, password: str) -> Optional[Any]:
+    """Verify operator credentials against PostgreSQL `app_users` and return a `cl.User` or None."""
+    from src.db.auth import authenticate_user
+    profile = await cl.make_async(authenticate_user)(username, password)
+    if profile is None:
+        return None
+    return _build_chainlit_user(profile)
+
+
+if hasattr(cl, "password_auth_callback"):
+    @cl.password_auth_callback
+    async def password_auth_callback(username: str, password: str) -> Optional[Any]:
+        """Chainlit password login callback verified against `app_users`."""
+        return await authenticate_credentials(username, password)
 
 
 def _create_cl_action(name: str, payload: dict[str, Any], label: str) -> cl.Action:
@@ -231,25 +382,8 @@ def _create_cl_action(name: str, payload: dict[str, Any], label: str) -> cl.Acti
         return cl.Action(name=name, value=json.dumps(payload), label=label)
 
 
-def build_role_switcher_actions(thread_id: str) -> list[cl.Action]:
-    """Create interactive RBAC role selection buttons for Procurement, Finance, and Read-only Guest."""
-    roles = [
-        ("procurement_manager", "👔 Role: Procurement Manager (Maria Keller)"),
-        ("finance_controller", "💰 Role: Finance Controller (Paul Novak)"),
-        ("viewer", "👁️ Role: Read-Only Guest (Public Scope)"),
-    ]
-    return [
-        _create_cl_action(
-            name="switch_role",
-            payload={"role": role_key, "thread_id": thread_id},
-            label=label,
-        )
-        for role_key, label in roles
-    ]
-
-
 def format_rbac_badge(profile: UserProfile) -> str:
-    """Format a clear status banner describing the user's RBAC identity, document scopes, and approval authority."""
+    """Format a clear status banner describing the authenticated operator's identity, scopes, and authority."""
     scopes_str = ", ".join(f"`{s}`" for s in profile.document_scopes)
     factories_str = ", ".join(f"`{f}`" for f in profile.factory_access) if profile.factory_access else "`None (Public Only)`"
     approval_str = (
@@ -258,7 +392,7 @@ def format_rbac_badge(profile: UserProfile) -> str:
         else "🔒 **Read-Only Viewer** (Cannot approve or execute Purchase Orders)"
     )
     return (
-        f"🔐 **Active RBAC Identity:** **{profile.name}** (`{profile.user_id}`) · "
+        f"🔐 **Authenticated Operator:** **{profile.name}** (`{profile.user_id}`) · "
         f"**Role:** `{profile.role}` · **Primary Scope:** `{profile.access_scope.value}`\n"
         f"- **Permitted Document Scopes:** {scopes_str}\n"
         f"- **Factory Visibility:** {factories_str} · **Approval Authority:** {approval_str}"
@@ -831,8 +965,13 @@ def generate_incident_report_artifacts(
         approved_memory_summary=memory_summary,
     )
 
-    out_dir = Path(tempfile.gettempdir()) / "supplyguard_reports"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_base = Path(os.getenv("SUPPLYGUARD_REPORTS_DIR", "/app/data/reports"))
+    try:
+        out_base.mkdir(parents=True, exist_ok=True)
+        out_dir = out_base
+    except OSError:
+        out_dir = Path(tempfile.gettempdir()) / "supplyguard_reports"
+        out_dir.mkdir(parents=True, exist_ok=True)
     safe_case = re.sub(r"[^A-Za-z0-9_-]", "_", payload.case_id)
     md_path = out_dir / f"Incident_Report_{safe_case}.md"
     pdf_path = out_dir / f"Incident_Report_{safe_case}.pdf"
@@ -985,21 +1124,35 @@ async def _emit_subagent_child_steps(
 
 
 # ==============================================================================
-# 8. Session Initialization & Checkpoint / Case Resume (#41, #42, #51)
+# 8. Session Initialization & Role-Scoped Case / Chat Resume (#41, #42, #51)
 # ==============================================================================
 
 
 async def _restore_or_greet(thread_id: str, *, is_manual_resume: bool = False) -> None:
     """Inspect PostgreSQL-backed orchestrator state for thread_id to restore or greet."""
-    profile = get_active_user_profile()
+    try:
+        profile = get_active_user_profile()
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Authentication Required:** {exc}").send()
+        return
+
     orchestrator = get_orchestrator()
-    case_state = orchestrator.get_state(thread_id)
+    try:
+        case_state = orchestrator.get_state(
+            thread_id,
+            requester=profile,
+            raise_on_unauthorized=True,
+        )
+    except PermissionError as exc:
+        await cl.Message(
+            content=(
+                "🔒 **Access Denied — Role / Ownership Restriction**\n\n"
+                f"{exc}"
+            )
+        ).send()
+        return
 
     if case_state is not None:
-        saved_profile = case_state.get("user_profile")
-        if isinstance(saved_profile, UserProfile):
-            profile = saved_profile
-            cl.user_session.set("user_profile", profile)
         status = case_state.get("status", "active")
         case_id = case_state.get("case_id", "CASE-MC17-001")
         fact: Optional[DisruptionFact] = case_state.get("disruption_fact")
@@ -1025,30 +1178,71 @@ async def _restore_or_greet(thread_id: str, *, is_manual_resume: bool = False) -
         return
 
     if is_manual_resume:
-        await cl.Message(content=f"ℹ️ No saved checkpoint found for thread `{thread_id}`.").send()
+        await cl.Message(content=f"ℹ️ No saved checkpoint found for thread `{thread_id}` under your account/role.").send()
         return
 
-    role_actions = build_role_switcher_actions(thread_id)
     await cl.Message(
         content=(
             "**Welcome to SupplyGuard AI — Agentic Supply Chain Disruption & Recovery Platform!** 🏭🛡️\n\n"
             f"Active session thread: `{thread_id}`\n\n"
             f"{format_rbac_badge(profile)}\n\n"
             "Describe a supply chain disruption (e.g., *“Supplier Atlas Components has announced a 12-day delay for component MC-17...”*) "
-            "or select an RBAC operator role below.\n"
-            "*(Commands: `/role <procurement|finance|guest>`, `/resume <thread_id>`, `/export`)*"
+            "or select a previous conversation from your role-scoped history sidebar.\n"
+            "*(Commands: `/resume <thread_id>`, `/export`)*"
         ),
-        actions=role_actions,
     ).send()
+
+
+def _resolve_session_thread_id() -> str:
+    """Resolve deterministic Chainlit thread_id (preferring thread_id over transient session.id)."""
+    sess = cl.context.session
+    return str(getattr(sess, "thread_id", None) or sess.id)
 
 
 @cl.on_chat_start
 async def on_chat_start() -> None:
-    """Initialize a chat session, bind thread_id 1:1 to session id, configure RBAC profile, and resume if restarting."""
-    session_id = cl.context.session.id
-    cl.user_session.set("thread_id", session_id)
-    get_active_user_profile()
-    await _restore_or_greet(session_id, is_manual_resume=False)
+    """Initialize an authenticated chat session and bind thread_id consistently."""
+    thread_id = _resolve_session_thread_id()
+    cl.user_session.set("thread_id", thread_id)
+    try:
+        get_active_user_profile()
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Authentication Required:** {exc}").send()
+        return
+    await _restore_or_greet(thread_id, is_manual_resume=False)
+
+
+if hasattr(cl, "on_chat_resume"):
+    @cl.on_chat_resume
+    async def on_chat_resume(thread: dict[str, Any]) -> None:
+        """Restore an operator's persisted SupplyGuard case when selecting a thread from history."""
+        thread_id = str(thread.get("id") or _resolve_session_thread_id())
+        cl.user_session.set("thread_id", thread_id)
+        try:
+            profile = get_active_user_profile()
+        except PermissionError as exc:
+            await cl.Message(content=f"🔒 **Authentication Required:** {exc}").send()
+            return
+
+        orchestrator = get_orchestrator()
+        try:
+            case_state = orchestrator.get_state(
+                thread_id,
+                requester=profile,
+                raise_on_unauthorized=True,
+            )
+        except PermissionError as exc:
+            await cl.Message(content=f"🔒 **Access Denied:** {exc}").send()
+            return
+
+        if not case_state:
+            return
+        status = case_state.get("status", "active")
+        if status == "awaiting_clarification":
+            question = case_state.get("clarification_question") or "Could you please clarify the supplier and component?"
+            await cl.Message(content=question).send()
+        elif status in ("awaiting_approval", "awaiting_modification"):
+            await _send_approval_card(case_state, thread_id, user_profile=profile)
 
 
 # ==============================================================================
@@ -1060,10 +1254,14 @@ async def on_chat_start() -> None:
 async def on_message(message: cl.Message) -> None:
     """Handle incoming user messages, slash commands, and SupplyGuard AI Deep Agent flows."""
     text = message.content.strip()
-    thread_id = cl.user_session.get("thread_id") or cl.context.session.id
+    thread_id = cl.user_session.get("thread_id") or _resolve_session_thread_id()
     cl.user_session.set("thread_id", thread_id)
     orchestrator = get_orchestrator()
-    profile = get_active_user_profile()
+    try:
+        profile = get_active_user_profile()
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Authentication Required:** {exc}").send()
+        return
 
     # 1. Command: /resume <thread_id> (Issue #51)
     if text.startswith("/resume"):
@@ -1072,25 +1270,44 @@ async def on_message(message: cl.Message) -> None:
         if not target_thread_id:
             await cl.Message(content="Usage: `/resume <thread_id>`").send()
             return
-        cl.user_session.set("thread_id", target_thread_id)
+        try:
+            authorized_state = orchestrator.get_state(
+                target_thread_id,
+                requester=profile,
+                raise_on_unauthorized=True,
+            )
+        except PermissionError as exc:
+            await cl.Message(content=f"🔒 **Access Denied:** {exc}").send()
+            return
+        if authorized_state is not None:
+            cl.user_session.set("thread_id", target_thread_id)
         await _restore_or_greet(target_thread_id, is_manual_resume=True)
         return
 
-    # 2. Command: /role <procurement|finance|guest> (Issue #43)
+    # 2. Command: /role is disabled under authenticated RBAC sessions
     if text.startswith("/role"):
-        parts = text.split(maxsplit=1)
-        role_arg = parts[1].strip() if len(parts) > 1 else "procurement_manager"
-        new_prof = set_active_user_profile(role_arg)
         await cl.Message(
-            content=f"🔄 **RBAC Role Updated!**\n\n{format_rbac_badge(new_prof)}"
+            content=(
+                "🔒 **Role Switching Disabled:** Your RBAC role is strictly bound to your authenticated account "
+                f"(`{profile.role}`). Sign out and log in with another authorized account to switch roles.\n\n"
+                f"{format_rbac_badge(profile)}"
+            )
         ).send()
         return
 
     # 3. Command: /export (Issue #50)
     if text.startswith("/export"):
-        case_state = orchestrator.get_state(thread_id) or orchestrator.get_latest_state()
+        try:
+            case_state = orchestrator.get_state(
+                thread_id,
+                requester=profile,
+                raise_on_unauthorized=True,
+            ) or orchestrator.get_latest_state(requester=profile)
+        except PermissionError as exc:
+            await cl.Message(content=f"🔒 **Access Denied:** {exc}").send()
+            return
         if not case_state:
-            await cl.Message(content="ℹ️ No active incident case to export yet.").send()
+            await cl.Message(content="ℹ️ No active incident case found for your account/role to export yet.").send()
             return
         report, md_path, pdf_path = generate_incident_report_artifacts(thread_id, case_state)
         elements = []
@@ -1112,7 +1329,7 @@ async def on_message(message: cl.Message) -> None:
 
     # 4. Route through unified SupplyGuardOrchestrator
     try:
-        prev_state = orchestrator.get_state(thread_id)
+        prev_state = orchestrator.get_state(thread_id, requester=profile, raise_on_unauthorized=True)
         prev_action_id = (
             prev_state["approval_payload"].action_id
             if prev_state and prev_state.get("approval_payload") is not None
@@ -1122,7 +1339,7 @@ async def on_message(message: cl.Message) -> None:
         lowered = text.lower()
 
         if "resume the case" in lowered or "reviewing yesterday" in lowered:
-            target_state = prev_state or orchestrator.get_latest_state()
+            target_state = prev_state or orchestrator.get_latest_state(requester=profile)
             if target_state is None:
                 await cl.Message(
                     content="ℹ️ No persisted SupplyGuard case found in database checkpoints to resume."
@@ -1130,6 +1347,10 @@ async def on_message(message: cl.Message) -> None:
                 return
             resumed_state = dict(target_state)
             resumed_state["thread_id"] = thread_id
+            resumed_state["user_profile"] = profile
+            resumed_state["owner_user_id"] = profile.user_id
+            resumed_state["owner_role"] = profile.role
+            resumed_state["access_scope"] = profile.access_scope.value
             orchestrator.persist_state(thread_id, resumed_state)
             await _restore_or_greet(thread_id, is_manual_resume=True)
             return
@@ -1248,16 +1469,20 @@ async def _handle_approval_decision(action: cl.Action, approved: bool) -> None:
     expected_hash = payload.get("payload_hash", "")
     if not thread_id:
         try:
-            thread_id = cl.user_session.get("thread_id") or cl.context.session.id
+            thread_id = cl.user_session.get("thread_id") or _resolve_session_thread_id()
         except Exception:
             thread_id = "default_thread"
 
-    profile = get_active_user_profile()
+    try:
+        profile = get_active_user_profile()
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Authentication Required:** {exc}").send()
+        return
     if not profile.can_approve:
         await cl.Message(
             content=(
                 f"🔒 **RBAC Authorization Denied:** Active role **`{profile.role}`** (**{profile.name}**) is a **Read-Only Viewer** "
-                "and is not authorized to approve or reject procurement actions. Switch to `Procurement Manager` or `Finance Controller`."
+                "and is not authorized to approve or reject procurement actions."
             )
         ).send()
         return
@@ -1284,7 +1509,15 @@ async def _handle_approval_decision(action: cl.Action, approved: bool) -> None:
                 pass
 
         orchestrator = get_orchestrator()
-        case_state = orchestrator.get_state(thread_id)
+        try:
+            case_state = orchestrator.get_state(
+                thread_id,
+                requester=profile,
+                raise_on_unauthorized=True,
+            )
+        except PermissionError as exc:
+            await cl.Message(content=f"🔒 **Access Denied:** {exc}").send()
+            return
         if case_state is None or case_state.get("approval_payload") is None:
             await cl.Message(content="⚠️ No pending approval payload found for this thread.").send()
             return
@@ -1379,13 +1612,28 @@ async def on_modify(action: cl.Action) -> None:
     """Handle operator 'Modify Plan' click: invalidate current approval card and prompt for updated parameters."""
     payload = _extract_action_payload(action)
     action_id = payload.get("action_id", "")
-    thread_id = payload.get("thread_id") or cl.user_session.get("thread_id") or cl.context.session.id
+    thread_id = payload.get("thread_id") or cl.user_session.get("thread_id") or _resolve_session_thread_id()
 
-    profile = get_active_user_profile()
+    try:
+        profile = get_active_user_profile()
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Authentication Required:** {exc}").send()
+        return
     if not profile.can_approve:
         await cl.Message(
             content=f"🔒 **RBAC Authorization Denied:** Role `{profile.role}` is Read-Only and cannot modify procurement plans."
         ).send()
+        return
+
+    orchestrator = get_orchestrator()
+    try:
+        case_state = orchestrator.get_state(
+            thread_id,
+            requester=profile,
+            raise_on_unauthorized=True,
+        )
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Access Denied:** {exc}").send()
         return
 
     approval_msg = cl.user_session.get(f"approval_msg:{action_id}") if action_id else None
@@ -1399,8 +1647,6 @@ async def on_modify(action: cl.Action) -> None:
     except Exception:
         pass
 
-    orchestrator = get_orchestrator()
-    case_state = orchestrator.get_state(thread_id)
     if case_state is not None:
         old_payload: Optional[ApprovalPayload] = case_state.get("approval_payload")
         if old_payload:
@@ -1417,26 +1663,28 @@ async def on_modify(action: cl.Action) -> None:
     ).send()
 
 
-@cl.action_callback("switch_role")
-async def on_switch_role(action: cl.Action) -> None:
-    """Handle interactive RBAC role switcher button click (Issue #43)."""
-    payload = _extract_action_payload(action)
-    role_key = payload.get("role", "procurement_manager")
-    new_prof = set_active_user_profile(role_key)
-    await cl.Message(
-        content=f"🔐 **Switched Active RBAC Session Role**\n\n{format_rbac_badge(new_prof)}"
-    ).send()
-
-
 @cl.action_callback("export_report")
 async def on_export_report(action: cl.Action) -> None:
     """Handle on-demand Markdown & PDF Incident Report export button click (Issue #50)."""
     payload = _extract_action_payload(action)
-    thread_id = payload.get("thread_id") or cl.user_session.get("thread_id") or cl.context.session.id
+    thread_id = payload.get("thread_id") or cl.user_session.get("thread_id") or _resolve_session_thread_id()
+    try:
+        profile = get_active_user_profile()
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Authentication Required:** {exc}").send()
+        return
     orchestrator = get_orchestrator()
-    case_state = orchestrator.get_state(thread_id) or orchestrator.get_latest_state()
+    try:
+        case_state = orchestrator.get_state(
+            thread_id,
+            requester=profile,
+            raise_on_unauthorized=True,
+        ) or orchestrator.get_latest_state(requester=profile)
+    except PermissionError as exc:
+        await cl.Message(content=f"🔒 **Access Denied:** {exc}").send()
+        return
     if not case_state:
-        await cl.Message(content="ℹ️ No completed case found to export.").send()
+        await cl.Message(content="ℹ️ No completed case found for your account/role to export.").send()
         return
     report, md_path, pdf_path = generate_incident_report_artifacts(thread_id, case_state)
     elements = []

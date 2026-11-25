@@ -53,8 +53,29 @@ class TestPostgresSchemaInit(unittest.TestCase):
 
     def test_thread_states_and_audit_log_columns(self):
         ts_body = self._extract_table_body("thread_states")
-        for col in ("thread_id", "case_state", "updated_at"):
+        for col in ("thread_id", "owner_user_id", "owner_role", "access_scope", "case_state", "updated_at"):
             self.assertRegex(ts_body, rf"\b{col}\s+[A-Za-z0-9_]+")
+
+    def test_auth_and_chat_history_tables_and_migration(self):
+        for table in ("app_users", "chat_users", "chat_threads", "chat_steps", "chat_elements", "chat_feedbacks"):
+            self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", self.sql_content)
+
+        app_users_body = self._extract_table_body("app_users")
+        for col in ("user_id", "username", "email", "display_name", "role", "access_scope", "password_hash", "is_active"):
+            self.assertRegex(app_users_body, rf"\b{col}\s+[A-Za-z0-9_]+")
+
+        threads_body = self._extract_table_body("chat_threads")
+        for col in ("id", "user_id", "user_identifier", "role", "access_scope", "metadata"):
+            self.assertRegex(threads_body, rf"\b{col}\s+[A-Za-z0-9_]+")
+
+        mig_002 = INIT_SQL_PATH.parent / "migrations" / "002_auth_and_chat_history.sql"
+        self.assertTrue(mig_002.is_file(), "002_auth_and_chat_history.sql migration must exist")
+        mig_sql = mig_002.read_text(encoding="utf-8")
+        self.assertRegex(mig_sql, r"\bBEGIN\s*;")
+        self.assertRegex(mig_sql, r"\bCOMMIT\s*;")
+        self.assertIn("ALTER TABLE IF EXISTS thread_states ADD COLUMN IF NOT EXISTS owner_user_id", mig_sql)
+        for table in ("app_users", "chat_users", "chat_threads", "chat_steps", "chat_elements", "chat_feedbacks"):
+            self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", mig_sql)
 
         audit_body = self._extract_table_body("audit_log")
         for col in (
@@ -94,6 +115,11 @@ class TestPostgresSchemaInit(unittest.TestCase):
     def test_indexes_defined(self):
         expected_indexes = [
             "idx_thread_states_updated_at",
+            "idx_thread_states_owner_role",
+            "idx_app_users_role",
+            "idx_chat_threads_user_role",
+            "idx_chat_steps_thread_created",
+            "idx_chat_elements_thread",
             "idx_audit_log_action_id",
             "idx_audit_log_thread_id",
             "idx_checkpoints_thread_id",
