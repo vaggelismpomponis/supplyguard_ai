@@ -19,9 +19,10 @@ from src.agent.schemas import ApprovalPayload, DisruptionFact, OperationalImpact
 def _normalize_payload(raw_or_obj: Any) -> Dict[str, Any]:
     """Normalize an ApprovalPayload for evaluator / fingerprint checks.
 
-    Sets `total_cost = round(quantity * unit_price, 2)` for the PO line item
-    while retaining `plan_total_cost` so both `numerical_correctness` and
-    `policy_constraints` verify exact PO math and spending cap compliance.
+    Preserves the full committed plan `total_cost` (PO subtotal + expedite fee +
+    transfer cost) alongside itemized components so `policy_constraints`,
+    `numerical_correctness`, and `payload_fingerprint()` all enforce the exact
+    total expenditure including expedite and transfer fees.
     """
     d = raw_or_obj.model_dump() if hasattr(raw_or_obj, "model_dump") else dict(raw_or_obj)
     status = d.get("status")
@@ -33,7 +34,11 @@ def _normalize_payload(raw_or_obj: Any) -> Dict[str, Any]:
 
     qty = int(d.get("quantity", 0))
     unit_price = float(d.get("unit_price", 0.0))
-    po_total = round(qty * unit_price, 2)
+    po_subtotal = round(qty * unit_price, 2)
+    expedite_fee = round(float(d.get("expedite_fee_eur", 0.0) or 0.0), 2)
+    transfer_cost = round(float(d.get("transfer_cost_eur", 0.0) or 0.0), 2)
+    computed_total = round(po_subtotal + expedite_fee + transfer_cost, 2)
+    full_total = round(float(d.get("total_cost", computed_total)), 2)
 
     return {
         "action_id": d.get("action_id"),
@@ -44,8 +49,11 @@ def _normalize_payload(raw_or_obj: Any) -> Dict[str, Any]:
         "component_id": d.get("component_id"),
         "quantity": qty,
         "unit_price": unit_price,
-        "total_cost": po_total,
-        "plan_total_cost": float(d.get("total_cost", po_total)),
+        "po_subtotal_eur": po_subtotal,
+        "expedite_fee_eur": expedite_fee,
+        "transfer_cost_eur": transfer_cost,
+        "total_cost": full_total,
+        "plan_total_cost": full_total,
         "spending_cap": float(d.get("spending_cap", 75000.0)),
         "status": status,
     }

@@ -104,11 +104,15 @@ def numerical_correctness(outcome: CaseOutcome, expected: Expected) -> Optional[
             missing = sorted(CALCULATOR_TOOLS - set(outcome["tool_calls"]))
             problems.append(f"money not computed by deterministic tools (missing {missing})")
         for p in outcome["approval_payloads"]:
-            total = float(p.get("quantity", 0)) * float(p.get("unit_price", 0))
-            if abs(total - float(p.get("total_cost", 0))) > MONEY_TOLERANCE_EUR:
+            expected_total = (
+                float(p.get("quantity", 0)) * float(p.get("unit_price", 0))
+                + float(p.get("expedite_fee_eur", 0.0) or 0.0)
+                + float(p.get("transfer_cost_eur", 0.0) or 0.0)
+            )
+            if abs(expected_total - float(p.get("total_cost", 0))) > MONEY_TOLERANCE_EUR:
                 problems.append(
                     f"payload {p.get('action_id')}: total {p.get('total_cost')} != "
-                    f"quantity x unit price {total:.2f}"
+                    f"expected {expected_total:.2f}"
                 )
     return _result("numerical_correctness", problems)
 
