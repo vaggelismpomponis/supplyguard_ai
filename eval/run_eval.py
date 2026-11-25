@@ -129,10 +129,21 @@ def run_local(args: argparse.Namespace) -> int:
 
 
 def _langsmith_evaluator(fn):
-    """Adapt an evaluator to LangSmith's (run, example) signature; n/a becomes score None."""
+    """Adapt an evaluator to LangSmith's (run, example) signature; n/a becomes score None.
+
+    Restart cases are skipped by the target (they run in eval.restart_scenario), so their outputs
+    carry no outcome to evaluate and are scored not applicable instead of raising KeyError.
+    Exceptions are reported here because LangSmith would label them with this function's name.
+    """
 
     def wrapper(run, example) -> dict:
-        result = fn(run.outputs, example.outputs)
+        outputs = run.outputs or {}
+        if "skipped" in outputs:
+            return {"key": fn.__name__, "score": None, "comment": outputs["skipped"]}
+        try:
+            result = fn(outputs, example.outputs)
+        except Exception as exc:  # noqa: BLE001 - surfaced as an evaluator error in LangSmith
+            return {"key": fn.__name__, "score": None, "comment": repr(exc), "extra": {"error": True}}
         return result or {"key": fn.__name__, "score": None, "comment": "not applicable"}
 
     wrapper.__name__ = fn.__name__

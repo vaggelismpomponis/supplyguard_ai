@@ -183,7 +183,7 @@ docker compose run --rm app pytest tests/ -v
 
 ## 8. Quality Coordination: SupplyGuard Day 5 Clean-Clone Test (#85) ✋ Platform
 
-**Owner:** Quality (@VickyMil-ai) · **Status:** Linux clean-stack run verified (Windows/macOS multi-laptop rows pending team rotation)
+**Owner:** Quality (@VickyMil-ai) · **Status:** Linux and macOS (Apple Silicon) verified; Windows (laptop 1) and a second macOS run (laptop 2) pending
 
 ### 8.1 Why a re-run
 
@@ -201,7 +201,7 @@ cp .env.example .env                                   # Copy-Item / copy on Win
 time docker compose up -d --build --wait               # record the "real" time
 docker compose ps                                      # postgres, neo4j, chromadb, external-risk, app healthy; seed exited 0
 docker compose logs seed | tail -5                     # 212 documents into pgvector and ChromaDB
-docker compose exec -T app python -m pytest -q         # record passed / failed
+docker compose exec -T app python -m pytest tests -q   # record passed / failed (bare `pytest` also collects docs/ course code and errors)
 docker compose exec -T app python -m eval.red_team scan          # 1 item: DOC-NOT-HELIOS-PRICE
 docker compose exec -T app python -m eval.retrieval_benchmark --live   # benchmark data reachable
 time docker compose restart app                        # warm restart < 30 s
@@ -218,13 +218,19 @@ Neo4j; warm restart under 30 s.
 | 1 | Windows 11 | | @vaggelismpomponis | | | | | | | |
 | 2 | macOS (Apple Silicon) | | @AlexZarkalis | | | | | | | |
 | 3 | Linux (`x86_64`) | Docker Engine + Compose | Orchestrator verification (2026-11-24) | 303.8 s image build (`--network=host`) + compose wait (< 6m) | All 5 services healthy; `seed` exit 0 (18 tables, Neo4j graph, 212 docs, 340 memories) | 270 passed, 1 skipped (`docker` binary absent inside container) | 1 item (`DOC-NOT-HELIOS-PRICE`) | pgvector R@5=1.000, chroma R@5=0.792, hybrid R@5=0.986 | 2.94–3.00 s | BuildKit bridge DNS/network unreachable on Linux host (`--network=host` succeeded) |
-| 4 | | | @VickyMil-ai | | | | | | | |
+| 4 | macOS 14.5 (Apple Silicon, `arm64`, 8 CPU) | Docker Desktop, Engine 29.0.1, Compose v2.40.3 | @VickyMil-ai (2026-11-25, `develop` @ `15fbd79`) | 4 s clone + 217 s `build --no-cache` + 83 s `up -d --wait` ≈ **5 min 4 s** (base images and pip downloads were already cached) | All 5 services healthy; `seed` exit 0 in 66 s (18 tables / 9,093 rows, Neo4j graph, 212 docs, 340 cases + memories, 5 users) | 362 passed, 1 skipped | 1 item (`DOC-NOT-HELIOS-PRICE`) | pgvector R@5=1.000, chroma R@5=0.833, hybrid R@5=0.986 (24 queries) | `restart` returns in 1.2 s; healthy again after 41 s | Host port 5432 taken by a local Homebrew Postgres → `up` failed; fixed with `POSTGRES_PORT=5433` in `.env` as in the README troubleshooting table. `eval.demo_check` also PASS on the fresh clone |
 
 Every friction point becomes an issue for Platform and a row in the CONTRIBUTING log.
+
+Laptop 4 notes: the clone ran in an empty folder with its own Compose project name, so all volumes
+started empty. Base images and the pip cache were already on the machine, so a first-ever run also
+has to download them (about 1–2 min on the other laptops in §4). The port 5432 failure is the README's
+documented case, but a member with a local Postgres hits it on the first `up`. Platform could
+consider defaulting `POSTGRES_PORT` to a less common port in `.env.example`.
 
 ### 8.4 Sign-off
 
 | Role | Name | Scope | Status | Date |
 |---|---|---|---|---|
-| Quality | @VickyMil-ai | Coordination, criteria checked (Linux verified; Windows/macOS pending team runs) | Partial | 2026-11-24 |
+| Quality | @VickyMil-ai | Coordination, criteria checked (Linux and macOS verified; Windows pending) | Partial | 2026-11-25 |
 | Platform | @vaggelismpomponis | Stack, seed, `--network=host` friction documented | Verified | 2026-11-24 |

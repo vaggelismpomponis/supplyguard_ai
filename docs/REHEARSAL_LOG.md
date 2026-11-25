@@ -59,6 +59,19 @@ own role.
    - "How do you know the purchase order was not created twice after the restart?"
 4. **Follow up:** each problem becomes an issue for the owning role, linked in the table below.
 
+## Readiness check (2026-11-25)
+
+Run by Quality on `develop` @ `15fbd79` before scheduling the rehearsals. Preconditions for
+rehearsal 1 are met.
+
+| Check | Result |
+|---|---|
+| `eval.demo_check` (running stack and fresh clean clone) | PASS: 2a, 2b, 6a, 6b |
+| `eval.restart_scenario` Procedure A (restart while approval pending) | PASS: same fingerprint after restart, executed once, one `audit_log` row after replay and double click |
+| `eval.restart_scenario` Procedure B (`after_graph_query`, `before_execute`) | PASS |
+| `eval.run_eval` (non-restart cases) | 99/99 pass every evaluator |
+| `eval.tracing` | enabled, project `supplyguard-ai`, API key set |
+
 ## Rehearsal 1
 
 **Date:** _TBD_ · **Commit:** _TBD_ · **Timekeeper:** _TBD_ · **`demo_check`:** _TBD_

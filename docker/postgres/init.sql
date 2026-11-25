@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS thread_states (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Volumes created before #105 have thread_states without the ownership columns, and the
+-- seed re-applies this script on every run; add them before the index below needs them.
+ALTER TABLE thread_states ADD COLUMN IF NOT EXISTS owner_user_id TEXT;
+ALTER TABLE thread_states ADD COLUMN IF NOT EXISTS owner_role TEXT;
+ALTER TABLE thread_states ADD COLUMN IF NOT EXISTS access_scope TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_thread_states_updated_at ON thread_states(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_thread_states_owner_role ON thread_states(owner_user_id, owner_role, updated_at DESC);
 

@@ -32,7 +32,7 @@ Project-wide πρόοδος για την πλατφόρμα **SupplyGuard AI** 
 - [x] Ευρετηρίαση 300 ιστορικών disruption cases και 40 approved incident memories
 - [x] Automated Compose `seed` service (`docker compose run seed`) χωρίς χειροκίνητα βήματα
 - [x] Walking skeleton με Deep Agents και tools (με graceful offline fallback χωρίς LLM keys)
-- [ ] Clean-clone benchmark σε <10′ σε πολλαπλά λειτουργικά συστήματα *(επαληθεύτηκε σε Linux `x86_64`· απομένουν Windows/macOS runs ομάδας)*
+- [ ] Clean-clone benchmark σε <10′ σε πολλαπλά λειτουργικά συστήματα *(επαληθεύτηκε σε Linux `x86_64` και macOS Apple Silicon· απομένει το Windows run)*
 
 ---
 
