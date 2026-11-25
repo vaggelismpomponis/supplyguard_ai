@@ -486,6 +486,8 @@ def run_challenger_subagent(
     fact: DisruptionFact,
     options: List[RecoveryOption],
     findings: List[DocumentaryFinding],
+    *,
+    graph_res: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Audit proposed plan against spending caps, certifications, and prompt injections."""
     injection_alerts: List[Dict[str, Any]] = []
@@ -517,16 +519,69 @@ def run_challenger_subagent(
         )
 
     recommended = next((o for o in options if o.is_recommended), options[0] if options else None)
-    req_qty = 3000 if (fact.component_id or "MC-17") == "MC-17" else (recommended.quantity if recommended else 0)
-    cap_limit = 3000 if (fact.component_id or "MC-17") == "MC-17" else None
+    rec_supplier_id = recommended.supplier_id if recommended else None
+    comp_id = fact.component_id or "MC-17"
+
+    # Resolve certification validity and monthly capacity dynamically from graph/master data
+    cert_valid = True
+    cap_limit: Optional[int] = None
+    if rec_supplier_id:
+        graph_suppliers = (graph_res or {}).get("suppliers") or []
+        matched_graph_sup = next((s for s in graph_suppliers if s.get("supplier_id") == rec_supplier_id), None)
+        if matched_graph_sup is not None:
+            if "certification_valid" in matched_graph_sup:
+                cert_valid = bool(matched_graph_sup["certification_valid"])
+            if matched_graph_sup.get("monthly_capacity_units") is not None:
+                cap_limit = int(matched_graph_sup["monthly_capacity_units"])
+
+        try:
+            from src.agent.schemas import _load_suppliers_table
+
+            matched_csv_sup = next(
+                (s for s in _load_suppliers_table() if s.get("supplier_id") == rec_supplier_id),
+                None,
+            )
+            if matched_csv_sup is not None:
+                status_str = (matched_csv_sup.get("certification_status") or "").strip().lower()
+                if status_str and status_str != "valid":
+                    cert_valid = False
+        except Exception:
+            pass
+
+        for f in findings:
+            if f.supplier_id == rec_supplier_id and "expired" in (f.summary or "").lower():
+                cert_valid = False
+        if recommended and recommended.rejection_reason and "expired" in recommended.rejection_reason.lower():
+            cert_valid = False
+
+        if cap_limit is None and comp_id == "MC-17" and rec_supplier_id == "S004":
+            cap_limit = 3000
+
+    if recommended is None:
+        req_qty = 0
+    elif (
+        recommended.action_type == SupplyGuardActionType.COMBINED_RECOVERY_PLAN
+        and recommended.cost_breakdown.get("cordillera_purchase_eur") is not None
+        and recommended.unit_price > 0
+    ):
+        req_qty = int(round(recommended.cost_breakdown["cordillera_purchase_eur"] / recommended.unit_price))
+    else:
+        req_qty = int(recommended.quantity)
 
     budget_audit = verify_budget_limits(
         total_cost_eur=recommended.recovery_cost if recommended else 0.0,
         spending_cap_eur=fact.spending_cap,
         requested_quantity=req_qty,
         supplier_monthly_capacity=cap_limit,
-        certification_valid=True,
+        certification_valid=cert_valid,
     )
+
+    rejected_suppliers: Dict[str, str] = {}
+    for opt in options:
+        if not opt.is_viable and opt.supplier_id:
+            rejected_suppliers[opt.supplier_id] = (
+                f"{opt.supplier_name or opt.supplier_id}: {opt.rejection_reason or 'Rejected by constraints'}"
+            )
 
     return {
         "subagent": "challenger_subagent",
@@ -535,11 +590,7 @@ def run_challenger_subagent(
         "injection_alerts": injection_alerts,
         "security_findings": security_findings,
         "tool_calls": ["scan_prompt_injections", "verify_budget_limits"],
-        "rejected_suppliers": {
-            "S002": "Helios Supply: 21d lead time too slow; real capacity 1,500/mo; prompt injection neutralized",
-            "S003": "Borealis Parts: ISO 9001:2015 expired 2026-09-30 (blocked by DOC-PRO-04-v1)",
-            "S005": "Delta Micro Systems: shares Tier-2 upstream U01 (Veltro) with Atlas S001",
-        },
+        "rejected_suppliers": rejected_suppliers,
     }
 
 

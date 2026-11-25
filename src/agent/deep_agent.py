@@ -154,6 +154,7 @@ def create_supplyguard_deep_agent(
     *,
     model: Optional[str] = None,
     use_postgres: bool = True,
+    checkpointer: Optional[Any] = None,
 ) -> Optional[Any]:
     """Instantiate `deepagents.create_deep_agent` with planning, subagents, HITL interrupt, and PostgresSaver."""
     resolved_model = _build_chat_model(model=model)
@@ -166,7 +167,7 @@ def create_supplyguard_deep_agent(
         logger.info("deepagents package not installed; using deterministic orchestrator mode.")
         return None
 
-    checkpointer = _get_checkpointer(use_postgres=use_postgres)
+    resolved_checkpointer = checkpointer if checkpointer is not None else _get_checkpointer(use_postgres=use_postgres)
     subagents = build_deep_agent_subagents()
     root_tools = [
         calculate_recovery_costs_tool,
@@ -183,8 +184,8 @@ def create_supplyguard_deep_agent(
         "system_prompt": ROOT_SYSTEM_PROMPT,
         "interrupt_on": {"execute_procurement_po": True},
     }
-    if checkpointer is not None:
-        kwargs["checkpointer"] = checkpointer
+    if resolved_checkpointer is not None:
+        kwargs["checkpointer"] = resolved_checkpointer
 
     try:
         return create_deep_agent(**kwargs)
@@ -282,14 +283,77 @@ class SupplyGuardOrchestrator:
         self.use_postgres = use_postgres
         self._threads: Dict[str, Dict[str, Any]] = {}
         self._executed_receipts: Dict[str, ProcurementReceipt] = {}
+        self._checkpointer: Optional[Any] = None
+        self._checkpointer_initialized: bool = False
         self._deep_agent: Optional[Any] = None
+        self._deep_agent_initialized: bool = False
         self._users: Dict[str, UserProfile] = load_users_from_csv()
 
     @property
+    def checkpointer(self) -> Optional[Any]:
+        """Lazily initialize PostgresSaver (when reachable) or MemorySaver checkpointer."""
+        if not self._checkpointer_initialized:
+            self._checkpointer_initialized = True
+            self._checkpointer = _get_checkpointer(use_postgres=self.use_postgres)
+        return self._checkpointer
+
+    @property
     def deep_agent(self) -> Optional[Any]:
-        if self._deep_agent is None:
-            self._deep_agent = create_supplyguard_deep_agent(use_postgres=self.use_postgres)
+        """Lazily initialize `create_deep_agent` backed by `self.checkpointer` when LLM keys are set."""
+        if self._deep_agent is None and not self._deep_agent_initialized:
+            self._deep_agent_initialized = True
+            self._deep_agent = create_supplyguard_deep_agent(
+                use_postgres=self.use_postgres,
+                checkpointer=self.checkpointer,
+            )
         return self._deep_agent
+
+    def _invoke_deep_agent(
+        self,
+        prompt: str,
+        run_config: Dict[str, Any],
+    ) -> Tuple[Optional[str], List[str]]:
+        """Invoke the live `create_deep_agent` runtime when configured, degrading gracefully offline."""
+        agent = self.deep_agent
+        if agent is None:
+            return None, []
+        try:
+            result = agent.invoke(
+                {"messages": [{"role": "user", "content": prompt}]},
+                config=run_config,
+            )
+            invoked_tools: List[str] = []
+            text_out: Optional[str] = None
+            if isinstance(result, dict):
+                messages = result.get("messages") or []
+                for msg in messages:
+                    msg_tool_calls = getattr(msg, "tool_calls", None)
+                    if msg_tool_calls is None and isinstance(msg, dict):
+                        msg_tool_calls = msg.get("tool_calls")
+                    for tc in msg_tool_calls or []:
+                        tc_name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", None)
+                        if tc_name and tc_name not in invoked_tools:
+                            invoked_tools.append(str(tc_name))
+                for msg in reversed(messages):
+                    role = getattr(msg, "type", None) or (msg.get("role") if isinstance(msg, dict) else None)
+                    content = getattr(msg, "content", None) if not isinstance(msg, dict) else msg.get("content")
+                    if role in ("ai", "assistant", None) and content:
+                        if isinstance(content, list):
+                            parts = [
+                                p.get("text", "") if isinstance(p, dict) else str(p)
+                                for p in content
+                            ]
+                            text_out = "\n".join(p for p in parts if p).strip() or None
+                        else:
+                            text_out = str(content).strip() or None
+                        if text_out:
+                            break
+            elif result is not None:
+                text_out = str(result).strip() or None
+            return text_out, invoked_tools
+        except Exception as exc:
+            logger.warning("Live deep_agent invocation failed; falling back to deterministic output: %s", exc)
+            return None, []
 
     def resolve_user(self, user_id: str) -> UserProfile:
         return self._users.get(user_id, self._users["procurement_manager"])
@@ -341,10 +405,42 @@ class SupplyGuardOrchestrator:
             state["procurement_receipt"] = ProcurementReceipt.model_validate(state["procurement_receipt"])
         return state
 
-    def _persist_checkpoint(self, thread_id: str, state: Dict[str, Any]) -> None:
-        """Persist full thread state to memory, PostgreSQL thread_states, and audit_log."""
+    def persist_state(self, thread_id: str, state: Dict[str, Any]) -> None:
+        """Persist full thread state to memory, LangGraph checkpointer (PostgresSaver), thread_states, and audit_log."""
         self._threads[thread_id] = state
         self._threads["latest"] = state
+
+        serialized = self._serialize_state(state)
+
+        # 1. Persist LangGraph-compatible checkpoint via PostgresSaver / MemorySaver
+        cp = self.checkpointer
+        if cp is not None and hasattr(cp, "put"):
+            try:
+                now_utc = datetime.now(timezone.utc)
+                cp_id = f"{int(now_utc.timestamp() * 1_000_000):020d}-{uuid.uuid4().hex[:8]}"
+                version = f"{int(now_utc.timestamp() * 1_000_000):020d}"
+                cp_config = {
+                    "configurable": {
+                        "thread_id": thread_id,
+                        "checkpoint_ns": "supplyguard_orchestrator",
+                    }
+                }
+                checkpoint_obj = {
+                    "v": 1,
+                    "id": cp_id,
+                    "ts": now_utc.isoformat(),
+                    "channel_values": {"case_state": serialized},
+                    "channel_versions": {"case_state": version},
+                    "versions_seen": {},
+                }
+                metadata_obj = {
+                    "source": "supplyguard_orchestrator",
+                    "case_id": state.get("case_id"),
+                    "status": state.get("status"),
+                }
+                cp.put(cp_config, checkpoint_obj, metadata_obj, {"case_state": version})
+            except Exception as exc:
+                logger.debug("Skipping checkpointer.put for thread %s: %s", thread_id, exc)
 
         if not self.use_postgres:
             return
@@ -355,7 +451,6 @@ class SupplyGuardOrchestrator:
                 return
             from src.db.idempotency import record_action, save_thread_state
 
-            serialized = self._serialize_state(state)
             save_thread_state(thread_id, serialized)
 
             payload: Optional[ApprovalPayload] = state.get("approval_payload")
@@ -377,24 +472,64 @@ class SupplyGuardOrchestrator:
         except Exception as exc:
             logger.debug("Skipping Postgres checkpoint persistence: %s", exc)
 
+    def _persist_checkpoint(self, thread_id: str, state: Dict[str, Any]) -> None:
+        """Internal alias for persist_state()."""
+        self.persist_state(thread_id, state)
+
     def get_state(self, thread_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve thread state from local cache or restore from PostgreSQL across restarts."""
+        """Retrieve thread state from local cache or restore from PostgreSQL / checkpointer across restarts."""
         if thread_id in self._threads:
             return self._threads[thread_id]
+
+        # 1. Try PostgreSQL thread_states when enabled
+        if self.use_postgres:
+            try:
+                from src.db.connection import is_postgres_available
+                from src.db.idempotency import load_thread_state
+
+                if is_postgres_available():
+                    raw_case = load_thread_state(thread_id)
+                    if raw_case is not None:
+                        restored = self._deserialize_state(raw_case)
+                        self._threads[thread_id] = restored
+                        return restored
+            except Exception as exc:
+                logger.debug("Could not restore thread %s from thread_states: %s", thread_id, exc)
+
+        # 2. Try LangGraph checkpointer (PostgresSaver / MemorySaver)
+        cp = self.checkpointer
+        if cp is not None and hasattr(cp, "get_tuple"):
+            try:
+                cp_tuple = cp.get_tuple(
+                    {
+                        "configurable": {
+                            "thread_id": thread_id,
+                            "checkpoint_ns": "supplyguard_orchestrator",
+                        }
+                    }
+                )
+                if cp_tuple is not None:
+                    cp_data = getattr(cp_tuple, "checkpoint", None) or (
+                        cp_tuple.get("checkpoint") if isinstance(cp_tuple, dict) else None
+                    )
+                    channel_vals = (cp_data or {}).get("channel_values", {})
+                    raw_cp_case = channel_vals.get("case_state")
+                    if isinstance(raw_cp_case, dict):
+                        restored = self._deserialize_state(raw_cp_case)
+                        self._threads[thread_id] = restored
+                        return restored
+            except Exception as exc:
+                logger.debug("Could not restore thread %s from checkpointer: %s", thread_id, exc)
+
         if not self.use_postgres:
             return None
+
+        # 3. Fallback to audit_log snapshot
         try:
             from src.db.connection import get_pooled_connection, is_postgres_available
-            from src.db.idempotency import load_thread_state
 
             if not is_postgres_available():
                 return None
-
-            raw_case = load_thread_state(thread_id)
-            if raw_case is not None:
-                restored = self._deserialize_state(raw_case)
-                self._threads[thread_id] = restored
-                return restored
 
             with get_pooled_connection() as conn:
                 with conn.cursor() as cur:
@@ -419,7 +554,7 @@ class SupplyGuardOrchestrator:
                     self._threads[thread_id] = restored
                     return restored
         except Exception as exc:
-            logger.debug("Could not restore thread %s from Postgres: %s", thread_id, exc)
+            logger.debug("Could not restore thread %s from Postgres audit_log: %s", thread_id, exc)
             return None
 
     def get_latest_state(self) -> Optional[Dict[str, Any]]:
@@ -497,7 +632,7 @@ class SupplyGuardOrchestrator:
 
         # 6. Adversarial Challenger Subagent
         plan[5]["status"] = "in_progress"
-        challenger_res = run_challenger_subagent(fact, options, findings)
+        challenger_res = run_challenger_subagent(fact, options, findings, graph_res=graph_res)
         plan[5]["status"] = "completed"
         for tc in challenger_res.get("tool_calls", []):
             if tc not in tool_calls:
@@ -506,6 +641,7 @@ class SupplyGuardOrchestrator:
         for sf in challenger_res.get("security_findings", []):
             if sf not in sec_findings:
                 sec_findings.append(sf)
+        state["challenger_res"] = challenger_res
         scratchpad["challenger_audit"] = challenger_res
         scratchpad["subagent_traces"].append(
             {"subagent": "challenger_subagent", "injection_alerts": len(challenger_res["injection_alerts"])}
@@ -542,30 +678,60 @@ class SupplyGuardOrchestrator:
         state["case_id"] = case_id
         state["recovery_options"] = options
         state["investigation_completed"] = True
+        state["last_turn_kind"] = "investigation"
         state["recovery_cost"] = opt_res["deterministic_cost_audit"]["total_recovery_cost_eur"]
         state["revenue_at_risk"] = impact.total_revenue_at_risk_eur
+
+        # Invoke live Deep Agent runtime when LLM credentials are active (for planning/synthesis & LangSmith trace)
+        profile: Optional[UserProfile] = state.get("user_profile")
+        run_cfg = _build_run_config(
+            thread_id,
+            case_id=case_id,
+            user_id=profile.user_id if profile else None,
+            role=profile.role if profile else None,
+            tags=("investigation",),
+        )
+        synthesis_prompt = (
+            f"Synthesize a concise executive recovery briefing for {case_id} "
+            f"(supplier={fact.supplier_name} {fact.supplier_id}, component={fact.component_id}, "
+            f"delay_days={fact.delay_days}, usable_units={impact.usable_units}, "
+            f"uncovered_demand_units={impact.uncovered_demand_units}, "
+            f"recovery_cost_eur={state['recovery_cost']:.2f}, "
+            f"revenue_at_risk_eur={state['revenue_at_risk']:.2f}, "
+            f"spending_cap_eur={fact.spending_cap:.2f}). "
+            "Use ONLY these verified deterministic figures; do NOT perform arithmetic and do NOT call execute_procurement_po."
+        )
+        da_summary, da_tools = self._invoke_deep_agent(synthesis_prompt, run_cfg)
+        scratchpad["deep_agent_invoked"] = da_summary is not None
+        if da_summary:
+            scratchpad["deep_agent_summary"] = da_summary
+        for tc in da_tools:
+            if tc not in tool_calls:
+                tool_calls.append(tc)
 
         if approval_payload is not None:
             state["approval_payload"] = approval_payload
             state["status"] = "awaiting_approval"
             self._record_payload_in_history(state, approval_payload)
-            state["last_answer"] = (
+            base_answer = (
                 f"Investigation complete for {case_id} ({fact.component_id}, {fact.supplier_name} {fact.supplier_id}). "
                 f"Usable stock: {impact.usable_units:,} units; uncovered demand: {impact.uncovered_demand_units:,} units. "
                 f"Recovery cost: €{state['recovery_cost']:,.2f}; Revenue at Risk: €{state['revenue_at_risk']:,.2f}. "
                 f"Awaiting human approval for {approval_payload.target_supplier_name} ({approval_payload.quantity:,} units)."
             )
+            state["last_answer"] = f"{base_answer}\n\n{da_summary}" if da_summary else base_answer
         else:
             plan[6]["status"] = "completed"
             state["approval_payload"] = None
             state["status"] = "completed"
-            state["last_answer"] = (
+            base_answer = (
                 f"Impact assessment complete for {case_id} ({fact.component_id}, {fact.supplier_name} {fact.supplier_id}). "
                 f"Affected products: {impact.affected_products_count}; open customer orders: {impact.affected_customer_orders_count}; "
                 f"uncovered demand: {impact.uncovered_demand_units:,} units. No purchase order required."
             )
+            state["last_answer"] = f"{base_answer}\n\n{da_summary}" if da_summary else base_answer
 
-        self._persist_checkpoint(thread_id, state)
+        self.persist_state(thread_id, state)
         return state
 
     def run_investigation(
@@ -851,11 +1017,25 @@ class SupplyGuardOrchestrator:
         if state and state.get("status") == "awaiting_modification":
             if any(k in lowered for k in ("borealis", "s003", "helios", "s002", "quarantine")):
                 return self.answer_followup(thread_id, text, user_profile)
-            qty_match = re.search(r"\b(\d{1,2},?\d{3}|\d{3,4})\b", text)
-            old_payload: ApprovalPayload = state["approval_payload"]
-            new_qty = int(qty_match.group(1).replace(",", "")) if qty_match else old_payload.quantity
-            cap_match = re.search(r"(?:€|eur\s*)(\d{2,3}(?:,\d{3})+|\d{4,6})", lowered)
-            new_cap = float(cap_match.group(1).replace(",", "")) if cap_match else None
+            cap_match = re.search(
+                r"(?:(?:€|eur\s*)(\d{1,3}(?:,\d{3})+|\d{4,6})"
+                r"|(\d{1,3}(?:,\d{3})+|\d{4,6})\s*(?:€|eur\b)"
+                r"|(?:spending\s+)?(?:cap|limit|budget)\s+(?:to\s+)?(?:€|eur\s*)?(\d{1,3}(?:,\d{3})+|\d{4,6}))",
+                lowered,
+            )
+            cap_str = next((g for g in cap_match.groups() if g), None) if cap_match else None
+            new_cap = float(cap_str.replace(",", "")) if cap_str else None
+            # Strip currency / spending-cap phrases before parsing quantity so e.g. '€90,000' is not misread as quantity
+            qty_text = re.sub(
+                r"(?:(?:spending\s+)?(?:cap|limit|budget)\s+(?:to\s+)?)?"
+                r"(?:(?:€|eur\s*)\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*(?:€|eur\b)"
+                r"|(?:spending\s+)?(?:cap|limit|budget)\s+(?:to\s+)?\d{1,3}(?:,\d{3})*(?:\.\d+)?)",
+                " ",
+                text,
+                flags=re.IGNORECASE,
+            )
+            qty_match = re.search(r"\b(\d{1,2},?\d{3}|\d{2,4})\b", qty_text)
+            new_qty = int(qty_match.group(1).replace(",", "")) if qty_match else None
             return self.modify_plan(thread_id, new_quantity=new_qty, new_spending_cap=new_cap)
 
         # 5. Follow-up Q&A or Policy Challenge on an existing/context case
@@ -888,6 +1068,7 @@ class SupplyGuardOrchestrator:
             state = latest if latest and latest.get("investigation_completed") else {}
         state = dict(state)
         state["thread_id"] = thread_id
+        state["last_turn_kind"] = "followup"
         lowered = text.strip().lower()
 
         fact: DisruptionFact = state.get("disruption_fact") or DisruptionFact(
@@ -1055,42 +1236,104 @@ class SupplyGuardOrchestrator:
 
         # EV-0083: Increase spending limit to EUR 90,000
         if "90,000" in lowered or "90000" in lowered or ("increase" in lowered and ("limit" in lowered or "cap" in lowered)):
-            fact.spending_cap = 90000.0
+            cap_match = re.search(
+                r"(?:€|eur\s*)(\d{1,3}(?:,\d{3})+|\d{4,6})|(\d{1,3}(?:,\d{3})+|\d{4,6})\s*(?:€|eur\b)",
+                lowered,
+            )
+            cap_str = next((g for g in cap_match.groups() if g), None) if cap_match else None
+            new_cap = float(cap_str.replace(",", "")) if cap_str else 90000.0
+            fact = fact.model_copy(update={"spending_cap": new_cap})
+
+            active_qty = payload.quantity if payload is not None else 3000
+            active_price = payload.unit_price if payload is not None else 9.80
+            active_exp_units = payload.expedite_units if payload is not None else 1500
+            active_exp_pct = payload.expedite_fee_pct if payload is not None else 6.0
+            active_trf_units = payload.transfer_units if payload is not None else 800
             cost_plan1 = calculate_recovery_costs(
                 strategy_type="combined_recovery_plan",
-                units=3000,
-                unit_price=9.80,
-                expedite_units=1500,
-                expedite_unit_price=9.80,
-                expedite_fee_pct=6.0,
-                transfer_units=800,
+                units=active_qty,
+                unit_price=active_price,
+                expedite_units=active_exp_units,
+                expedite_unit_price=active_price,
+                expedite_fee_pct=active_exp_pct,
+                transfer_units=active_trf_units,
                 transfer_cost_per_unit=0.12,
             )
             budget_90k = verify_budget_limits(
                 total_cost_eur=cost_plan1["total_recovery_cost_eur"],
-                spending_cap_eur=90000.0,
-                requested_quantity=3000,
-                supplier_monthly_capacity=3000,
+                spending_cap_eur=new_cap,
+                requested_quantity=active_qty,
+                supplier_monthly_capacity=3000 if (fact.component_id or "MC-17") == "MC-17" else None,
             )
             _add_tool("calculate_recovery_costs")
             _add_tool("verify_budget_limits")
-            if payload is not None:
-                payload.spending_cap = 90000.0
-                payload.payload_hash = payload.compute_payload_hash()
+
+            revalidation_note = ""
+            if payload is not None and payload.status not in (ActionStatus.EXECUTED, ActionStatus.REJECTED):
+                # Never mutate an active ApprovalPayload in place: invalidate old action_id and issue a fresh revision
+                old_id = payload.action_id
+                payload.status = ActionStatus.INVALIDATED
                 self._record_payload_in_history(state, payload)
+                if self.use_postgres:
+                    try:
+                        from src.db.connection import is_postgres_available
+                        from src.db.idempotency import record_action
+
+                        if is_postgres_available():
+                            record_action(
+                                action_id=payload.action_id,
+                                thread_id=thread_id,
+                                action_type=payload.action_type.value,
+                                actor=user_profile.name,
+                                component_id=payload.component_id,
+                                status="invalidated",
+                                rationale=f"Invalidated due to spending cap update to EUR {new_cap:,.2f}",
+                            )
+                    except Exception:
+                        pass
+
+                updated_evidence = list(payload.supporting_evidence or [])
+                if not any(ev.get("source_id") == "DOC-EM-INTERNAL-01" for ev in updated_evidence):
+                    updated_evidence.append(
+                        {
+                            "source_id": "DOC-EM-INTERNAL-01",
+                            "effective_date": "2026-10-17",
+                            "access_scope": "internal",
+                            "note": f"Finance Director written authorization required for €{new_cap:,.0f} spending cap",
+                        }
+                    )
+                new_payload = build_approval_payload(
+                    fact,
+                    impact,
+                    case_id=payload.case_id,
+                    quantity=payload.quantity,
+                    supplier_id=payload.target_supplier_id or "S004",
+                    supplier_name=payload.target_supplier_name or "Cordillera Industrial",
+                    unit_price=payload.unit_price,
+                    revision=payload.revision + 1,
+                    supporting_evidence=updated_evidence,
+                )
+                state["approval_payload"] = new_payload
+                state["status"] = "awaiting_approval"
+                self._record_payload_in_history(state, new_payload)
+                revalidation_note = (
+                    f"\n3. **Payload Binding Revalidated (`v{new_payload.revision}`):** Previous card `{old_id}` "
+                    f"marked `INVALIDATED`; fresh Approval Card `{new_payload.action_id}` (digest `{new_payload.payload_hash}`) issued."
+                )
+
             state["disruption_fact"] = fact
             state["refused"] = False
             state["last_answer"] = (
-                "### 💶 Deterministic Re-Evaluation with `€90,000.00` Spending Cap (`DOC-EM-INTERNAL-01` & `policies.json`)\n\n"
+                f"### 💶 Deterministic Re-Evaluation with `€{new_cap:,.2f}` Spending Cap (`DOC-EM-INTERNAL-01` & `policies.json`)\n\n"
                 "1. **Governance & Approval Tier Change (`config/policies.json`):**\n"
-                "   - Raising the incident spending cap from `€75,000` to **`€90,000`** requires written **Finance Director** "
+                f"   - Raising the incident spending cap from `€75,000` to **`€{new_cap:,.0f}`** requires written **Finance Director** "
                 "authorization per **`DOC-EM-INTERNAL-01`** (effective `2026-10-17`).\n"
                 "2. **Impact on Recommended Plan (`STRAT-1`):**\n"
-                f"   - Plan 1 cost remains **`€{cost_plan1['total_recovery_cost_eur']:,.2f}`** (`€{budget_90k['headroom_eur']:,.2f}` headroom under `€90,000`).\n"
+                f"   - Plan 1 cost remains **`€{cost_plan1['total_recovery_cost_eur']:,.2f}`** (`€{budget_90k['headroom_eur']:,.2f}` headroom under `€{new_cap:,.0f}`).\n"
                 "   - **Operational Bottleneck Remains Physical Capacity, Not Budget:** Cordillera (`S004`) is capped at **`3,000 units/month`**, "
-                "Borealis (`S003`) remains blocked by expired ISO 9001 (`DOC-PRO-04-v1`), and Helios (`S002`) remains too slow (21d)."
+                f"Borealis (`S003`) remains blocked by expired ISO 9001 (`DOC-PRO-04-v1`), and Helios (`S002`) remains too slow (21d).{revalidation_note}"
             )
-            self._persist_checkpoint(thread_id, state)
+            self.persist_state(thread_id, state)
             return state
 
         # EV-0101: Count penalties twice
@@ -1166,16 +1409,50 @@ class SupplyGuardOrchestrator:
             self._persist_checkpoint(thread_id, state)
             return state
 
-        # Default summary from persisted case state
+        # Default summary from persisted case state (enriched by live Deep Agent when configured)
         state["refused"] = False
-        state["last_answer"] = (
+        rec_cost = float(state.get("recovery_cost") or (payload.total_cost if payload else 0.0))
+        base_summary = (
             f"### 📋 Persisted Case Memory Summary (`{state.get('case_id', 'CASE-MC17-001')}`)\n\n"
             f"- **Disruption:** `{fact.supplier_name} ({fact.supplier_id})` · `{fact.component_id}` · `{fact.delay_days}-day delay`\n"
             f"- **Stock:** `{impact.usable_units:,}` usable of `{impact.total_physical_units:,}` physical (`{impact.reserved_units:,}` reserved, `{impact.quarantined_units:,}` quarantined)\n"
-            f"- **Recommended Plan (`STRAT-1`):** `€30,378.00` recovery cost vs `€{impact.total_revenue_at_risk_eur:,.2f}` revenue at risk (cap `€{fact.spending_cap:,.2f}`)."
+            f"- **Recommended Plan:** `€{rec_cost:,.2f}` recovery cost vs `€{impact.total_revenue_at_risk_eur:,.2f}` revenue at risk (cap `€{fact.spending_cap:,.2f}`)."
         )
-        self._persist_checkpoint(thread_id, state)
+        run_cfg = _build_run_config(
+            thread_id,
+            case_id=state.get("case_id"),
+            user_id=user_profile.user_id,
+            role=user_profile.role,
+            tags=("followup",),
+        )
+        da_reply, da_tools = self._invoke_deep_agent(
+            f"Answer this SupplyGuard follow-up question using ONLY the verified persisted case context below. "
+            f"Do NOT perform arithmetic and do NOT call execute_procurement_po.\n\n"
+            f"Case context:\n{base_summary}\n\nQuestion: {text}",
+            run_cfg,
+        )
+        for tc in da_tools:
+            _add_tool(tc)
+        state["last_answer"] = f"{da_reply}\n\n{base_summary}" if da_reply else base_summary
+        self.persist_state(thread_id, state)
         return state
+
+    def _resolve_supplier_monthly_capacity(
+        self,
+        state: Dict[str, Any],
+        supplier_id: Optional[str],
+        component_id: Optional[str],
+    ) -> Optional[int]:
+        """Look up supplier monthly capacity dynamically from graph_res (falling back to MC-17 S004 cap)."""
+        if not supplier_id:
+            return None
+        graph_suppliers = (state.get("graph_res") or {}).get("suppliers") or []
+        for s in graph_suppliers:
+            if s.get("supplier_id") == supplier_id and s.get("monthly_capacity_units") is not None:
+                return int(s["monthly_capacity_units"])
+        if supplier_id == "S004" and (component_id or "MC-17") == "MC-17":
+            return 3000
+        return None
 
     def modify_plan(
         self,
@@ -1213,23 +1490,43 @@ class SupplyGuardOrchestrator:
                 pass
 
         if new_spending_cap is not None:
-            fact.spending_cap = float(new_spending_cap)
+            fact = fact.model_copy(update={"spending_cap": float(new_spending_cap)})
+            state["disruption_fact"] = fact
 
         qty = new_quantity if new_quantity is not None else old_payload.quantity
-        qty = min(qty, 3000)
+        supplier_cap = self._resolve_supplier_monthly_capacity(
+            state,
+            old_payload.target_supplier_id,
+            old_payload.component_id,
+        )
+        if supplier_cap is not None:
+            qty = min(qty, supplier_cap)
 
+        target_supplier_id = old_payload.target_supplier_id or "S004"
+        target_supplier_name = old_payload.target_supplier_name or "Alternative Supplier"
         new_payload = build_approval_payload(
             fact,
             impact,
             case_id=old_payload.case_id,
             quantity=qty,
+            supplier_id=target_supplier_id,
+            supplier_name=target_supplier_name,
+            unit_price=old_payload.unit_price,
             revision=old_payload.revision + 1,
+        )
+        opt_res = run_optimizer_subagent(
+            fact,
+            impact,
+            custom_cordillera_qty=qty,
+            graph_res=state.get("graph_res"),
         )
         state["approval_payload"] = new_payload
         state["status"] = "awaiting_approval"
-        state["recovery_options"] = compute_recovery_options(fact, impact, custom_cordillera_qty=qty)
+        state["last_turn_kind"] = "modification"
+        state["recovery_options"] = opt_res["recovery_options"]
+        state["recovery_cost"] = new_payload.total_cost
         self._record_payload_in_history(state, new_payload)
-        self._persist_checkpoint(thread_id, state)
+        self.persist_state(thread_id, state)
         return state
 
     def approve_and_execute(
@@ -1299,49 +1596,27 @@ class SupplyGuardOrchestrator:
         if not was_replay and payload.action_id not in executed_ids:
             executed_ids.append(payload.action_id)
 
-        # Execute complementary MCP operations idempotently
-        expedite_ref = f"EXP-{payload.expedite_po_id or 'PO-2026-9002'}"
-        transfer_ref = "TRF-2026-0800"
-        schedule_ref = "SCH-2026-W43"
-        try:
-            from src.mcp.client import (
-                expedite_purchase_order_tool,
-                request_stock_transfer_tool,
-                update_production_schedule_tool,
-            )
+        # Execute complementary MCP operations idempotently without swallowing runtime failures
+        fact_obj: Optional[DisruptionFact] = state.get("disruption_fact")
+        impact_obj: Optional[OperationalImpact] = state.get("operational_impact")
+        target_product_id = (
+            impact_obj.affected_products[0]
+            if (impact_obj and impact_obj.affected_products)
+            else "P012"
+        )
+        target_week_start = (
+            fact_obj.original_due
+            if (fact_obj and fact_obj.original_due)
+            else "2026-10-26"
+        )
+        tier1_orders_protected = len(impact_obj.reserved_stock_orders) if impact_obj else 0
 
-            if payload.expedite_po_id:
-                exp_res = expedite_purchase_order_tool(
-                    action_id=payload.action_id,
-                    po_id=payload.expedite_po_id,
-                    days_gain=7,
-                    fee_pct=payload.expedite_fee_pct,
-                    thread_id=thread_id,
-                )
-                expedite_ref = exp_res.get("expedite_ref", expedite_ref)
-            if payload.transfer_units > 0:
-                trf_res = request_stock_transfer_tool(
-                    action_id=payload.action_id,
-                    component_id=payload.component_id,
-                    from_location=payload.transfer_from_location,
-                    to_location=payload.transfer_to_locations,
-                    qty=payload.transfer_units,
-                    thread_id=thread_id,
-                )
-                transfer_ref = trf_res.get("transfer_ref", transfer_ref)
-            if payload.residual_units_reallocated > 0:
-                sch_res = update_production_schedule_tool(
-                    action_id=payload.action_id,
-                    product_id="P012",
-                    week_start="2026-10-26",
-                    planned_units=payload.residual_units_reallocated,
-                    thread_id=thread_id,
-                )
-                schedule_ref = sch_res.get("schedule_ref", schedule_ref)
-        except Exception as exc:
-            logger.debug("Optional complementary MCP operations skipped: %s", exc)
+        expedite_ref: Optional[str] = None
+        transfer_ref: Optional[str] = None
+        schedule_ref: Optional[str] = None
+        complementary_errors: List[str] = []
 
-        operations = [
+        operations: List[Dict[str, Any]] = [
             {
                 "operation": "create_purchase_order",
                 "po_id": po_number,
@@ -1352,33 +1627,182 @@ class SupplyGuardOrchestrator:
                 "subtotal_eur": payload.po_subtotal_eur,
                 "approval_id": payload.action_id,
                 "payload_hash": payload.payload_hash,
-            },
-            {
-                "operation": "expedite_purchase_order",
-                "po_id": payload.expedite_po_id or "PO-2026-9002",
-                "days_gain": 7,
-                "fee_pct": payload.expedite_fee_pct,
-                "fee_eur": payload.expedite_fee_eur,
-                "approval_id": payload.action_id,
-            },
-            {
-                "operation": "request_stock_transfer",
-                "transfer_id": transfer_ref,
-                "component_id": payload.component_id,
-                "from_location": payload.transfer_from_location,
-                "to_location": payload.transfer_to_locations,
-                "qty": payload.transfer_units,
-                "cost_eur": payload.transfer_cost_eur,
-                "approval_id": payload.action_id,
-            },
-            {
-                "operation": "update_production_schedule",
-                "schedule_ref": schedule_ref,
-                "reallocated_tier3_units": payload.residual_units_reallocated,
-                "tier1_orders_protected": 6,
-                "approval_id": payload.action_id,
-            },
+                "status": "confirmed",
+            }
         ]
+
+        try:
+            from src.mcp.client import (
+                expedite_purchase_order_tool,
+                request_stock_transfer_tool,
+                update_production_schedule_tool,
+            )
+            has_mcp_client = True
+        except ImportError as exc:
+            logger.warning("MCP client unavailable in minimal host environment; recording simulated fallback refs: %s", exc)
+            has_mcp_client = False
+
+        if payload.expedite_po_id:
+            if has_mcp_client:
+                try:
+                    exp_res = expedite_purchase_order_tool(
+                        action_id=payload.action_id,
+                        po_id=payload.expedite_po_id,
+                        days_gain=7,
+                        fee_pct=payload.expedite_fee_pct,
+                        thread_id=thread_id,
+                    )
+                    expedite_ref = exp_res.get("expedite_ref")
+                    operations.append(
+                        {
+                            "operation": "expedite_purchase_order",
+                            "po_id": payload.expedite_po_id,
+                            "expedite_ref": expedite_ref,
+                            "days_gain": 7,
+                            "fee_pct": payload.expedite_fee_pct,
+                            "fee_eur": exp_res.get("fee_eur", payload.expedite_fee_eur),
+                            "approval_id": payload.action_id,
+                            "status": exp_res.get("status", "confirmed"),
+                        }
+                    )
+                except Exception as exc:
+                    logger.warning("Complementary MCP operation expedite_purchase_order failed: %s", exc)
+                    complementary_errors.append(f"expedite_purchase_order: {exc}")
+                    operations.append(
+                        {
+                            "operation": "expedite_purchase_order",
+                            "po_id": payload.expedite_po_id,
+                            "approval_id": payload.action_id,
+                            "status": "failed",
+                            "error": str(exc),
+                        }
+                    )
+            else:
+                expedite_ref = f"EXP-{payload.expedite_po_id}"
+                operations.append(
+                    {
+                        "operation": "expedite_purchase_order",
+                        "po_id": payload.expedite_po_id,
+                        "expedite_ref": expedite_ref,
+                        "days_gain": 7,
+                        "fee_pct": payload.expedite_fee_pct,
+                        "fee_eur": payload.expedite_fee_eur,
+                        "approval_id": payload.action_id,
+                        "status": "simulated_offline",
+                    }
+                )
+
+        if payload.transfer_units > 0:
+            if has_mcp_client:
+                try:
+                    trf_res = request_stock_transfer_tool(
+                        action_id=payload.action_id,
+                        component_id=payload.component_id,
+                        from_location=payload.transfer_from_location,
+                        to_location=payload.transfer_to_locations,
+                        qty=payload.transfer_units,
+                        thread_id=thread_id,
+                    )
+                    transfer_ref = trf_res.get("transfer_ref")
+                    operations.append(
+                        {
+                            "operation": "request_stock_transfer",
+                            "transfer_id": transfer_ref,
+                            "component_id": payload.component_id,
+                            "from_location": payload.transfer_from_location,
+                            "to_location": payload.transfer_to_locations,
+                            "qty": payload.transfer_units,
+                            "cost_eur": trf_res.get("cost_eur", payload.transfer_cost_eur),
+                            "approval_id": payload.action_id,
+                            "status": trf_res.get("status", "confirmed"),
+                        }
+                    )
+                except Exception as exc:
+                    logger.warning("Complementary MCP operation request_stock_transfer failed: %s", exc)
+                    complementary_errors.append(f"request_stock_transfer: {exc}")
+                    operations.append(
+                        {
+                            "operation": "request_stock_transfer",
+                            "component_id": payload.component_id,
+                            "from_location": payload.transfer_from_location,
+                            "to_location": payload.transfer_to_locations,
+                            "qty": payload.transfer_units,
+                            "approval_id": payload.action_id,
+                            "status": "failed",
+                            "error": str(exc),
+                        }
+                    )
+            else:
+                transfer_ref = f"TRF-2026-{payload.transfer_units:04d}"
+                operations.append(
+                    {
+                        "operation": "request_stock_transfer",
+                        "transfer_id": transfer_ref,
+                        "component_id": payload.component_id,
+                        "from_location": payload.transfer_from_location,
+                        "to_location": payload.transfer_to_locations,
+                        "qty": payload.transfer_units,
+                        "cost_eur": payload.transfer_cost_eur,
+                        "approval_id": payload.action_id,
+                        "status": "simulated_offline",
+                    }
+                )
+
+        if payload.residual_units_reallocated > 0:
+            if has_mcp_client:
+                try:
+                    sch_res = update_production_schedule_tool(
+                        action_id=payload.action_id,
+                        product_id=target_product_id,
+                        week_start=target_week_start,
+                        planned_units=payload.residual_units_reallocated,
+                        thread_id=thread_id,
+                    )
+                    schedule_ref = sch_res.get("schedule_ref")
+                    operations.append(
+                        {
+                            "operation": "update_production_schedule",
+                            "schedule_ref": schedule_ref,
+                            "product_id": target_product_id,
+                            "week_start": target_week_start,
+                            "reallocated_tier3_units": payload.residual_units_reallocated,
+                            "tier1_orders_protected": tier1_orders_protected,
+                            "approval_id": payload.action_id,
+                            "status": sch_res.get("status", "confirmed"),
+                        }
+                    )
+                except Exception as exc:
+                    logger.warning("Complementary MCP operation update_production_schedule failed: %s", exc)
+                    complementary_errors.append(f"update_production_schedule: {exc}")
+                    operations.append(
+                        {
+                            "operation": "update_production_schedule",
+                            "product_id": target_product_id,
+                            "week_start": target_week_start,
+                            "reallocated_tier3_units": payload.residual_units_reallocated,
+                            "tier1_orders_protected": tier1_orders_protected,
+                            "approval_id": payload.action_id,
+                            "status": "failed",
+                            "error": str(exc),
+                        }
+                    )
+            else:
+                schedule_ref = f"SCH-{target_product_id}-{target_week_start}"
+                operations.append(
+                    {
+                        "operation": "update_production_schedule",
+                        "schedule_ref": schedule_ref,
+                        "product_id": target_product_id,
+                        "week_start": target_week_start,
+                        "reallocated_tier3_units": payload.residual_units_reallocated,
+                        "tier1_orders_protected": tier1_orders_protected,
+                        "approval_id": payload.action_id,
+                        "status": "simulated_offline",
+                    }
+                )
+
+        if complementary_errors:
+            state["complementary_errors"] = complementary_errors
 
         receipt = ProcurementReceipt(
             action_id=payload.action_id,

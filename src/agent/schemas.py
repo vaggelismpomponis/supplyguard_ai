@@ -1312,39 +1312,65 @@ def build_approval_payload(
     supplier_name: str = "Cordillera Industrial",
     unit_price: float = 9.80,
     revision: int = 1,
+    supporting_evidence: Optional[List[Dict[str, str]]] = None,
 ) -> ApprovalPayload:
     """Create a payload-bound ApprovalPayload with deterministic costs and SHA-256 payload_hash."""
+    comp_id = fact.component_id or "MC-17"
+    is_mc17 = comp_id == "MC-17"
+    is_mc17_cordillera = is_mc17 and supplier_id == "S004"
+
     po_subtotal = round(quantity * unit_price, 2)
-    expedite_units = 1500 if supplier_id == "S004" else 0
-    expedite_fee = 882.0 if supplier_id == "S004" else 0.0
-    transfer_units = 800
-    transfer_cost = 96.0
+    expedite_units = 1500 if is_mc17_cordillera else 0
+    expedite_fee_pct = 6.0 if is_mc17_cordillera else 0.0
+    expedite_fee = 882.0 if is_mc17_cordillera else 0.0
+    expedite_po_id = "PO-2026-9002" if is_mc17_cordillera else None
+    transfer_units = 800 if is_mc17 else min(impact.hub_usable_units, max(0, impact.uncovered_demand_units))
+    transfer_cost = round(transfer_units * 0.12, 2)
+    transfer_to = (
+        "W-LYO (450) & W-KAT (350)"
+        if is_mc17
+        else (", ".join(impact.affected_factories) or "Affected Plants")
+    )
     total_cost = round(po_subtotal + expedite_fee + transfer_cost, 2)
     residual = max(0, impact.uncovered_demand_units - (quantity + expedite_units + transfer_units))
 
-    evidence = [
-        {"source_id": "DOC-CON-S004-v1", "effective_date": "2025-08-01", "access_scope": "procurement", "note": "Cordillera EUR 9.80/unit, 9d lead time, 3,000/mo capacity, 6% expedite fee"},
-        {"source_id": "DOC-QUA-S004-v1", "effective_date": "2024-11-30", "access_scope": "procurement", "note": "ISO 9001:2015 valid through 2027-11-30; independent upstream U02"},
-        {"source_id": "DOC-PRO-04-v1", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
-        {"source_id": "DOC-NOT-ATLAS-MC17", "effective_date": "2026-10-19", "access_scope": "procurement", "note": "Formal 12-day delay notice on Atlas PO-2026-9001"},
-    ]
+    if supporting_evidence is not None:
+        evidence = list(supporting_evidence)
+    elif is_mc17_cordillera:
+        evidence = [
+            {"source_id": "DOC-CON-S004-v1", "effective_date": "2025-08-01", "access_scope": "procurement", "note": "Cordillera EUR 9.80/unit, 9d lead time, 3,000/mo capacity, 6% expedite fee"},
+            {"source_id": "DOC-QUA-S004-v1", "effective_date": "2024-11-30", "access_scope": "procurement", "note": "ISO 9001:2015 valid through 2027-11-30; independent upstream U02"},
+            {"source_id": "DOC-PRO-04-v1", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
+            {"source_id": "DOC-NOT-ATLAS-MC17", "effective_date": "2026-10-19", "access_scope": "procurement", "note": "Formal 12-day delay notice on Atlas PO-2026-9001"},
+        ]
+    else:
+        evidence = [
+            {"source_id": f"DOC-CON-{supplier_id}-v1", "effective_date": "2026-01-01", "access_scope": "procurement", "note": f"{supplier_name} ({supplier_id}) EUR {unit_price:.2f}/unit for {comp_id}"},
+            {"source_id": "DOC-PRO-04-v1", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
+        ]
+
+    action_type = (
+        SupplyGuardActionType.COMBINED_RECOVERY_PLAN
+        if (expedite_po_id or transfer_units > 0)
+        else SupplyGuardActionType.PURCHASE_ALTERNATIVE
+    )
 
     payload = ApprovalPayload(
         action_id=f"act-{uuid.uuid4().hex[:10]}",
         case_id=case_id,
-        action_type=SupplyGuardActionType.COMBINED_RECOVERY_PLAN,
+        action_type=action_type,
         target_supplier_id=supplier_id,
         target_supplier_name=supplier_name,
-        component_id=fact.component_id or "MC-17",
+        component_id=comp_id,
         quantity=quantity,
         unit_price=unit_price,
         po_subtotal_eur=po_subtotal,
-        expedite_po_id="PO-2026-9002" if supplier_id == "S004" else None,
+        expedite_po_id=expedite_po_id,
         expedite_units=expedite_units,
-        expedite_fee_pct=6.0 if supplier_id == "S004" else 0.0,
+        expedite_fee_pct=expedite_fee_pct,
         expedite_fee_eur=expedite_fee,
         transfer_from_location="W-HUB",
-        transfer_to_locations="W-LYO (450) & W-KAT (350)",
+        transfer_to_locations=transfer_to,
         transfer_units=transfer_units,
         transfer_cost_eur=transfer_cost,
         residual_units_reallocated=residual,
