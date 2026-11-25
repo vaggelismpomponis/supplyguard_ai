@@ -182,61 +182,63 @@ def execute_procurement_po(
             "idempotent_replay": False,
         }
 
+    pg_available = False
     if use_postgres:
         try:
             from src.db.connection import is_postgres_available
 
-            if is_postgres_available():
-                from src.db.idempotency import execute_idempotent, get_action_status
+            pg_available = bool(is_postgres_available())
+        except ImportError:
+            pg_available = False
 
-                status = get_action_status(action_id)
-                if status == "executed":
-                    receipt = create_purchase_order_tool(
-                        action_id=action_id,
-                        supplier_id=supplier_id,
-                        component_id=component_id,
-                        quantity=quantity,
-                        unit_price=unit_price,
-                        delivery_date=delivery_date,
-                        thread_id=thread_id,
-                    )
-                    receipt["idempotent_replay"] = True
-                    return receipt
-                if status is None or status != "approved":
-                    raise ValueError(
-                        f"Action '{action_id}' cannot execute with status '{status}'. "
-                        "Explicit human approval is required."
-                    )
+    if pg_available:
+        from src.db.idempotency import execute_idempotent, get_action_status
 
-                executed, result = execute_idempotent(
-                    action_id,
-                    create_purchase_order_tool,
-                    supplier_id=supplier_id,
-                    component_id=component_id,
-                    quantity=quantity,
-                    unit_price=unit_price,
-                    delivery_date=delivery_date,
-                    thread_id=thread_id,
-                )
-                if not executed and result == "already_executed":
-                    receipt = create_purchase_order_tool(
-                        action_id=action_id,
-                        supplier_id=supplier_id,
-                        component_id=component_id,
-                        quantity=quantity,
-                        unit_price=unit_price,
-                        delivery_date=delivery_date,
-                        thread_id=thread_id,
-                    )
-                    receipt["idempotent_replay"] = True
-                    return receipt
-                if isinstance(result, dict):
-                    result["idempotent_replay"] = False
-                return result
-        except ValueError:
-            raise
-        except Exception:
-            pass
+        # Fail closed: once PostgreSQL is reachable, never fall through past the DB approval guard.
+        status = get_action_status(action_id)
+        if status == "executed":
+            receipt = create_purchase_order_tool(
+                action_id=action_id,
+                supplier_id=supplier_id,
+                component_id=component_id,
+                quantity=quantity,
+                unit_price=unit_price,
+                delivery_date=delivery_date,
+                thread_id=thread_id,
+            )
+            receipt["idempotent_replay"] = True
+            return receipt
+        if status is None or status != "approved":
+            raise ValueError(
+                f"Action '{action_id}' cannot execute with status '{status}'. "
+                "Explicit human approval is required."
+            )
+
+        executed, result = execute_idempotent(
+            action_id,
+            create_purchase_order_tool,
+            supplier_id=supplier_id,
+            component_id=component_id,
+            quantity=quantity,
+            unit_price=unit_price,
+            delivery_date=delivery_date,
+            thread_id=thread_id,
+        )
+        if not executed and result == "already_executed":
+            receipt = create_purchase_order_tool(
+                action_id=action_id,
+                supplier_id=supplier_id,
+                component_id=component_id,
+                quantity=quantity,
+                unit_price=unit_price,
+                delivery_date=delivery_date,
+                thread_id=thread_id,
+            )
+            receipt["idempotent_replay"] = True
+            return receipt
+        if isinstance(result, dict):
+            result["idempotent_replay"] = False
+        return result
 
     receipt = create_purchase_order_tool(
         action_id=action_id,
