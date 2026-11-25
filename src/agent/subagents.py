@@ -369,102 +369,38 @@ def run_optimizer_subagent(
     graph_res: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate and deterministically cost >= 3 recovery strategies (zero LLM arithmetic)."""
-    cid = fact.component_id or "MC-17"
-    if cid == "MC-17":
-        options: List[RecoveryOption] = compute_recovery_options(
-            fact,
-            impact,
-            custom_cordillera_qty=custom_cordillera_qty,
-        )
-        qty_c = custom_cordillera_qty if custom_cordillera_qty is not None else 3000
-        cost_check = calculate_recovery_costs(
-            strategy_type="combined_recovery_plan",
-            units=qty_c,
-            unit_price=9.80,
-            expedite_units=1500,
-            expedite_unit_price=9.80,
-            expedite_fee_pct=6.0,
-            transfer_units=800,
-            transfer_cost_per_unit=0.12,
-        )
+    options: List[RecoveryOption] = compute_recovery_options(
+        fact,
+        impact,
+        custom_cordillera_qty=custom_cordillera_qty,
+    )
+    rec = next((o for o in options if o.is_recommended), options[0] if options else None)
+    if rec and rec.cost_breakdown:
+        cost_check = {
+            "strategy_type": rec.action_type.value if hasattr(rec.action_type, "value") else str(rec.action_type),
+            "purchase_subtotal_eur": float(rec.cost_breakdown.get("cordillera_purchase_eur", rec.recovery_cost)),
+            "expedite_fee_eur": float(rec.cost_breakdown.get("expedite_fee_6pct_contract_eur", 0.0)),
+            "transfer_cost_eur": float(rec.cost_breakdown.get("transfers_eur", 0.0)),
+            "total_recovery_cost_eur": float(rec.recovery_cost),
+        }
         risk_check = calculate_revenue_at_risk(
             uncovered_demand_units=impact.uncovered_demand_units,
-            covered_units=800 + 1500 + qty_c,
+            covered_units=rec.quantity,
             total_exposure_eur=impact.total_revenue_at_risk_eur,
             tier1_protected=True,
         )
     else:
-        suppliers = (graph_res or {}).get("suppliers") or []
-        shared_rejected = set((graph_res or {}).get("rejected_due_to_shared_upstream") or [])
         needed = max(0, impact.uncovered_demand_units)
-        options = []
-        best_cost = None
-        best_risk = None
-        for idx, s in enumerate(suppliers):
-            sid = s.get("supplier_id")
-            if sid == fact.supplier_id:
-                continue
-            cap = int(s.get("monthly_capacity_units") or 0)
-            price = float(s.get("unit_price_eur") or 10.0)
-            lt = int(s.get("lead_time_days") or 14)
-            cert_ok = bool(s.get("certification_valid", True))
-            max_by_cap = int(fact.spending_cap // price) if price > 0 else cap
-            qty = min(needed, cap, max_by_cap) if needed > 0 else 0
-            cost_res = calculate_recovery_costs(
-                strategy_type="purchase_alternative",
-                units=qty,
-                unit_price=price,
-            )
-            risk_res = calculate_revenue_at_risk(
-                uncovered_demand_units=needed,
-                covered_units=qty,
-                total_exposure_eur=impact.total_revenue_at_risk_eur,
-                tier1_protected=True,
-            )
-            reasons: List[str] = []
-            if not cert_ok:
-                reasons.append("Expired ISO 9001 certification (DOC-PRO-04-v1).")
-            if sid in shared_rejected:
-                reasons.append("Shares Tier-2 upstream manufacturer with disrupted supplier.")
-            if cost_res["total_recovery_cost_eur"] > fact.spending_cap:
-                reasons.append(f"Exceeds spending cap (€{fact.spending_cap:,.2f}).")
-            if qty == 0 and needed > 0:
-                reasons.append("Zero feasible capacity within budget cap.")
-            viable = len(reasons) == 0 and needed > 0
-            options.append(
-                RecoveryOption(
-                    strategy_id=f"STRAT-{idx + 1}",
-                    strategy_code=f"C ({sid})",
-                    title=f"Purchase from {s.get('name', sid)} ({sid})",
-                    action_type=SupplyGuardActionType.PURCHASE_ALTERNATIVE,
-                    supplier_id=sid,
-                    supplier_name=s.get("name", sid),
-                    quantity=qty,
-                    unit_price=price,
-                    lead_time_days=lt,
-                    recovery_cost=cost_res["total_recovery_cost_eur"],
-                    revenue_at_risk=risk_res["revenue_at_risk_eur"],
-                    uncovered_units_remaining=risk_res["residual_uncovered_units"],
-                    is_viable=viable,
-                    is_recommended=False,
-                    rejection_reason="; ".join(reasons) if reasons else None,
-                    cost_breakdown={"total_recovery_cost_eur": cost_res["total_recovery_cost_eur"]},
-                )
-            )
-            if viable and best_cost is None:
-                best_cost = cost_res
-                best_risk = risk_res
-                options[-1].is_recommended = True
-
-        cost_check = best_cost or calculate_recovery_costs(
+        transfer_qty = min(needed, impact.hub_usable_units)
+        cost_check = calculate_recovery_costs(
             strategy_type="transfer_inventory",
             units=0,
             unit_price=0.0,
-            transfer_units=min(needed, impact.hub_usable_units),
+            transfer_units=transfer_qty,
         )
-        risk_check = best_risk or calculate_revenue_at_risk(
+        risk_check = calculate_revenue_at_risk(
             uncovered_demand_units=needed,
-            covered_units=min(needed, impact.hub_usable_units),
+            covered_units=transfer_qty,
             total_exposure_eur=impact.total_revenue_at_risk_eur,
         )
 
@@ -603,9 +539,15 @@ def build_deep_agent_subagents() -> List[Dict[str, Any]]:
     """Return the 6 subagent definitions formatted for `deepagents.create_deep_agent(subagents=...)`."""
     knowledge = _try_knowledge_tools()
     ktools_map = {t.name: t for t in knowledge.get("supplyguard_tools", [])}
+    try:
+        from src.mcp.client import SUPPLYGUARD_MCP_TOOLS
+        mcp_map = {t.name: t for t in SUPPLYGUARD_MCP_TOOLS}
+    except Exception:
+        mcp_map = {}
 
     def _pick(*names: str, extra: Optional[List[Any]] = None) -> List[Any]:
         selected = [ktools_map[n] for n in names if n in ktools_map]
+        selected.extend(mcp_map[n] for n in names if n in mcp_map and n not in ktools_map)
         if extra:
             selected.extend(extra)
         return selected
@@ -650,7 +592,7 @@ def build_deep_agent_subagents() -> List[Dict[str, Any]]:
                 "upstream dependencies (such as U01 Veltro Semiconductor shared by Atlas S001 and Delta S005) "
                 "and verify independent alternatives (Cordillera S004 via U02)."
             ),
-            "tools": _pick("query_supplier_graph"),
+            "tools": _pick("query_supplier_graph", "get_supplier_risk_tool"),
         },
         {
             "name": "optimizer_subagent",
