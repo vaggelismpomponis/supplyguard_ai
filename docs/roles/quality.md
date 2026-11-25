@@ -55,16 +55,16 @@
 ## Role checklist
 
 - [ ] Project agreements και `CONTRIBUTING.md` συντηρημένο
-- [ ] LangSmith tracing ενεργό για όλα τα Deep Agent runs
-- [ ] 105 held-out evaluation scenarios και MC-17 benchmark φορτωμένα
-- [ ] Automated evaluators (triage, numerical correctness, policy, dependencies, approval)
-- [ ] Retrieval benchmark report (pgvector vs ChromaDB vs Hybrid)
-- [ ] Adversarial testing: εξουδετέρωση του φυτεμένου prompt-injection εγγράφου
-- [ ] Container restart verification με zero duplicate execution
-- [ ] Evaluation run σε όλα τα σενάρια με καταγραφή περασμένων τεστ
+- [x] LangSmith tracing ενεργό για όλα τα Deep Agent runs
+- [x] 105 held-out evaluation scenarios και MC-17 benchmark φορτωμένα
+- [x] Automated evaluators (triage, numerical correctness, policy, dependencies, approval)
+- [x] Retrieval benchmark report (pgvector vs ChromaDB vs Hybrid)
+- [x] Adversarial testing: εξουδετέρωση του φυτεμένου prompt-injection εγγράφου
+- [x] Container restart verification με zero duplicate execution
+- [x] Evaluation run σε όλα τα σενάρια με καταγραφή περασμένων τεστ
 - [ ] 10-minute live demo script ολοκληρωμένο
 - [ ] ≥2 πρόβες ομάδας με rotation παρουσιαστών
-- [ ] Definition of Done επαληθευμένο
+- [x] Definition of Done επαληθευμένο
 - [ ] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
 - [ ] Μπορώ να εξηγήσω ολόκληρη τη ροή και την αξιολόγηση στο demo
 

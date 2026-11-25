@@ -8,26 +8,16 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ==============================================================================
--- 2. State-Changing Action & Approval Cards Table
--- Tracks state-changing action requests (PO execution, transfer, reallocations)
+-- 2. Durable Thread Case State Table
+-- Persists serialized SupplyGuard case states across container restarts
 -- ==============================================================================
-CREATE TABLE IF NOT EXISTS tickets (
-    id SERIAL PRIMARY KEY,
-    action_id VARCHAR(64) UNIQUE NOT NULL,
-    employee VARCHAR(128) NOT NULL,
-    application VARCHAR(128) NOT NULL,
-    symptom TEXT NOT NULL,
-    urgency VARCHAR(32) NOT NULL DEFAULT 'medium',
-    status VARCHAR(32) NOT NULL DEFAULT 'pending',
-    details JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS thread_states (
+    thread_id TEXT PRIMARY KEY,
+    case_state JSONB NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_tickets_action_id ON tickets(action_id);
-CREATE INDEX IF NOT EXISTS idx_tickets_employee ON tickets(employee);
-CREATE INDEX IF NOT EXISTS idx_tickets_application ON tickets(application);
-CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_thread_states_updated_at ON thread_states(updated_at DESC);
 
 -- ==============================================================================
 -- 3. Audit Log & Idempotency Guard Table
@@ -39,8 +29,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     action_id VARCHAR(64) UNIQUE NOT NULL,
     thread_id VARCHAR(128) NOT NULL,
     action_type VARCHAR(64) NOT NULL,
-    employee VARCHAR(128),
-    application VARCHAR(128),
+    actor VARCHAR(128),
+    component_id VARCHAR(64),
     status VARCHAR(32) NOT NULL DEFAULT 'pending',
     parameters JSONB DEFAULT '{}',
     rationale TEXT,
@@ -269,7 +259,8 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     status VARCHAR(32) NOT NULL,
     expedite_allowed BOOLEAN DEFAULT FALSE,
     expedite_fee_pct NUMERIC(6, 4) DEFAULT 0,
-    expedite_days_gain INTEGER DEFAULT 0
+    expedite_days_gain INTEGER DEFAULT 0,
+    action_id VARCHAR(64) UNIQUE
 );
 
 CREATE INDEX IF NOT EXISTS idx_po_supplier_comp ON purchase_orders(supplier_id, component_id);
@@ -305,3 +296,27 @@ CREATE TABLE IF NOT EXISTS supplier_message_inbox (
     sender VARCHAR(255) NOT NULL,
     text TEXT NOT NULL
 );
+
+-- ==============================================================================
+-- 7. Incident Memories Vector Store (pgvector)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS incident_memories (
+    memory_id         TEXT PRIMARY KEY,
+    kind              TEXT NOT NULL CHECK (kind IN ('historical_case', 'approved_memory')),
+    case_id           TEXT NOT NULL,
+    supplier_id       TEXT,
+    component_id      TEXT,
+    component_type    TEXT,
+    disruption_type   TEXT,
+    delay_days        INT,
+    severity          TEXT CHECK (severity IN ('minor', 'moderate', 'major')),
+    strategy          TEXT,
+    recovery_cost_eur NUMERIC(14, 2),
+    outcome           TEXT,
+    access_scope      TEXT NOT NULL,
+    content           TEXT NOT NULL,
+    embedding         vector(1536) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_incident_memories_embedding ON incident_memories USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_incident_memories_filters ON incident_memories(component_type, severity);

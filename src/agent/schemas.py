@@ -87,32 +87,37 @@ SUPPORT_DATA_DIR = Path(__file__).resolve().parents[1] / "support-data"
 # 1. Core Enumerations (docs/ARCHITECTURE_CONTRACTS.md Section 2.1 - 2.3)
 # ==============================================================================
 
+try:
+    from src.core.contracts import (
+        AccessScope,
+        ActionStatus,
+        ActionType as SupplyGuardActionType,
+    )
+except ImportError:  # pragma: no cover - fallback when pydantic is absent on host
 
-class SupplyGuardActionType(str, Enum):
-    TRANSFER_INVENTORY = "transfer_inventory"
-    EXPEDITE_ORDER = "expedite_order"
-    PURCHASE_ALTERNATIVE = "purchase_alternative"
-    REALLOCATE_COMPONENTS = "reallocate_components"
-    RESCHEDULE_PRODUCTION = "reschedule_production"
-    COMBINED_RECOVERY_PLAN = "combined_recovery_plan"
-    ANSWER_POLICY = "answer_policy"
-    REQUEST_CLARIFICATION = "request_clarification"
+    class SupplyGuardActionType(str, Enum):  # type: ignore[no-redef]
+        TRANSFER_INVENTORY = "transfer_inventory"
+        EXPEDITE_ORDER = "expedite_order"
+        PURCHASE_ALTERNATIVE = "purchase_alternative"
+        REALLOCATE_COMPONENTS = "reallocate_components"
+        RESCHEDULE_PRODUCTION = "reschedule_production"
+        COMBINED_RECOVERY_PLAN = "combined_recovery_plan"
+        ANSWER_POLICY = "answer_policy"
+        REQUEST_CLARIFICATION = "request_clarification"
 
+    class ActionStatus(str, Enum):  # type: ignore[no-redef]
+        PENDING = "pending"
+        APPROVED = "approved"
+        EXECUTED = "executed"
+        REJECTED = "rejected"
+        INVALIDATED = "invalidated"
 
-class ActionStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    EXECUTED = "executed"
-    REJECTED = "rejected"
-    INVALIDATED = "invalidated"
-
-
-class AccessScope(str, Enum):
-    PROCUREMENT = "procurement"
-    FINANCE = "finance"
-    PUBLIC = "public"
-    INTERNAL = "internal"
-    FINANCE_CONFIDENTIAL = "finance-confidential"
+    class AccessScope(str, Enum):  # type: ignore[no-redef]
+        PROCUREMENT = "procurement"
+        FINANCE = "finance"
+        PUBLIC = "public"
+        INTERNAL = "internal"
+        FINANCE_CONFIDENTIAL = "finance-confidential"
 
 
 # ==============================================================================
@@ -665,11 +670,17 @@ def _load_suppliers_table() -> List[Dict[str, str]]:
 
 
 PROMPT_INJECTION_PATTERNS = (
-    r"ignore\s+(?:all\s+)?previous\s+instructions",
-    r"system\s*:\s*reveal\s+finance-confidential",
-    r"skip\s+human\s+approval",
+    r"ignore\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|rules|policies)",
+    r"system\s+instruction",
+    r"(?:for|to)\s+(?:ai|llm)\s+(?:assistants?|agents?|models?)",
+    r"(?:^|\s)(?:system|assistant)\s*:",
+    r"(?:execute|place|issue|approve)\s+(?:an?\s+)?(?:purchase\s+)?order\b.{0,40}\bwithout\s+(?:human\s+)?approval",
+    r"do\s+not\s+(?:mention|tell|inform|report)\b.{0,30}\b(?:user|message|this)",
+    r"(?:skip|bypass|disable)\s+(?:the\s+)?(?:human\s+)?approval",
+    r"mark\s+.{0,40}\s+as\s+(?:certified|approved)",
     r"approve\s+any\s+purchase\s+from\s+helios",
-    r"without\s+human\s+approval.*do\s+not\s+mention",
+    r"finance\s+director\s+already\s+approved",
+    r"i\s+am\s+the\s+finance\s+director",
 )
 
 
@@ -679,8 +690,13 @@ def detect_prompt_injection_in_text(text: str) -> Optional[str]:
     for pat in PROMPT_INJECTION_PATTERNS:
         m = re.search(pat, lowered)
         if m:
-            return m.group(0)
+            return m.group(0).strip()
     return None
+
+
+def _strip_untrusted_notice(text: str) -> str:
+    """Remove embedded 'Attached notice: ...' payloads before extracting operational caps."""
+    return re.split(r"\battached\s+notice\s*:", text, maxsplit=1, flags=re.I)[0]
 
 
 def extract_disruption_fact(
@@ -689,7 +705,8 @@ def extract_disruption_fact(
 ) -> DisruptionFact:
     """Extract supplier, component, delay days, and spending cap from user message, flagging ambiguity."""
     suppliers = _load_suppliers_table()
-    lowered = text.lower()
+    clean_text = _strip_untrusted_notice(text)
+    lowered = clean_text.lower()
 
     supplier_id = previous_fact.supplier_id if previous_fact and not previous_fact.is_ambiguous else None
     supplier_name = previous_fact.supplier_name if previous_fact and not previous_fact.is_ambiguous else None
@@ -698,7 +715,7 @@ def extract_disruption_fact(
     spending_cap = previous_fact.spending_cap if previous_fact else 75000.0
 
     # 1. Component ID (e.g. MC-17, MC-140)
-    comp_match = re.search(r"\b(MC-?\d{1,3})\b", text, re.I)
+    comp_match = re.search(r"\b(MC-?\d{1,3})\b", clean_text, re.I)
     if comp_match:
         raw_comp = comp_match.group(1).upper()
         if not raw_comp.startswith("MC-"):
@@ -722,7 +739,7 @@ def extract_disruption_fact(
         spending_cap = float(cap_match.group(1).replace(",", ""))
 
     # 4. Explicit supplier ID (e.g. S001, S006)
-    sid_match = re.search(r"\b(S0\d{2})\b", text, re.I)
+    sid_match = re.search(r"\b(S0\d{2})\b", clean_text, re.I)
     is_ambiguous = False
     ambiguity_candidates: List[str] = []
 
@@ -987,15 +1004,48 @@ def retrieve_scoped_documentary_findings(
     fact: Optional[DisruptionFact] = None,
 ) -> List[DocumentaryFinding]:
     """Retrieve documentary evidence, conflict flags, and security alerts filtered by user's RBAC scope."""
+    if fact is not None and fact.component_id and fact.component_id != "MC-17":
+        # Non-MC-17 cases retrieve relevant scoped documents dynamically without injecting MC-17 findings
+        try:
+            from src.knowledge import mocks as kmocks
+
+            norm_scope = (
+                "finance"
+                if user_profile.can_view_finance_confidential
+                else ("public" if user_profile.access_scope == AccessScope.PUBLIC else "procurement")
+            )
+            docs = kmocks.retrieve_documents(
+                f"{fact.component_id} {fact.supplier_name or ''} supplier certification",
+                access_scope=norm_scope,
+                top_k=5,
+            )
+            return [
+                DocumentaryFinding(
+                    source_id=d.source_id,
+                    doc_type=d.doc_type,
+                    title=d.title,
+                    version=str(d.version or "1"),
+                    effective_date=d.effective_date,
+                    access_scope=d.access_scope,
+                    summary=d.content[:240],
+                    is_superseded=d.superseded_by is not None,
+                    is_malicious=not d.trusted,
+                )
+                for d in docs
+                if user_profile.can_access_document_scope(d.access_scope)
+            ]
+        except Exception:
+            return []
+
     all_findings = [
         DocumentaryFinding(
-            source_id="DOC-NOT-001",
+            source_id="DOC-NOT-ATLAS-MC17",
             doc_type="supplier_notice",
-            title="Formal delay notice - Atlas Components (PO-2026-9001)",
+            title="Supplier notice - Atlas Components - MC-17 delay",
             supplier_id="S001",
             version="1",
             effective_date="2026-10-19",
-            access_scope="public",
+            access_scope="procurement",
             summary="Atlas Components (S001) formally announces a 12-day delay on PO-2026-9001 (6,000 units MC-17, new due date 2026-11-07).",
             is_conflict=True,
             conflict_resolution="Governs over informal e-mail DOC-EM-ATLAS-01 (16 days) per source precedence policy; 16-day sensitivity tracked.",
@@ -1010,7 +1060,7 @@ def retrieve_scoped_documentary_findings(
             access_scope="procurement",
             summary="Account manager informally warns MC-17 delay might reach 16 days with partial 1,000-unit shipment after 8 days.",
             is_conflict=True,
-            conflict_resolution="Subordinate to formal notice DOC-NOT-001 (12 days); retained for 16-day downside sensitivity analysis.",
+            conflict_resolution="Subordinate to formal notice DOC-NOT-ATLAS-MC17 (12 days); retained for 16-day downside sensitivity analysis.",
         ),
         DocumentaryFinding(
             source_id="DOC-CON-S001-v3",
@@ -1022,7 +1072,7 @@ def retrieve_scoped_documentary_findings(
             access_scope="procurement",
             summary="Active supply contract with Atlas Components: standard lead time 14 days, unit price EUR 8.50.",
             is_conflict=True,
-            conflict_resolution="Supersedes stale contract DOC-CON-S001-v2 (effective 2024-05-01, 10-day lead time).",
+            conflict_resolution="Supersedes stale contract DOC-CON-S001-v2 (effective 2025-01-01, 10-day lead time).",
         ),
         DocumentaryFinding(
             source_id="DOC-CON-S001-v2",
@@ -1030,7 +1080,7 @@ def retrieve_scoped_documentary_findings(
             title="Supply contract - Atlas Components (v2 - Superseded)",
             supplier_id="S001",
             version="2",
-            effective_date="2024-05-01",
+            effective_date="2025-01-01",
             access_scope="procurement",
             summary="Legacy contract stating 10-day lead time for MC-17.",
             is_superseded=True,
@@ -1049,16 +1099,16 @@ def retrieve_scoped_documentary_findings(
             conflict_resolution="Contracted 6% expedite fee (EUR 882) takes precedence over e-mail DOC-EM-CORDILLERA-01 quoting 10% (EUR 1,470).",
         ),
         DocumentaryFinding(
-            source_id="DOC-QUAL-S003",
+            source_id="DOC-QUA-S003-v1",
             doc_type="qualification",
-            title="Qualification & ISO 9001 record - Borealis Parts (S003)",
+            title="ISO 9001 qualification record - Borealis Parts (S003)",
             supplier_id="S003",
             version="1",
-            effective_date="2026-09-30",
+            effective_date="2023-10-01",
             access_scope="procurement",
             summary="Borealis Parts (S003) ISO 9001:2015 certificate EXPIRED on 2026-09-30 (despite stale ERP status 'approved').",
             is_conflict=True,
-            conflict_resolution="Blocked under procedure DOC-PRO-04 (requires valid ISO certification before creating any purchase order).",
+            conflict_resolution="Blocked under procedure DOC-PRO-04-v1 (requires valid ISO certification before creating any purchase order).",
         ),
         DocumentaryFinding(
             source_id="DOC-EM-HELIOS-01",
@@ -1150,7 +1200,7 @@ def compute_recovery_options(
                 "total_recovery_cost_eur": plan1_total,
                 "sensitivity_10pct_email_total_eur": round(po_cost + 1470.0 + transfer_cost, 2),
             },
-            supporting_sources=["DOC-CON-S004-v1", "DOC-QUAL-S004", "DOC-PRO-04", "DOC-NOT-001"],
+            supporting_sources=["DOC-CON-S004-v1", "DOC-QUA-S004-v1", "DOC-PRO-04-v1", "DOC-NOT-ATLAS-MC17"],
         ),
         RecoveryOption(
             strategy_id="STRAT-2",
@@ -1224,7 +1274,7 @@ def compute_recovery_options(
             ),
             actions_breakdown=["Blocked by Quality Policy DOC-PRO-04"],
             cost_breakdown={"total_recovery_cost_eur": 31850.0},
-            supporting_sources=["DOC-QUAL-S003", "DOC-EM-BOREALIS-01", "DOC-PRO-04"],
+            supporting_sources=["DOC-QUA-S003-v1", "DOC-EM-BOREALIS-01", "DOC-PRO-04-v1"],
         ),
         RecoveryOption(
             strategy_id="STRAT-5",
@@ -1262,39 +1312,65 @@ def build_approval_payload(
     supplier_name: str = "Cordillera Industrial",
     unit_price: float = 9.80,
     revision: int = 1,
+    supporting_evidence: Optional[List[Dict[str, str]]] = None,
 ) -> ApprovalPayload:
     """Create a payload-bound ApprovalPayload with deterministic costs and SHA-256 payload_hash."""
+    comp_id = fact.component_id or "MC-17"
+    is_mc17 = comp_id == "MC-17"
+    is_mc17_cordillera = is_mc17 and supplier_id == "S004"
+
     po_subtotal = round(quantity * unit_price, 2)
-    expedite_units = 1500 if supplier_id == "S004" else 0
-    expedite_fee = 882.0 if supplier_id == "S004" else 0.0
-    transfer_units = 800
-    transfer_cost = 96.0
+    expedite_units = 1500 if is_mc17_cordillera else 0
+    expedite_fee_pct = 6.0 if is_mc17_cordillera else 0.0
+    expedite_fee = 882.0 if is_mc17_cordillera else 0.0
+    expedite_po_id = "PO-2026-9002" if is_mc17_cordillera else None
+    transfer_units = 800 if is_mc17 else min(impact.hub_usable_units, max(0, impact.uncovered_demand_units))
+    transfer_cost = round(transfer_units * 0.12, 2)
+    transfer_to = (
+        "W-LYO (450) & W-KAT (350)"
+        if is_mc17
+        else (", ".join(impact.affected_factories) or "Affected Plants")
+    )
     total_cost = round(po_subtotal + expedite_fee + transfer_cost, 2)
     residual = max(0, impact.uncovered_demand_units - (quantity + expedite_units + transfer_units))
 
-    evidence = [
-        {"source_id": "DOC-CON-S004-v1", "effective_date": "2025-08-01", "access_scope": "procurement", "note": "Cordillera EUR 9.80/unit, 9d lead time, 3,000/mo capacity, 6% expedite fee"},
-        {"source_id": "DOC-QUAL-S004", "effective_date": "2025-11-30", "access_scope": "procurement", "note": "ISO 9001:2015 valid through 2027-11-30; independent upstream U02"},
-        {"source_id": "DOC-PRO-04", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
-        {"source_id": "DOC-NOT-001", "effective_date": "2026-10-19", "access_scope": "public", "note": "Formal 12-day delay notice on Atlas PO-2026-9001"},
-    ]
+    if supporting_evidence is not None:
+        evidence = list(supporting_evidence)
+    elif is_mc17_cordillera:
+        evidence = [
+            {"source_id": "DOC-CON-S004-v1", "effective_date": "2025-08-01", "access_scope": "procurement", "note": "Cordillera EUR 9.80/unit, 9d lead time, 3,000/mo capacity, 6% expedite fee"},
+            {"source_id": "DOC-QUA-S004-v1", "effective_date": "2024-11-30", "access_scope": "procurement", "note": "ISO 9001:2015 valid through 2027-11-30; independent upstream U02"},
+            {"source_id": "DOC-PRO-04-v1", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
+            {"source_id": "DOC-NOT-ATLAS-MC17", "effective_date": "2026-10-19", "access_scope": "procurement", "note": "Formal 12-day delay notice on Atlas PO-2026-9001"},
+        ]
+    else:
+        evidence = [
+            {"source_id": f"DOC-CON-{supplier_id}-v1", "effective_date": "2026-01-01", "access_scope": "procurement", "note": f"{supplier_name} ({supplier_id}) EUR {unit_price:.2f}/unit for {comp_id}"},
+            {"source_id": "DOC-PRO-04-v1", "effective_date": "2026-01-15", "access_scope": "internal", "note": "Emergency procurement & certification verification policy"},
+        ]
+
+    action_type = (
+        SupplyGuardActionType.COMBINED_RECOVERY_PLAN
+        if (expedite_po_id or transfer_units > 0)
+        else SupplyGuardActionType.PURCHASE_ALTERNATIVE
+    )
 
     payload = ApprovalPayload(
         action_id=f"act-{uuid.uuid4().hex[:10]}",
         case_id=case_id,
-        action_type=SupplyGuardActionType.COMBINED_RECOVERY_PLAN,
+        action_type=action_type,
         target_supplier_id=supplier_id,
         target_supplier_name=supplier_name,
-        component_id=fact.component_id or "MC-17",
+        component_id=comp_id,
         quantity=quantity,
         unit_price=unit_price,
         po_subtotal_eur=po_subtotal,
-        expedite_po_id="PO-2026-9002" if supplier_id == "S004" else None,
+        expedite_po_id=expedite_po_id,
         expedite_units=expedite_units,
-        expedite_fee_pct=6.0 if supplier_id == "S004" else 0.0,
+        expedite_fee_pct=expedite_fee_pct,
         expedite_fee_eur=expedite_fee,
         transfer_from_location="W-HUB",
-        transfer_to_locations="W-LYO (450) & W-KAT (350)",
+        transfer_to_locations=transfer_to,
         transfer_units=transfer_units,
         transfer_cost_eur=transfer_cost,
         residual_units_reallocated=residual,

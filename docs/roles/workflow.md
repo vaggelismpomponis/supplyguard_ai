@@ -55,18 +55,18 @@
 
 ## Role checklist
 
-- [ ] State schemas, action types και contracts συμφωνημένα
-- [ ] Root Deep Agent (`create_deep_agent`) με dynamic planning middleware και scratchpad
-- [ ] PostgreSQL checkpointer συνδεδεμένο για persistence
-- [ ] 6 Subagents πλήρως υλοποιημένοι και διασυνδεδεμένοι
-- [ ] Ντετερμινιστικά εργαλεία υπολογισμού Recovery Cost & Revenue at Risk
-- [ ] Mocks αντικαταστάθηκαν με πραγματικά tools
-- [ ] Απόρριψη Borealis (ληγμένη πιστοποίηση) & Delta (κοινός upstream κατασκευαστής)
-- [ ] Human Approval interrupt με αυστηρό payload binding (spend cap ≤ €75k)
-- [ ] Idempotent εκτέλεση στο Simulated Procurement MCP (zero duplicates)
-- [ ] Restart test: ανθεκτικότητα σε container crashes χωρίς απώλεια κατάστασης
-- [ ] Αποθήκευση approved incident memory και εξαγωγή Incident Report
-- [ ] Multi-turn follow-up συνομιλία πλήρως λειτουργική
+- [x] State schemas, action types και contracts συμφωνημένα
+- [x] Root Deep Agent (`create_deep_agent`) με dynamic planning middleware και scratchpad
+- [x] PostgreSQL checkpointer συνδεδεμένο για persistence
+- [x] 6 Subagents πλήρως υλοποιημένοι και διασυνδεδεμένοι
+- [x] Ντετερμινιστικά εργαλεία υπολογισμού Recovery Cost & Revenue at Risk
+- [x] Mocks αντικαταστάθηκαν με πραγματικά tools
+- [x] Απόρριψη Borealis (ληγμένη πιστοποίηση) & Delta (κοινός upstream κατασκευαστής)
+- [x] Human Approval interrupt με αυστηρό payload binding (spend cap ≤ €75k)
+- [x] Idempotent εκτέλεση στο Simulated Procurement MCP (zero duplicates)
+- [x] Restart test: ανθεκτικότητα σε container crashes χωρίς απώλεια κατάστασης
+- [x] Αποθήκευση approved incident memory και εξαγωγή Incident Report
+- [x] Multi-turn follow-up συνομιλία πλήρως λειτουργική
 - [ ] Συμμετοχή στις πρόβες του live demo (≥2)
 - [ ] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
 - [ ] Μπορώ να εξηγήσω ολόκληρη την αρχιτεκτονική των Deep Agents στο demo

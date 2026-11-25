@@ -1,36 +1,11 @@
-"""Mock tools with the final signatures, for the Workflow skeleton (no databases needed)."""
-from .models import GraphResult, Outage, PolicyResult
+"""Mock tools with the final signatures, reading support-data files directly (no databases needed)."""
+import re
+from datetime import date, timedelta
 
-
-def retrieve_policy(query: str, application: str | None = None) -> PolicyResult | None:
-    return PolicyResult(
-        text="Every credential reset requires explicit human engineer approval.",
-        doc_id="POL-001", effective_date="2026-09-01", source="POL-001_password_reset_v2.md",
-    )
-
-
-def check_graph(application: str) -> GraphResult:
-    return GraphResult(
-        application=application, dependencies=["Identity Provider (SSO)"],
-        active_outages=["Identity Provider (SSO)"],
-        outages=[Outage(
-            outage_id="OUT-2026-01", service="Identity Provider (SSO)",
-            title="Identity Provider (SSO) Token Validation Degradation", severity="critical",
-            started_at="2026-11-13T14:30:00Z", summary="Intermittent SSO authentication failures.",
-        )],
-    )
-
-
-# --- SupplyGuard mocks (#73): same signatures as tools.py, read the support-data files directly ---
-# Real data, no database: Workflow can build and test the skeleton before the stack runs.
-# Not mocked: Neo4j traversal (the CSVs hold the same edges) and vector ranking (word overlap here).
-import re  # noqa: E402
-from datetime import date, timedelta  # noqa: E402
-
-from . import data_quality as dq  # noqa: E402
-from . import supply_graph  # noqa: E402
-from .ingest_documents import chunks  # noqa: E402
-from .models import (  # noqa: E402
+from . import data_quality as dq
+from . import supply_graph
+from .ingest_documents import chunks
+from .models import (
     AffectedProduct, BOMResult, ClaimConflict, CustomerOrderAtRisk, DocumentResult, InventoryLocation,
     InventoryStatusResult, OpenPurchaseOrder, QuarantineLot, Reservation, SharedUpstream,
     SupplierGraphResult, SupplierOption,

@@ -23,6 +23,7 @@ class ActionType(str, Enum):
     PURCHASE_ALTERNATIVE = "purchase_alternative"     # Create purchase order with qualified alternate supplier
     REALLOCATE_COMPONENTS = "reallocate_components"   # Prioritize component allocations to tier-1 customers
     RESCHEDULE_PRODUCTION = "reschedule_production"   # Shift production runs across the 12-week schedule
+    COMBINED_RECOVERY_PLAN = "combined_recovery_plan" # Coordinated multi-step recovery plan
     ANSWER_POLICY = "answer_policy"                   # Informative query response from documentary evidence
     REQUEST_CLARIFICATION = "request_clarification"   # Pause to prompt user for ambiguous/missing facts
 
@@ -33,13 +34,16 @@ class ActionStatus(str, Enum):
     APPROVED = "approved"     # Explicitly approved by authorized operator
     EXECUTED = "executed"     # Successfully executed in simulated procurement; cannot be re-executed
     REJECTED = "rejected"     # Rejected by operator; alternative plan required
+    INVALIDATED = "invalidated"  # Invalidated after payload mutation; fresh approval required
 
 
 class AccessScope(str, Enum):
     """Role-Based Access Control scopes."""
-    PROCUREMENT = "procurement"  # Procurement managers: standard operational & contract docs
-    FINANCE = "finance"          # Finance controllers: margin, price & penalty-confidential docs
-    PUBLIC = "public"            # Read-only guests: public announcements and high-level case status
+    PROCUREMENT = "procurement"                    # Procurement managers: standard operational & contract docs
+    FINANCE = "finance"                            # Finance controllers: margin, price & penalty-confidential docs
+    PUBLIC = "public"                              # Read-only guests: public announcements and high-level case status
+    INTERNAL = "internal"                          # Internal procedures & operational emails
+    FINANCE_CONFIDENTIAL = "finance-confidential"  # Margin & negotiated penalty sheet (DOC-FIN-01-v1)
 
 
 # ==============================================================================

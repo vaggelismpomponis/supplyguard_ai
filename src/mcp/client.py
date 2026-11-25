@@ -3,6 +3,9 @@
 Platform Role | Scope: mcp, workflow
 Provides tools usable by Deep Agents or workflow nodes:
 - create_purchase_order_tool
+- expedite_purchase_order_tool
+- request_stock_transfer_tool
+- update_production_schedule_tool
 - get_supplier_risk_tool
 - check_inventory_balance_tool
 """
@@ -21,6 +24,7 @@ def create_purchase_order_tool(
     quantity: int,
     unit_price: float,
     delivery_date: Optional[str] = None,
+    thread_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute purchase order in simulated procurement system."""
     system = get_procurement_system()
@@ -31,8 +35,65 @@ def create_purchase_order_tool(
         quantity=quantity,
         unit_price=unit_price,
         delivery_date=delivery_date,
+        thread_id=thread_id,
     )
     return receipt.model_dump()
+
+
+def expedite_purchase_order_tool(
+    action_id: str,
+    po_id: str,
+    days_gain: int = 7,
+    fee_pct: float = 6.0,
+    thread_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Expedite an existing open purchase order in simulated procurement system."""
+    system = get_procurement_system()
+    return system.expedite_purchase_order(
+        action_id=action_id,
+        po_id=po_id,
+        days_gain=days_gain,
+        fee_pct=fee_pct,
+        thread_id=thread_id,
+    )
+
+
+def request_stock_transfer_tool(
+    action_id: str,
+    component_id: str,
+    from_location: str,
+    to_location: str,
+    qty: int,
+    thread_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Transfer usable stock between internal warehouse locations."""
+    system = get_procurement_system()
+    return system.request_stock_transfer(
+        action_id=action_id,
+        component_id=component_id,
+        from_location=from_location,
+        to_location=to_location,
+        qty=qty,
+        thread_id=thread_id,
+    )
+
+
+def update_production_schedule_tool(
+    action_id: str,
+    product_id: str,
+    week_start: str,
+    planned_units: int,
+    thread_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Adjust production schedule slot in simulated procurement system."""
+    system = get_procurement_system()
+    return system.update_production_schedule(
+        action_id=action_id,
+        product_id=product_id,
+        week_start=week_start,
+        planned_units=planned_units,
+        thread_id=thread_id,
+    )
 
 
 def get_supplier_risk_tool(
@@ -50,7 +111,7 @@ def get_supplier_risk_tool(
     return risk.model_dump()
 
 
-def check_inventory_balance_tool(component_id: str) -> Dict[str, int]:
+def check_inventory_balance_tool(component_id: str) -> Dict[str, Any]:
     """Check inventory usable, reserved, quarantined stock for a component."""
     system = get_procurement_system()
     return system.check_inventory_balance(component_id=component_id)

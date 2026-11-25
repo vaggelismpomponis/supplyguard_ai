@@ -44,6 +44,9 @@ ALTER TABLE supplier_components ALTER COLUMN approved_source DROP DEFAULT;
 ALTER TABLE supplier_components ALTER COLUMN approved_source TYPE VARCHAR(16) USING NULL;
 ALTER TABLE purchase_orders DROP CONSTRAINT IF EXISTS purchase_orders_component_id_fkey;
 ALTER TABLE shipment_updates DROP CONSTRAINT IF EXISTS shipment_updates_component_id_fkey;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS action_id VARCHAR(64);
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor VARCHAR(128);
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS component_id VARCHAR(64);
 """
 
 

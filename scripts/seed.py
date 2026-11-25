@@ -72,8 +72,27 @@ def wait_for_services(max_attempts: int = 20, delay_seconds: float = 2.0) -> Non
                 neo4j_ready = True
                 break
         except Exception as exc:
+            print(f"[Seed Service] Waiting for Neo4j ({attempt}/{max_attempts}): {exc}")
             time.sleep(delay_seconds)
-            break  # In unit test environment, don't stall if container is down
+    if not neo4j_ready:
+        print("[Seed Service] ⚠️ Neo4j not reachable after retries.")
+
+    # ChromaDB Check
+    chroma_host = os.getenv("CHROMA_HOST")
+    chroma_port = os.getenv("CHROMA_PORT", "8000")
+    if chroma_host:
+        for attempt in range(1, max_attempts + 1):
+            try:
+                req = urllib.request.Request(
+                    f"http://{chroma_host}:{chroma_port}/api/v1/heartbeat",
+                    headers={"User-Agent": "SeedScript"},
+                )
+                with urllib.request.urlopen(req, timeout=2) as resp:
+                    if resp.status == 200:
+                        break
+            except Exception as exc:
+                print(f"[Seed Service] Waiting for ChromaDB ({attempt}/{max_attempts}): {exc}")
+                time.sleep(delay_seconds)
 
     # External Risk Service Check
     risk_url = os.getenv("EXTERNAL_RISK_URL", "http://localhost:8080")

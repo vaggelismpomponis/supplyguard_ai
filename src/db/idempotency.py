@@ -1,8 +1,8 @@
-"""Idempotency guard and audit logging for state-changing operations.
+"""Idempotency guard, audit logging, and thread state persistence for SupplyGuard AI.
 
-Guarantees that state-changing actions (account resets, tickets, escalations)
-are never executed more than once across container restarts, network replays,
-or crash recovery.
+Guarantees that state-changing procurement actions (purchase orders, expedites,
+stock transfers, schedule updates) are never executed more than once across
+container restarts, network replays, or crash recovery.
 Adheres to architecture contracts (docs/ARCHITECTURE_CONTRACTS.md) and
 the schema defined in docker/postgres/init.sql.
 
@@ -15,18 +15,23 @@ import inspect
 import json
 from typing import Any, Callable, Dict, Optional, Tuple
 
-import psycopg
 from psycopg.rows import dict_row
 
 from src.db.connection import get_pooled_connection
+
+
+def _ensure_audit_columns(cur: Any) -> None:
+    """Ensure SupplyGuard actor/component_id columns exist on older Postgres volumes."""
+    cur.execute("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor VARCHAR(128);")
+    cur.execute("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS component_id VARCHAR(64);")
 
 
 def record_action(
     action_id: str,
     thread_id: str,
     action_type: str,
-    employee: Optional[str] = None,
-    application: Optional[str] = None,
+    actor: Optional[str] = None,
+    component_id: Optional[str] = None,
     status: str = "pending",
     parameters: Optional[Dict[str, Any]] = None,
     rationale: str = "",
@@ -36,19 +41,23 @@ def record_action(
     Guarantees unique action_id tracking per Day 1 contracts.
     Preserves terminal 'executed' status to prevent lifecycle regressions on conflict.
     """
-    params_json = json.dumps(parameters or {})
+    params_json = json.dumps(parameters or {}, default=str)
     with get_pooled_connection() as conn:
         with conn.transaction():
             with conn.cursor(row_factory=dict_row) as cur:
+                _ensure_audit_columns(cur)
                 cur.execute(
                     """
                     INSERT INTO audit_log (
-                        action_id, thread_id, action_type, employee, application,
+                        action_id, thread_id, action_type, actor, component_id,
                         status, parameters, rationale
                     )
                     VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s)
                     ON CONFLICT (action_id)
                     DO UPDATE SET
+                        thread_id = EXCLUDED.thread_id,
+                        actor = COALESCE(EXCLUDED.actor, audit_log.actor),
+                        component_id = COALESCE(EXCLUDED.component_id, audit_log.component_id),
                         status = CASE
                             WHEN audit_log.status = 'executed' THEN 'executed'
                             ELSE EXCLUDED.status
@@ -67,14 +76,25 @@ def record_action(
                         action_id,
                         thread_id,
                         action_type,
-                        employee,
-                        application,
+                        actor,
+                        component_id,
                         status,
                         params_json,
                         rationale,
                     ),
                 )
                 return cur.fetchone()
+
+
+def get_action_record(action_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve the full audit_log row for an action_id."""
+    with get_pooled_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM audit_log WHERE action_id = %s;",
+                (action_id,),
+            )
+            return cur.fetchone()
 
 
 def get_action_status(action_id: str) -> Optional[str]:
@@ -91,8 +111,7 @@ def get_action_status(action_id: str) -> Optional[str]:
 
 def is_action_executed(action_id: str) -> bool:
     """Check if the action has already been executed."""
-    status = get_action_status(action_id)
-    return status == "executed"
+    return get_action_status(action_id) == "executed"
 
 
 def execute_idempotent(
@@ -105,10 +124,10 @@ def execute_idempotent(
 
     Guarantees:
     1. Short-circuits if status is already 'executed', preventing duplicate side effects.
-    2. Rejects any status other than 'approved' (e.g. 'pending', 'rejected'), ensuring
-       unapproved actions are never invoked.
+    2. Rejects any status other than 'approved' (e.g. 'pending', 'rejected', 'invalidated'),
+       ensuring unapproved actions are never invoked.
     3. Serializes execution using PostgreSQL row-level locking (SELECT ... FOR UPDATE).
-    4. Downstream operations are passed action_id to enable durable downstream idempotency.
+    4. Persists any returned receipt inside audit_log.parameters atomically with status='executed'.
 
     Returns:
         (executed, result):
@@ -129,7 +148,6 @@ def execute_idempotent(
                 current_status = row["status"]
 
                 if current_status == "executed":
-                    # Already executed, skip execution safely
                     return False, "already_executed"
 
                 if current_status != "approved":
@@ -138,74 +156,106 @@ def execute_idempotent(
                         "State-changing actions require explicit human approval."
                     )
 
-                # Pass action_id to execution_fn if supported by its signature for downstream idempotency
                 sig = inspect.signature(execution_fn)
                 if "action_id" in sig.parameters and "action_id" not in kwargs:
                     kwargs["action_id"] = action_id
 
                 result = execution_fn(*args, **kwargs)
 
-                # Mark as executed atomically with timestamp
-                cur.execute(
-                    """
-                    UPDATE audit_log
-                    SET status = 'executed',
-                        executed_at = CURRENT_TIMESTAMP
-                    WHERE action_id = %s;
-                    """,
-                    (action_id,),
-                )
+                receipt_data = result.model_dump() if hasattr(result, "model_dump") else result
+                if isinstance(receipt_data, dict):
+                    cur.execute(
+                        """
+                        UPDATE audit_log
+                        SET status = 'executed',
+                            executed_at = CURRENT_TIMESTAMP,
+                            parameters = COALESCE(parameters, '{}'::jsonb) || jsonb_build_object('receipt', %s::jsonb)
+                        WHERE action_id = %s;
+                        """,
+                        (json.dumps(receipt_data, default=str), action_id),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        UPDATE audit_log
+                        SET status = 'executed',
+                            executed_at = CURRENT_TIMESTAMP
+                        WHERE action_id = %s;
+                        """,
+                        (action_id,),
+                    )
                 return True, result
 
 
-def create_ticket_idempotent(
-    action_id: str,
-    employee: str,
-    application: str,
-    symptom: str,
-    urgency: str = "medium",
-    details: Optional[Dict[str, Any]] = None,
-) -> Tuple[bool, Dict[str, Any]]:
-    """Idempotently insert an IT support ticket into tickets table in a single atomic operation.
+def _ensure_thread_states_table(cur: Any) -> None:
+    """Ensure the durable thread_states table exists on older unmigrated Postgres volumes."""
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS thread_states (
+            thread_id TEXT PRIMARY KEY,
+            case_state JSONB NOT NULL,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+    )
 
-    Uses INSERT ... ON CONFLICT (action_id) DO NOTHING to eliminate race conditions
-    between concurrent workers.
 
-    Returns:
-        (created, ticket_record):
-            - (True, record) if newly created.
-            - (False, record) if already existed.
-    """
-    details_json = json.dumps(details or {})
+def save_thread_state(thread_id: str, case_state: Dict[str, Any]) -> None:
+    """Persist serialized thread state to PostgreSQL for container-restart durability."""
+    payload_json = json.dumps(case_state, default=str)
     with get_pooled_connection() as conn:
         with conn.transaction():
-            with conn.cursor(row_factory=dict_row) as cur:
+            with conn.cursor() as cur:
+                _ensure_thread_states_table(cur)
                 cur.execute(
                     """
-                    INSERT INTO tickets (
-                        action_id, employee, application, symptom, urgency, status, details
-                    )
-                    VALUES (%s, %s, %s, %s, %s, 'pending', %s::jsonb)
-                    ON CONFLICT (action_id) DO NOTHING
-                    RETURNING *;
+                    INSERT INTO thread_states (thread_id, case_state, updated_at)
+                    VALUES (%s, %s::jsonb, CURRENT_TIMESTAMP)
+                    ON CONFLICT (thread_id)
+                    DO UPDATE SET
+                        case_state = EXCLUDED.case_state,
+                        updated_at = CURRENT_TIMESTAMP;
                     """,
-                    (
-                        action_id,
-                        employee,
-                        application,
-                        symptom,
-                        urgency,
-                        details_json,
-                    ),
+                    (thread_id, payload_json),
                 )
-                inserted = cur.fetchone()
-                if inserted:
-                    return True, inserted
 
-                # Conflict occurred; fetch the pre-existing row atomically
+
+def load_thread_state(thread_id: str) -> Optional[Dict[str, Any]]:
+    """Load persisted thread state from PostgreSQL."""
+    with get_pooled_connection() as conn:
+        with conn.transaction():
+            with conn.cursor() as cur:
+                _ensure_thread_states_table(cur)
                 cur.execute(
-                    "SELECT * FROM tickets WHERE action_id = %s;",
-                    (action_id,),
+                    """
+                    SELECT case_state
+                    FROM thread_states
+                    WHERE thread_id = %s;
+                    """,
+                    (thread_id,),
                 )
-                existing = cur.fetchone()
-                return False, existing
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return row[0] if isinstance(row[0], dict) else json.loads(row[0])
+
+
+def load_latest_thread_state() -> Optional[Tuple[str, Dict[str, Any]]]:
+    """Load the most recently updated SupplyGuard thread state from PostgreSQL."""
+    with get_pooled_connection() as conn:
+        with conn.transaction():
+            with conn.cursor() as cur:
+                _ensure_thread_states_table(cur)
+                cur.execute(
+                    """
+                    SELECT thread_id, case_state
+                    FROM thread_states
+                    ORDER BY updated_at DESC
+                    LIMIT 1;
+                    """
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                raw = row[1] if isinstance(row[1], dict) else json.loads(row[1])
+                return str(row[0]), raw

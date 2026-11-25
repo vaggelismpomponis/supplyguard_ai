@@ -48,18 +48,18 @@
 
 ## Role checklist
 
-- [ ] Σχεσιακό σχήμα PostgreSQL για όλα τα operational datasets του `support-data/`
-- [ ] Neo4j multi-tier graph model τεκμηριωμένο με upstream supplier dependencies
-- [ ] Ingestion scripts για Neo4j CSVs πλήρως idempotent
-- [ ] 212 έγγραφα κατατμημένα με `source_id`, `version`/`effective_date`, `access_scope`
-- [ ] Αποθήκευση σε `pgvector` και `ChromaDB`
-- [ ] Ευρετηρίαση 300 ιστορικών περιπτώσεων και 40 approved memories
-- [ ] Υλοποίηση Hybrid Retrieval tool (Vector + BM25 + Graph)
-- [ ] Δυναμικό filtering βάσει ρόλου χρήστη (`access_scope`)
-- [ ] Κανόνες επίλυσης συγκρούσεων μεταξύ συμβολαίων και emails
-- [ ] Εντοπισμός ληγμένων πιστοποιήσεων προμηθευτών
-- [ ] Seeding script ενταγμένο στο Compose `seed` service
-- [ ] Παροχή δεδομένων στον Quality για τα 105 evaluation cases
+- [x] Σχεσιακό σχήμα PostgreSQL για όλα τα operational datasets του `support-data/`
+- [x] Neo4j multi-tier graph model τεκμηριωμένο με upstream supplier dependencies
+- [x] Ingestion scripts για Neo4j CSVs πλήρως idempotent
+- [x] 212 έγγραφα κατατμημένα με `source_id`, `version`/`effective_date`, `access_scope`
+- [x] Αποθήκευση σε `pgvector` και `ChromaDB`
+- [x] Ευρετηρίαση 300 ιστορικών περιπτώσεων και 40 approved memories
+- [x] Υλοποίηση Hybrid Retrieval tool (Vector + BM25 + Graph)
+- [x] Δυναμικό filtering βάσει ρόλου χρήστη (`access_scope`)
+- [x] Κανόνες επίλυσης συγκρούσεων μεταξύ συμβολαίων και emails
+- [x] Εντοπισμός ληγμένων πιστοποιήσεων προμηθευτών
+- [x] Seeding script ενταγμένο στο Compose `seed` service
+- [x] Παροχή δεδομένων στον Quality για τα 105 evaluation cases
 - [ ] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
 - [ ] Μπορώ να εξηγήσω ολόκληρη τη δομή των δεδομένων και της ανάκτησης στο demo
 
