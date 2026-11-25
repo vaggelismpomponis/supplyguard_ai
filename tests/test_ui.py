@@ -505,6 +505,7 @@ class TestInterfaceFormattingAndHandlers(unittest.IsolatedAsyncioTestCase):
         )
         # Switch to a brand-new session/thread and resume yesterday's case
         cl.context.session.id = "sess-new-456"
+        cl.context.session.thread_id = "sess-new-456"
         cl.user_session.set("thread_id", "sess-new-456")
         await self.ui_app.on_message(cl.Message(content="Resume the case I was reviewing yesterday."))
 
