@@ -1,7 +1,8 @@
-"""Index the 300 historical disruption cases and 40 approved incident memories (KAN-09).
+"""Index the 300 historical disruption cases and 40 approved incident memories (#76).
 
 Run: python -m src.knowledge.incident_memory
-Idempotent: the table is replaced in one transaction.
+Idempotent: the provided records are replaced in one transaction. Memories approved at runtime
+(save_approved_memory) are kept: the seed runs on every `docker compose up`.
 
 Kept apart from the document chunks (own pgvector table, not policy_chunks) so few-shot lookups for a new case never
 mix with contract or notice retrieval. Each row is filterable by component_type (from the
@@ -103,7 +104,8 @@ def ingest() -> int:
     vectors = embed([r["content"] for r in rows])
     with pg() as conn:  # one transaction: all or nothing
         conn.execute(DDL)
-        conn.execute("DELETE FROM incident_memories")
+        # only the provided records: a full wipe would lose the approved memories of past cases
+        conn.execute("DELETE FROM incident_memories WHERE memory_id = ANY(%s)", ([r["memory_id"] for r in rows],))
         with conn.cursor() as cur:
             cur.executemany(
                 f"INSERT INTO incident_memories ({', '.join(COLS)}, embedding) VALUES ({', '.join(['%s'] * len(COLS))}, %s::vector)",
