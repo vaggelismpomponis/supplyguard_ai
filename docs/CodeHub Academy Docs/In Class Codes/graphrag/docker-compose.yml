@@ -1,0 +1,14 @@
+services:
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/codehubpassword
+      NEO4J_PLUGINS: '["apoc"]'   # required by langchain-neo4j (apoc.meta.data)
+    ports:
+      - "7474:7474"   # browser UI: http://localhost:7474
+      - "7687:7687"   # bolt protocol, used by langchain-neo4j
+    volumes:
+      - neo4j_data:/data
+
+volumes:
+  neo4j_data:

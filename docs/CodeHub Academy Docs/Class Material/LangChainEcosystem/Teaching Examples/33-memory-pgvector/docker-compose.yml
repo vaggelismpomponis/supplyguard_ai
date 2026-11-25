@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16   # Postgres 16 with the pgvector extension preinstalled
+    environment:
+      POSTGRES_USER: langgraph
+      POSTGRES_PASSWORD: langgraph
+      POSTGRES_DB: agent_memory
+    ports:
+      - "5444:5432"   # 5444: Units 18/20 already use 5442/5433 on this course
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

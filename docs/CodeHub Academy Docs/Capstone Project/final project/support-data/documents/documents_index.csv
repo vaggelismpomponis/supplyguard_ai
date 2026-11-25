@@ -1,0 +1,213 @@
+source_id,doc_type,title,supplier_id,version,effective_date,access_scope,path
+DOC-CON-S001-v3,contract,Supply contract - Atlas Components,S001,3,2026-03-01,procurement,documents/contract/DOC-CON-S001-v3.md
+DOC-CON-S002-v1,contract,Supply contract - Helios Supply,S002,1,2025-01-01,procurement,documents/contract/DOC-CON-S002-v1.md
+DOC-CON-S003-v1,contract,Supply contract - Borealis Parts,S003,1,2025-11-01,procurement,documents/contract/DOC-CON-S003-v1.md
+DOC-CON-S004-v1,contract,Supply contract - Cordillera Industrial,S004,1,2025-08-01,procurement,documents/contract/DOC-CON-S004-v1.md
+DOC-CON-S005-v1,contract,Supply contract - Delta Micro Systems,S005,1,2025-01-01,procurement,documents/contract/DOC-CON-S005-v1.md
+DOC-CON-S006-v1,contract,Supply contract - Atlas Logistik GmbH,S006,1,2025-06-01,procurement,documents/contract/DOC-CON-S006-v1.md
+DOC-CON-S007-v1,contract,Supply contract - Orion Components,S007,1,2025-12-01,procurement,documents/contract/DOC-CON-S007-v1.md
+DOC-CON-S008-v1,contract,Supply contract - Cobalt Supply,S008,1,2025-06-01,procurement,documents/contract/DOC-CON-S008-v1.md
+DOC-CON-S009-v1,contract,Supply contract - Lumen Systems,S009,1,2025-08-01,procurement,documents/contract/DOC-CON-S009-v1.md
+DOC-CON-S010-v1,contract,Supply contract - Kestrel Components,S010,1,2025-07-01,procurement,documents/contract/DOC-CON-S010-v1.md
+DOC-CON-S011-v1,contract,Supply contract - Quanta Systems,S011,1,2025-08-01,procurement,documents/contract/DOC-CON-S011-v1.md
+DOC-CON-S012-v1,contract,Supply contract - Hydra Components,S012,1,2025-04-01,procurement,documents/contract/DOC-CON-S012-v1.md
+DOC-CON-S013-v1,contract,Supply contract - Aurum Works,S013,1,2025-04-01,procurement,documents/contract/DOC-CON-S013-v1.md
+DOC-CON-S014-v1,contract,Supply contract - Borda Supply,S014,1,2025-08-01,procurement,documents/contract/DOC-CON-S014-v1.md
+DOC-CON-S015-v1,contract,Supply contract - Hydra Works,S015,1,2025-05-01,procurement,documents/contract/DOC-CON-S015-v1.md
+DOC-CON-S016-v1,contract,Supply contract - Orion Supply,S016,1,2025-02-01,procurement,documents/contract/DOC-CON-S016-v1.md
+DOC-CON-S017-v1,contract,Supply contract - Lumen Works,S017,1,2025-10-01,procurement,documents/contract/DOC-CON-S017-v1.md
+DOC-CON-S018-v1,contract,Supply contract - Altair Electronics,S018,1,2025-11-01,procurement,documents/contract/DOC-CON-S018-v1.md
+DOC-CON-S019-v1,contract,Supply contract - Ionic Components,S019,1,2025-06-01,procurement,documents/contract/DOC-CON-S019-v1.md
+DOC-CON-S020-v1,contract,Supply contract - Cobalt Industrial,S020,1,2025-03-01,procurement,documents/contract/DOC-CON-S020-v1.md
+DOC-CON-S021-v1,contract,Supply contract - Kestrel Supply,S021,1,2025-03-01,procurement,documents/contract/DOC-CON-S021-v1.md
+DOC-CON-S022-v1,contract,Supply contract - Solis Electronics,S022,1,2025-04-01,procurement,documents/contract/DOC-CON-S022-v1.md
+DOC-CON-S023-v1,contract,Supply contract - Silva Industrial,S023,1,2025-11-01,procurement,documents/contract/DOC-CON-S023-v1.md
+DOC-CON-S024-v1,contract,Supply contract - Altair Metals,S024,1,2025-11-01,procurement,documents/contract/DOC-CON-S024-v1.md
+DOC-CON-S025-v1,contract,Supply contract - Nova Components,S025,1,2025-09-01,procurement,documents/contract/DOC-CON-S025-v1.md
+DOC-CON-S026-v1,contract,Supply contract - Zenith Supply,S026,1,2025-01-01,procurement,documents/contract/DOC-CON-S026-v1.md
+DOC-CON-S027-v1,contract,Supply contract - Meridian Dynamics,S027,1,2025-07-01,procurement,documents/contract/DOC-CON-S027-v1.md
+DOC-CON-S028-v1,contract,Supply contract - Vector Metals,S028,1,2025-06-01,procurement,documents/contract/DOC-CON-S028-v1.md
+DOC-CON-S029-v1,contract,Supply contract - Ferro Components,S029,1,2025-05-01,procurement,documents/contract/DOC-CON-S029-v1.md
+DOC-CON-S030-v1,contract,Supply contract - Argo Electronics,S030,1,2025-11-01,procurement,documents/contract/DOC-CON-S030-v1.md
+DOC-CON-S031-v1,contract,Supply contract - Trident Dynamics,S031,1,2025-09-01,procurement,documents/contract/DOC-CON-S031-v1.md
+DOC-CON-S032-v1,contract,Supply contract - Trident Metals,S032,1,2025-09-01,procurement,documents/contract/DOC-CON-S032-v1.md
+DOC-CON-S033-v1,contract,Supply contract - Meridian Industrial,S033,1,2025-02-01,procurement,documents/contract/DOC-CON-S033-v1.md
+DOC-CON-S034-v1,contract,Supply contract - Hydra Industrial,S034,1,2025-12-01,procurement,documents/contract/DOC-CON-S034-v1.md
+DOC-CON-S035-v1,contract,Supply contract - Argo Dynamics,S035,1,2025-10-01,procurement,documents/contract/DOC-CON-S035-v1.md
+DOC-CON-S036-v1,contract,Supply contract - Lumen Dynamics,S036,1,2025-12-01,procurement,documents/contract/DOC-CON-S036-v1.md
+DOC-CON-S037-v1,contract,Supply contract - Silva Dynamics,S037,1,2025-09-01,procurement,documents/contract/DOC-CON-S037-v1.md
+DOC-CON-S038-v1,contract,Supply contract - Nova Systems,S038,1,2025-02-01,procurement,documents/contract/DOC-CON-S038-v1.md
+DOC-CON-S039-v1,contract,Supply contract - Ferro Dynamics,S039,1,2025-07-01,procurement,documents/contract/DOC-CON-S039-v1.md
+DOC-CON-S040-v1,contract,Supply contract - Nimbus Technik,S040,1,2025-02-01,procurement,documents/contract/DOC-CON-S040-v1.md
+DOC-CON-S041-v1,contract,Supply contract - Kestrel Systems,S041,1,2025-03-01,procurement,documents/contract/DOC-CON-S041-v1.md
+DOC-CON-S042-v1,contract,Supply contract - Solis Systems,S042,1,2025-12-01,procurement,documents/contract/DOC-CON-S042-v1.md
+DOC-CON-S043-v1,contract,Supply contract - Kestrel Electronics,S043,1,2025-02-01,procurement,documents/contract/DOC-CON-S043-v1.md
+DOC-CON-S044-v1,contract,Supply contract - Orion Metals,S044,1,2025-02-01,procurement,documents/contract/DOC-CON-S044-v1.md
+DOC-CON-S045-v1,contract,Supply contract - Nimbus Supply,S045,1,2025-07-01,procurement,documents/contract/DOC-CON-S045-v1.md
+DOC-CON-S046-v1,contract,Supply contract - Altair Technik,S046,1,2025-03-01,procurement,documents/contract/DOC-CON-S046-v1.md
+DOC-CON-S047-v1,contract,Supply contract - Lumen Components,S047,1,2025-04-01,procurement,documents/contract/DOC-CON-S047-v1.md
+DOC-CON-S048-v1,contract,Supply contract - Quanta Electronics,S048,1,2025-12-01,procurement,documents/contract/DOC-CON-S048-v1.md
+DOC-CON-S049-v1,contract,Supply contract - Borda Industrial,S049,1,2025-09-01,procurement,documents/contract/DOC-CON-S049-v1.md
+DOC-CON-S050-v1,contract,Supply contract - Trident Systems,S050,1,2025-10-01,procurement,documents/contract/DOC-CON-S050-v1.md
+DOC-CON-S051-v1,contract,Supply contract - Aurum Technik,S051,1,2025-01-01,procurement,documents/contract/DOC-CON-S051-v1.md
+DOC-CON-S052-v1,contract,Supply contract - Zenith Dynamics,S052,1,2025-08-01,procurement,documents/contract/DOC-CON-S052-v1.md
+DOC-CON-S053-v1,contract,Supply contract - Praxis Metals,S053,1,2025-05-01,procurement,documents/contract/DOC-CON-S053-v1.md
+DOC-CON-S054-v1,contract,Supply contract - Praxis Technik,S054,1,2025-09-01,procurement,documents/contract/DOC-CON-S054-v1.md
+DOC-CON-S055-v1,contract,Supply contract - Solis Works,S055,1,2025-04-01,procurement,documents/contract/DOC-CON-S055-v1.md
+DOC-CON-S056-v1,contract,Supply contract - Vertex Metals,S056,1,2025-10-01,procurement,documents/contract/DOC-CON-S056-v1.md
+DOC-CON-S057-v1,contract,Supply contract - Ferro Metals,S057,1,2025-04-01,procurement,documents/contract/DOC-CON-S057-v1.md
+DOC-CON-S058-v1,contract,Supply contract - Silva Supply,S058,1,2025-06-01,procurement,documents/contract/DOC-CON-S058-v1.md
+DOC-CON-S059-v1,contract,Supply contract - Ionic Industrial,S059,1,2025-10-01,procurement,documents/contract/DOC-CON-S059-v1.md
+DOC-CON-S060-v1,contract,Supply contract - Meridian Systems,S060,1,2025-10-01,procurement,documents/contract/DOC-CON-S060-v1.md
+DOC-CON-S001-v2,contract,Supply contract - Atlas Components (SUPERSEDED),S001,2,2025-01-01,procurement,documents/contract/DOC-CON-S001-v2.md
+DOC-QUA-S001-v1,qualification,ISO 9001 qualification record - Atlas Components,S001,1,2024-06-30,procurement,documents/qualification/DOC-QUA-S001-v1.md
+DOC-QUA-S002-v1,qualification,ISO 9001 qualification record - Helios Supply,S002,1,2024-03-31,procurement,documents/qualification/DOC-QUA-S002-v1.md
+DOC-QUA-S003-v1,qualification,ISO 9001 qualification record - Borealis Parts,S003,1,2023-10-01,procurement,documents/qualification/DOC-QUA-S003-v1.md
+DOC-QUA-S004-v1,qualification,ISO 9001 qualification record - Cordillera Industrial,S004,1,2024-11-30,procurement,documents/qualification/DOC-QUA-S004-v1.md
+DOC-QUA-S005-v1,qualification,ISO 9001 qualification record - Delta Micro Systems,S005,1,2024-08-31,procurement,documents/qualification/DOC-QUA-S005-v1.md
+DOC-QUA-S006-v1,qualification,ISO 9001 qualification record - Atlas Logistik GmbH,S006,1,2024-05-31,procurement,documents/qualification/DOC-QUA-S006-v1.md
+DOC-QUA-S007-v1,qualification,ISO 9001 qualification record - Orion Components,S007,1,2024-06-01,procurement,documents/qualification/DOC-QUA-S007-v1.md
+DOC-QUA-S008-v1,qualification,ISO 9001 qualification record - Cobalt Supply,S008,1,2025-05-13,procurement,documents/qualification/DOC-QUA-S008-v1.md
+DOC-QUA-S009-v1,qualification,ISO 9001 qualification record - Lumen Systems,S009,1,2023-12-10,procurement,documents/qualification/DOC-QUA-S009-v1.md
+DOC-QUA-S010-v1,qualification,ISO 9001 qualification record - Kestrel Components,S010,1,2025-03-08,procurement,documents/qualification/DOC-QUA-S010-v1.md
+DOC-QUA-S011-v1,qualification,ISO 9001 qualification record - Quanta Systems,S011,1,2024-12-07,procurement,documents/qualification/DOC-QUA-S011-v1.md
+DOC-QUA-S012-v1,qualification,ISO 9001 qualification record - Hydra Components,S012,1,2024-05-19,procurement,documents/qualification/DOC-QUA-S012-v1.md
+DOC-QUA-S013-v1,qualification,ISO 9001 qualification record - Aurum Works,S013,1,2025-07-03,procurement,documents/qualification/DOC-QUA-S013-v1.md
+DOC-QUA-S014-v1,qualification,ISO 9001 qualification record - Borda Supply,S014,1,2024-03-13,procurement,documents/qualification/DOC-QUA-S014-v1.md
+DOC-QUA-S015-v1,qualification,ISO 9001 qualification record - Hydra Works,S015,1,2025-05-01,procurement,documents/qualification/DOC-QUA-S015-v1.md
+DOC-QUA-S016-v1,qualification,ISO 9001 qualification record - Orion Supply,S016,1,2025-08-28,procurement,documents/qualification/DOC-QUA-S016-v1.md
+DOC-QUA-S017-v1,qualification,ISO 9001 qualification record - Lumen Works,S017,1,2025-06-21,procurement,documents/qualification/DOC-QUA-S017-v1.md
+DOC-QUA-S018-v1,qualification,ISO 9001 qualification record - Altair Electronics,S018,1,2024-03-21,procurement,documents/qualification/DOC-QUA-S018-v1.md
+DOC-QUA-S019-v1,qualification,ISO 9001 qualification record - Ionic Components,S019,1,2025-06-28,procurement,documents/qualification/DOC-QUA-S019-v1.md
+DOC-QUA-S020-v1,qualification,ISO 9001 qualification record - Cobalt Industrial,S020,1,2025-05-30,procurement,documents/qualification/DOC-QUA-S020-v1.md
+DOC-QUA-S021-v1,qualification,ISO 9001 qualification record - Kestrel Supply,S021,1,2025-04-27,procurement,documents/qualification/DOC-QUA-S021-v1.md
+DOC-QUA-S022-v1,qualification,ISO 9001 qualification record - Solis Electronics,S022,1,2024-05-25,procurement,documents/qualification/DOC-QUA-S022-v1.md
+DOC-QUA-S023-v1,qualification,ISO 9001 qualification record - Silva Industrial,S023,1,2023-12-13,procurement,documents/qualification/DOC-QUA-S023-v1.md
+DOC-QUA-S024-v1,qualification,ISO 9001 qualification record - Altair Metals,S024,1,2025-08-29,procurement,documents/qualification/DOC-QUA-S024-v1.md
+DOC-QUA-S025-v1,qualification,ISO 9001 qualification record - Nova Components,S025,1,2025-07-04,procurement,documents/qualification/DOC-QUA-S025-v1.md
+DOC-QUA-S026-v1,qualification,ISO 9001 qualification record - Zenith Supply,S026,1,2025-07-17,procurement,documents/qualification/DOC-QUA-S026-v1.md
+DOC-QUA-S027-v1,qualification,ISO 9001 qualification record - Meridian Dynamics,S027,1,2024-12-26,procurement,documents/qualification/DOC-QUA-S027-v1.md
+DOC-QUA-S028-v1,qualification,ISO 9001 qualification record - Vector Metals,S028,1,2023-11-15,procurement,documents/qualification/DOC-QUA-S028-v1.md
+DOC-QUA-S029-v1,qualification,ISO 9001 qualification record - Ferro Components,S029,1,2024-03-14,procurement,documents/qualification/DOC-QUA-S029-v1.md
+DOC-QUA-S030-v1,qualification,ISO 9001 qualification record - Argo Electronics,S030,1,2024-06-20,procurement,documents/qualification/DOC-QUA-S030-v1.md
+DOC-QUA-S031-v1,qualification,ISO 9001 qualification record - Trident Dynamics,S031,1,2024-09-15,procurement,documents/qualification/DOC-QUA-S031-v1.md
+DOC-QUA-S032-v1,qualification,ISO 9001 qualification record - Trident Metals,S032,1,2025-08-30,procurement,documents/qualification/DOC-QUA-S032-v1.md
+DOC-QUA-S033-v1,qualification,ISO 9001 qualification record - Meridian Industrial,S033,1,2024-04-06,procurement,documents/qualification/DOC-QUA-S033-v1.md
+DOC-QUA-S034-v1,qualification,ISO 9001 qualification record - Hydra Industrial,S034,1,2024-09-27,procurement,documents/qualification/DOC-QUA-S034-v1.md
+DOC-QUA-S035-v1,qualification,ISO 9001 qualification record - Argo Dynamics,S035,1,2025-08-15,procurement,documents/qualification/DOC-QUA-S035-v1.md
+DOC-QUA-S036-v1,qualification,ISO 9001 qualification record - Lumen Dynamics,S036,1,2025-06-06,procurement,documents/qualification/DOC-QUA-S036-v1.md
+DOC-QUA-S037-v1,qualification,ISO 9001 qualification record - Silva Dynamics,S037,1,2025-05-17,procurement,documents/qualification/DOC-QUA-S037-v1.md
+DOC-QUA-S038-v1,qualification,ISO 9001 qualification record - Nova Systems,S038,1,2025-01-20,procurement,documents/qualification/DOC-QUA-S038-v1.md
+DOC-QUA-S039-v1,qualification,ISO 9001 qualification record - Ferro Dynamics,S039,1,2025-08-21,procurement,documents/qualification/DOC-QUA-S039-v1.md
+DOC-QUA-S040-v1,qualification,ISO 9001 qualification record - Nimbus Technik,S040,1,2024-12-14,procurement,documents/qualification/DOC-QUA-S040-v1.md
+DOC-QUA-S041-v1,qualification,ISO 9001 qualification record - Kestrel Systems,S041,1,2024-04-18,procurement,documents/qualification/DOC-QUA-S041-v1.md
+DOC-QUA-S042-v1,qualification,ISO 9001 qualification record - Solis Systems,S042,1,2024-04-22,procurement,documents/qualification/DOC-QUA-S042-v1.md
+DOC-QUA-S043-v1,qualification,ISO 9001 qualification record - Kestrel Electronics,S043,1,2023-11-25,procurement,documents/qualification/DOC-QUA-S043-v1.md
+DOC-QUA-S044-v1,qualification,ISO 9001 qualification record - Orion Metals,S044,1,2024-05-23,procurement,documents/qualification/DOC-QUA-S044-v1.md
+DOC-QUA-S045-v1,qualification,ISO 9001 qualification record - Nimbus Supply,S045,1,2024-03-26,procurement,documents/qualification/DOC-QUA-S045-v1.md
+DOC-QUA-S046-v1,qualification,ISO 9001 qualification record - Altair Technik,S046,1,2024-06-18,procurement,documents/qualification/DOC-QUA-S046-v1.md
+DOC-QUA-S047-v1,qualification,ISO 9001 qualification record - Lumen Components,S047,1,2025-05-09,procurement,documents/qualification/DOC-QUA-S047-v1.md
+DOC-QUA-S048-v1,qualification,ISO 9001 qualification record - Quanta Electronics,S048,1,2024-06-21,procurement,documents/qualification/DOC-QUA-S048-v1.md
+DOC-QUA-S049-v1,qualification,ISO 9001 qualification record - Borda Industrial,S049,1,2024-09-06,procurement,documents/qualification/DOC-QUA-S049-v1.md
+DOC-QUA-S050-v1,qualification,ISO 9001 qualification record - Trident Systems,S050,1,2023-12-12,procurement,documents/qualification/DOC-QUA-S050-v1.md
+DOC-QUA-S051-v1,qualification,ISO 9001 qualification record - Aurum Technik,S051,1,2025-03-16,procurement,documents/qualification/DOC-QUA-S051-v1.md
+DOC-QUA-S052-v1,qualification,ISO 9001 qualification record - Zenith Dynamics,S052,1,2025-08-24,procurement,documents/qualification/DOC-QUA-S052-v1.md
+DOC-QUA-S053-v1,qualification,ISO 9001 qualification record - Praxis Metals,S053,1,2023-12-13,procurement,documents/qualification/DOC-QUA-S053-v1.md
+DOC-QUA-S054-v1,qualification,ISO 9001 qualification record - Praxis Technik,S054,1,2025-09-05,procurement,documents/qualification/DOC-QUA-S054-v1.md
+DOC-QUA-S055-v1,qualification,ISO 9001 qualification record - Solis Works,S055,1,2024-04-14,procurement,documents/qualification/DOC-QUA-S055-v1.md
+DOC-QUA-S056-v1,qualification,ISO 9001 qualification record - Vertex Metals,S056,1,2024-07-20,procurement,documents/qualification/DOC-QUA-S056-v1.md
+DOC-QUA-S057-v1,qualification,ISO 9001 qualification record - Ferro Metals,S057,1,2025-02-02,procurement,documents/qualification/DOC-QUA-S057-v1.md
+DOC-QUA-S058-v1,qualification,ISO 9001 qualification record - Silva Supply,S058,1,2025-01-01,procurement,documents/qualification/DOC-QUA-S058-v1.md
+DOC-QUA-S059-v1,qualification,ISO 9001 qualification record - Ionic Industrial,S059,1,2025-08-05,procurement,documents/qualification/DOC-QUA-S059-v1.md
+DOC-QUA-S060-v1,qualification,ISO 9001 qualification record - Meridian Systems,S060,1,2024-11-14,procurement,documents/qualification/DOC-QUA-S060-v1.md
+DOC-PRO-01-v1,procedure,Disruption triage and case creation,,1,2026-01-15,internal,documents/procedure/DOC-PRO-01-v1.md
+DOC-PRO-02-v1,procedure,Source precedence and conflicting information,,1,2026-01-15,internal,documents/procedure/DOC-PRO-02-v1.md
+DOC-PRO-03-v1,procedure,Spending authority and approval thresholds,,1,2026-01-15,internal,documents/procedure/DOC-PRO-03-v1.md
+DOC-PRO-04-v1,procedure,Supplier qualification requirements,,1,2026-01-15,internal,documents/procedure/DOC-PRO-04-v1.md
+DOC-PRO-05-v1,procedure,Dual-sourcing and shared upstream risk,,1,2026-01-15,internal,documents/procedure/DOC-PRO-05-v1.md
+DOC-PRO-06-v1,procedure,Inventory transfers and usable stock,,1,2026-01-15,internal,documents/procedure/DOC-PRO-06-v1.md
+DOC-PRO-07-v1,procedure,Customer prioritisation,,1,2026-01-15,internal,documents/procedure/DOC-PRO-07-v1.md
+DOC-PRO-08-v1,procedure,Expedite handling,,1,2026-01-15,internal,documents/procedure/DOC-PRO-08-v1.md
+DOC-PRO-09-v1,procedure,Incident report template,,1,2026-01-15,internal,documents/procedure/DOC-PRO-09-v1.md
+DOC-PRO-10-v1,procedure,Data handling and access scopes,,1,2026-01-15,internal,documents/procedure/DOC-PRO-10-v1.md
+DOC-PRO-11-v1,procedure,Handling untrusted content,,1,2026-01-15,internal,documents/procedure/DOC-PRO-11-v1.md
+DOC-PRO-12-v1,procedure,Revenue exposure and penalty reporting,,1,2026-01-15,internal,documents/procedure/DOC-PRO-12-v1.md
+DOC-FIN-01-v1,finance,Margin and penalty rate sheet,,1,2026-02-01,finance-confidential,documents/finance/DOC-FIN-01-v1.md
+DOC-NOT-001,supplier_notice,Supplier notice - Quanta Electronics - MC-2,S048,1,2026-06-17,procurement,documents/supplier_notice/DOC-NOT-001.md
+DOC-NOT-002,supplier_notice,Supplier notice - Borda Supply - MC-2,S014,1,2026-09-23,procurement,documents/supplier_notice/DOC-NOT-002.md
+DOC-NOT-003,supplier_notice,Supplier notice - Silva Dynamics - MC-38,S037,1,2026-04-03,procurement,documents/supplier_notice/DOC-NOT-003.md
+DOC-NOT-004,supplier_notice,Supplier notice - Orion Supply - MC-1,S016,1,2026-03-31,procurement,documents/supplier_notice/DOC-NOT-004.md
+DOC-NOT-005,supplier_notice,Supplier notice - Aurum Technik - MC-31,S051,1,2026-03-13,procurement,documents/supplier_notice/DOC-NOT-005.md
+DOC-NOT-006,supplier_notice,Supplier notice - Trident Systems - MC-44,S050,1,2026-07-03,procurement,documents/supplier_notice/DOC-NOT-006.md
+DOC-NOT-007,supplier_notice,Supplier notice - Solis Works - MC-6,S055,1,2026-06-23,procurement,documents/supplier_notice/DOC-NOT-007.md
+DOC-NOT-008,supplier_notice,Supplier notice - Nova Components - MC-22,S025,1,2025-12-01,procurement,documents/supplier_notice/DOC-NOT-008.md
+DOC-NOT-009,supplier_notice,Supplier notice - Borda Industrial - MC-19,S049,1,2026-04-25,procurement,documents/supplier_notice/DOC-NOT-009.md
+DOC-NOT-010,supplier_notice,Supplier notice - Argo Dynamics - MC-33,S035,1,2026-08-31,procurement,documents/supplier_notice/DOC-NOT-010.md
+DOC-NOT-011,supplier_notice,Supplier notice - Kestrel Supply - MC-41,S021,1,2026-09-08,procurement,documents/supplier_notice/DOC-NOT-011.md
+DOC-NOT-012,supplier_notice,Supplier notice - Quanta Systems - MC-5,S011,1,2026-05-26,procurement,documents/supplier_notice/DOC-NOT-012.md
+DOC-NOT-013,supplier_notice,Supplier notice - Quanta Systems - MC-5,S011,1,2026-06-07,procurement,documents/supplier_notice/DOC-NOT-013.md
+DOC-NOT-014,supplier_notice,Supplier notice - Aurum Technik - MC-31,S051,1,2026-06-28,procurement,documents/supplier_notice/DOC-NOT-014.md
+DOC-NOT-015,supplier_notice,Supplier notice - Altair Metals - MC-18,S024,1,2026-01-01,procurement,documents/supplier_notice/DOC-NOT-015.md
+DOC-NOT-016,supplier_notice,Supplier notice - Zenith Dynamics - MC-10,S052,1,2026-06-22,procurement,documents/supplier_notice/DOC-NOT-016.md
+DOC-NOT-017,supplier_notice,Supplier notice - Ferro Metals - MC-19,S057,1,2026-08-11,procurement,documents/supplier_notice/DOC-NOT-017.md
+DOC-NOT-018,supplier_notice,Supplier notice - Solis Systems - MC-57,S042,1,2026-02-20,procurement,documents/supplier_notice/DOC-NOT-018.md
+DOC-NOT-019,supplier_notice,Supplier notice - Zenith Supply - MC-11,S026,1,2025-11-26,procurement,documents/supplier_notice/DOC-NOT-019.md
+DOC-NOT-020,supplier_notice,Supplier notice - Quanta Systems - MC-5,S011,1,2026-04-08,procurement,documents/supplier_notice/DOC-NOT-020.md
+DOC-NOT-021,supplier_notice,Supplier notice - Ferro Components - MC-14,S029,1,2026-05-09,procurement,documents/supplier_notice/DOC-NOT-021.md
+DOC-NOT-022,supplier_notice,Supplier notice - Kestrel Components - MC-12,S010,1,2026-04-11,procurement,documents/supplier_notice/DOC-NOT-022.md
+DOC-NOT-023,supplier_notice,Supplier notice - Silva Dynamics - MC-38,S037,1,2026-04-25,procurement,documents/supplier_notice/DOC-NOT-023.md
+DOC-NOT-024,supplier_notice,Supplier notice - Kestrel Supply - MC-41,S021,1,2026-05-25,procurement,documents/supplier_notice/DOC-NOT-024.md
+DOC-NOT-025,supplier_notice,Supplier notice - Quanta Electronics - MC-2,S048,1,2026-03-31,procurement,documents/supplier_notice/DOC-NOT-025.md
+DOC-NOT-026,supplier_notice,Supplier notice - Lumen Systems - MC-5,S009,1,2026-06-21,procurement,documents/supplier_notice/DOC-NOT-026.md
+DOC-NOT-027,supplier_notice,Supplier notice - Solis Electronics - MC-27,S022,1,2026-07-05,procurement,documents/supplier_notice/DOC-NOT-027.md
+DOC-NOT-028,supplier_notice,Supplier notice - Silva Industrial - MC-11,S023,1,2026-02-15,procurement,documents/supplier_notice/DOC-NOT-028.md
+DOC-NOT-029,supplier_notice,Supplier notice - Trident Metals - MC-1,S032,1,2026-04-23,procurement,documents/supplier_notice/DOC-NOT-029.md
+DOC-NOT-030,supplier_notice,Supplier notice - Quanta Systems - MC-5,S011,1,2026-04-24,procurement,documents/supplier_notice/DOC-NOT-030.md
+DOC-NOT-031,supplier_notice,Supplier notice - Praxis Technik - MC-9,S054,1,2026-09-20,procurement,documents/supplier_notice/DOC-NOT-031.md
+DOC-NOT-032,supplier_notice,Supplier notice - Nimbus Technik - MC-1,S040,1,2026-09-26,procurement,documents/supplier_notice/DOC-NOT-032.md
+DOC-NOT-033,supplier_notice,Supplier notice - Argo Dynamics - MC-33,S035,1,2026-09-11,procurement,documents/supplier_notice/DOC-NOT-033.md
+DOC-NOT-034,supplier_notice,Supplier notice - Vertex Metals - MC-15,S056,1,2026-06-28,procurement,documents/supplier_notice/DOC-NOT-034.md
+DOC-NOT-035,supplier_notice,Supplier notice - Kestrel Systems - MC-7,S041,1,2026-10-01,procurement,documents/supplier_notice/DOC-NOT-035.md
+DOC-NOT-036,supplier_notice,Supplier notice - Kestrel Electronics - MC-15,S043,1,2026-05-03,procurement,documents/supplier_notice/DOC-NOT-036.md
+DOC-NOT-037,supplier_notice,Supplier notice - Aurum Technik - MC-31,S051,1,2026-06-02,procurement,documents/supplier_notice/DOC-NOT-037.md
+DOC-NOT-038,supplier_notice,Supplier notice - Meridian Industrial - MC-1,S033,1,2026-03-15,procurement,documents/supplier_notice/DOC-NOT-038.md
+DOC-NOT-039,supplier_notice,Supplier notice - Nimbus Technik - MC-1,S040,1,2026-02-17,procurement,documents/supplier_notice/DOC-NOT-039.md
+DOC-NOT-040,supplier_notice,Supplier notice - Nimbus Supply - MC-8,S045,1,2026-05-16,procurement,documents/supplier_notice/DOC-NOT-040.md
+DOC-NOT-ATLAS-MC17,supplier_notice,Supplier notice - Atlas Components - MC-17 delay,S001,1,2026-10-19,procurement,documents/supplier_notice/DOC-NOT-ATLAS-MC17.md
+DOC-EM-ATLAS-01,email,E-mail: Atlas account manager (conflicts with formal notice),S001,1,2026-10-19,procurement,documents/email/DOC-EM-ATLAS-01.md
+DOC-EM-HELIOS-01,email,E-mail: Helios sales - capacity for MC-17 (conflicts with contract),S002,1,2026-10-18,procurement,documents/email/DOC-EM-HELIOS-01.md
+DOC-EM-BOREALIS-01,email,E-mail: Borealis - certificate renewal,S003,1,2026-10-17,procurement,documents/email/DOC-EM-BOREALIS-01.md
+DOC-EM-CORDILLERA-01,email,E-mail: Cordillera - expedite terms (conflicts with contract),S004,1,2026-10-19,procurement,documents/email/DOC-EM-CORDILLERA-01.md
+DOC-EM-DELTA-01,email,E-mail: Delta Micro - availability,S005,1,2026-10-17,procurement,documents/email/DOC-EM-DELTA-01.md
+DOC-EM-INTERNAL-01,email,Internal e-mail: spending limit,,1,2026-10-17,internal,documents/email/DOC-EM-INTERNAL-01.md
+DOC-NOT-HELIOS-PRICE,supplier_notice,Supplier notice - Helios Supply - price update,S002,1,2026-10-18,public,documents/supplier_notice/DOC-NOT-HELIOS-PRICE.md
+DOC-INC-HC-001,incident_report,Incident report HC-001 - Borda Industrial - MC-300,S049,1,2025-09-28,internal,documents/incident_report/DOC-INC-HC-001.md
+DOC-INC-HC-002,incident_report,Incident report HC-002 - Quanta Electronics - MC-130,S048,1,2025-07-08,internal,documents/incident_report/DOC-INC-HC-002.md
+DOC-INC-HC-003,incident_report,Incident report HC-003 - Hydra Works - MC-48,S015,1,2025-09-30,internal,documents/incident_report/DOC-INC-HC-003.md
+DOC-INC-HC-004,incident_report,Incident report HC-004 - Meridian Industrial - MC-221,S033,1,2024-11-08,internal,documents/incident_report/DOC-INC-HC-004.md
+DOC-INC-HC-005,incident_report,Incident report HC-005 - Hydra Industrial - MC-137,S034,1,2024-06-12,internal,documents/incident_report/DOC-INC-HC-005.md
+DOC-INC-HC-006,incident_report,Incident report HC-006 - Nimbus Technik - MC-47,S040,1,2025-03-31,internal,documents/incident_report/DOC-INC-HC-006.md
+DOC-INC-HC-007,incident_report,Incident report HC-007 - Aurum Works - MC-203,S013,1,2026-02-28,internal,documents/incident_report/DOC-INC-HC-007.md
+DOC-INC-HC-008,incident_report,Incident report HC-008 - Lumen Components - MC-95,S047,1,2024-10-13,internal,documents/incident_report/DOC-INC-HC-008.md
+DOC-INC-HC-009,incident_report,Incident report HC-009 - Praxis Technik - MC-9,S054,1,2026-03-01,internal,documents/incident_report/DOC-INC-HC-009.md
+DOC-INC-HC-010,incident_report,Incident report HC-010 - Borda Supply - MC-109,S014,1,2025-03-25,internal,documents/incident_report/DOC-INC-HC-010.md
+DOC-INC-HC-011,incident_report,Incident report HC-011 - Solis Works - MC-112,S055,1,2024-11-30,internal,documents/incident_report/DOC-INC-HC-011.md
+DOC-INC-HC-012,incident_report,Incident report HC-012 - Hydra Works - MC-234,S015,1,2026-03-21,internal,documents/incident_report/DOC-INC-HC-012.md
+DOC-INC-HC-013,incident_report,Incident report HC-013 - Altair Metals - MC-172,S024,1,2026-07-29,internal,documents/incident_report/DOC-INC-HC-013.md
+DOC-INC-HC-014,incident_report,Incident report HC-014 - Kestrel Systems - MC-80,S041,1,2025-04-07,internal,documents/incident_report/DOC-INC-HC-014.md
+DOC-INC-HC-015,incident_report,Incident report HC-015 - Lumen Dynamics - MC-88,S036,1,2024-11-02,internal,documents/incident_report/DOC-INC-HC-015.md
+DOC-INC-HC-016,incident_report,Incident report HC-016 - Zenith Dynamics - MC-10,S052,1,2026-09-23,internal,documents/incident_report/DOC-INC-HC-016.md
+DOC-INC-HC-017,incident_report,Incident report HC-017 - Hydra Industrial - MC-137,S034,1,2026-03-01,internal,documents/incident_report/DOC-INC-HC-017.md
+DOC-INC-HC-018,incident_report,Incident report HC-018 - Solis Electronics - MC-263,S022,1,2025-10-25,internal,documents/incident_report/DOC-INC-HC-018.md
+DOC-INC-HC-019,incident_report,Incident report HC-019 - Kestrel Supply - MC-287,S021,1,2025-05-09,internal,documents/incident_report/DOC-INC-HC-019.md
+DOC-INC-HC-020,incident_report,Incident report HC-020 - Nova Components - MC-86,S025,1,2024-10-10,internal,documents/incident_report/DOC-INC-HC-020.md
+DOC-INC-HC-021,incident_report,Incident report HC-021 - Solis Electronics - MC-252,S022,1,2025-06-01,internal,documents/incident_report/DOC-INC-HC-021.md
+DOC-INC-HC-022,incident_report,Incident report HC-022 - Silva Dynamics - MC-295,S037,1,2026-08-04,internal,documents/incident_report/DOC-INC-HC-022.md
+DOC-INC-HC-023,incident_report,Incident report HC-023 - Solis Systems - MC-289,S042,1,2024-08-29,internal,documents/incident_report/DOC-INC-HC-023.md
+DOC-INC-HC-024,incident_report,Incident report HC-024 - Meridian Dynamics - MC-105,S027,1,2025-12-17,internal,documents/incident_report/DOC-INC-HC-024.md
+DOC-INC-HC-025,incident_report,Incident report HC-025 - Hydra Components - MC-16,S012,1,2026-02-01,internal,documents/incident_report/DOC-INC-HC-025.md
+DOC-INC-HC-026,incident_report,Incident report HC-026 - Meridian Dynamics - MC-43,S027,1,2024-11-25,internal,documents/incident_report/DOC-INC-HC-026.md
+DOC-INC-HC-027,incident_report,Incident report HC-027 - Trident Dynamics - MC-260,S031,1,2025-04-02,internal,documents/incident_report/DOC-INC-HC-027.md
+DOC-INC-HC-028,incident_report,Incident report HC-028 - Lumen Systems - MC-89,S009,1,2024-11-08,internal,documents/incident_report/DOC-INC-HC-028.md
+DOC-INC-HC-029,incident_report,Incident report HC-029 - Ionic Components - MC-162,S019,1,2024-11-18,internal,documents/incident_report/DOC-INC-HC-029.md
+DOC-INC-HC-030,incident_report,Incident report HC-030 - Zenith Dynamics - MC-268,S052,1,2025-12-01,internal,documents/incident_report/DOC-INC-HC-030.md

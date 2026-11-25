@@ -1,0 +1,301 @@
+case_id,date,supplier_id,component_id,disruption_type,delay_days,strategy_used,recovery_cost_eur,outcome,lesson_learned
+HC-001,2025-09-28,S049,MC-300,logistics disruption,5,A,58145.66,resolved,Stale e-mail figures misled the first estimate.
+HC-002,2025-07-08,S048,MC-130,upstream shortage,19,A,18512.0,resolved,Alternative supplier needed qualification check first.
+HC-003,2025-09-30,S015,MC-48,logistics disruption,21,E,39617.34,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-004,2024-11-08,S033,MC-221,certification lapse,17,B,27662.91,resolved,Alternative supplier needed qualification check first.
+HC-005,2024-06-12,S034,MC-137,delay,28,D,17137.33,resolved,Stale e-mail figures misled the first estimate.
+HC-006,2025-03-31,S040,MC-47,quality hold,10,E,33364.35,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-007,2026-02-28,S013,MC-203,capacity shortfall,16,B,23017.54,resolved,Expedite fee lower than expected penalty.
+HC-008,2024-10-13,S047,MC-95,upstream shortage,11,C,62770.72,partially resolved,Stale e-mail figures misled the first estimate.
+HC-009,2026-03-01,S054,MC-9,quality hold,24,E,49511.8,resolved,Shared upstream manufacturer caused second delay.
+HC-010,2025-03-25,S014,MC-109,quality hold,13,B,45402.64,partially resolved,Stale e-mail figures misled the first estimate.
+HC-011,2024-11-30,S055,MC-112,quality hold,20,C,4382.69,resolved,Stale e-mail figures misled the first estimate.
+HC-012,2026-03-21,S015,MC-234,certification lapse,15,B,11827.85,resolved,Shared upstream manufacturer caused second delay.
+HC-013,2026-07-29,S024,MC-172,quality hold,24,D,62496.38,resolved,Early transfer avoided line stop.
+HC-014,2025-04-07,S041,MC-80,upstream shortage,20,B,53531.58,resolved,Early transfer avoided line stop.
+HC-015,2024-11-02,S036,MC-88,logistics disruption,25,E,26770.63,partially resolved,Early transfer avoided line stop.
+HC-016,2026-09-23,S052,MC-10,logistics disruption,20,D,49831.1,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-017,2026-03-01,S034,MC-137,quality hold,27,D,62828.14,partially resolved,Stale e-mail figures misled the first estimate.
+HC-018,2025-10-25,S022,MC-263,capacity shortfall,30,A,57225.66,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-019,2025-05-09,S021,MC-287,quality hold,10,C,53155.48,resolved,Alternative supplier needed qualification check first.
+HC-020,2024-10-10,S025,MC-86,delay,15,C,21526.7,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-021,2025-06-01,S022,MC-252,quality hold,28,A,29296.26,resolved,Early transfer avoided line stop.
+HC-022,2026-08-04,S037,MC-295,certification lapse,5,A,49898.29,partially resolved,Shared upstream manufacturer caused second delay.
+HC-023,2024-08-29,S042,MC-289,delay,6,B,63986.58,resolved,Expedite fee lower than expected penalty.
+HC-024,2025-12-17,S027,MC-105,upstream shortage,30,A,34533.84,resolved,Alternative supplier needed qualification check first.
+HC-025,2026-02-01,S012,MC-16,upstream shortage,27,D,39244.31,resolved,Stale e-mail figures misled the first estimate.
+HC-026,2024-11-25,S027,MC-43,delay,10,A,24852.19,resolved,Early transfer avoided line stop.
+HC-027,2025-04-02,S031,MC-260,delay,4,C,6555.28,resolved,Stale e-mail figures misled the first estimate.
+HC-028,2024-11-08,S009,MC-89,logistics disruption,11,C,15988.14,resolved,Alternative supplier needed qualification check first.
+HC-029,2024-11-18,S019,MC-162,certification lapse,3,B,20228.93,resolved,Expedite fee lower than expected penalty.
+HC-030,2025-12-01,S052,MC-268,certification lapse,28,E,56193.04,resolved,Stale e-mail figures misled the first estimate.
+HC-031,2024-07-04,S017,MC-263,logistics disruption,28,C,28007.53,partially resolved,Alternative supplier needed qualification check first.
+HC-032,2026-04-15,S042,MC-113,upstream shortage,17,A,48460.46,resolved,Shared upstream manufacturer caused second delay.
+HC-033,2026-04-10,S002,MC-17,upstream shortage,10,E,22405.08,partially resolved,Early transfer avoided line stop.
+HC-034,2026-08-20,S029,MC-14,capacity shortfall,30,E,62079.44,resolved,Shared upstream manufacturer caused second delay.
+HC-035,2026-09-23,S029,MC-250,delay,26,D,41075.9,resolved,Early transfer avoided line stop.
+HC-036,2025-03-05,S008,MC-140,upstream shortage,21,E,34417.31,resolved,Expedite fee lower than expected penalty.
+HC-037,2026-07-23,S056,MC-262,quality hold,13,E,1953.92,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-038,2025-07-12,S024,MC-115,quality hold,17,C,37983.93,resolved,Alternative supplier needed qualification check first.
+HC-039,2024-06-29,S046,MC-134,quality hold,18,B,44596.11,partially resolved,Stale e-mail figures misled the first estimate.
+HC-040,2026-02-05,S037,MC-278,certification lapse,28,B,50129.97,resolved,Alternative supplier needed qualification check first.
+HC-041,2026-01-15,S026,MC-132,logistics disruption,21,A,29058.78,partially resolved,Alternative supplier needed qualification check first.
+HC-042,2026-06-22,S010,MC-279,quality hold,25,E,15599.34,resolved,Stale e-mail figures misled the first estimate.
+HC-043,2025-06-11,S041,MC-135,delay,19,E,55361.02,resolved,Stale e-mail figures misled the first estimate.
+HC-044,2025-11-07,S015,MC-191,certification lapse,29,D,35609.5,resolved,Alternative supplier needed qualification check first.
+HC-045,2026-03-02,S029,MC-212,delay,16,C,33365.9,resolved,Expedite fee lower than expected penalty.
+HC-046,2026-09-22,S019,MC-32,quality hold,17,D,59763.39,partially resolved,Alternative supplier needed qualification check first.
+HC-047,2026-02-25,S036,MC-179,delay,5,A,36111.02,partially resolved,Alternative supplier needed qualification check first.
+HC-048,2025-09-20,S057,MC-19,delay,27,A,11852.05,resolved,Early transfer avoided line stop.
+HC-049,2026-02-21,S045,MC-292,capacity shortfall,7,C,53136.11,resolved,Stale e-mail figures misled the first estimate.
+HC-050,2026-05-14,S050,MC-59,upstream shortage,14,A,5594.73,resolved,Early transfer avoided line stop.
+HC-051,2024-11-22,S001,MC-17,certification lapse,8,C,39170.05,resolved,Alternative supplier needed qualification check first.
+HC-052,2024-09-16,S018,MC-103,logistics disruption,30,E,64110.63,resolved,Expedite fee lower than expected penalty.
+HC-053,2025-10-16,S009,MC-139,quality hold,5,E,54093.3,partially resolved,Early transfer avoided line stop.
+HC-054,2026-08-25,S046,MC-96,capacity shortfall,13,D,61937.3,partially resolved,Shared upstream manufacturer caused second delay.
+HC-055,2025-12-08,S014,MC-55,certification lapse,6,C,49888.03,partially resolved,Alternative supplier needed qualification check first.
+HC-056,2024-05-10,S054,MC-220,certification lapse,15,B,809.06,resolved,Expedite fee lower than expected penalty.
+HC-057,2025-03-22,S007,MC-51,upstream shortage,12,B,41981.33,resolved,Expedite fee lower than expected penalty.
+HC-058,2024-07-31,S050,MC-174,logistics disruption,20,B,17219.03,resolved,Expedite fee lower than expected penalty.
+HC-059,2024-08-26,S022,MC-287,capacity shortfall,26,D,19421.87,resolved,Stale e-mail figures misled the first estimate.
+HC-060,2025-11-08,S031,MC-243,certification lapse,26,D,19630.24,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-061,2026-06-18,S021,MC-217,upstream shortage,13,E,35156.35,resolved,Alternative supplier needed qualification check first.
+HC-062,2025-05-11,S024,MC-172,delay,14,B,35305.58,resolved,Alternative supplier needed qualification check first.
+HC-063,2025-12-03,S057,MC-53,upstream shortage,6,E,60830.24,resolved,Shared upstream manufacturer caused second delay.
+HC-064,2026-04-19,S001,MC-17,certification lapse,14,E,5223.91,resolved,Alternative supplier needed qualification check first.
+HC-065,2025-04-20,S041,MC-106,capacity shortfall,13,A,51941.47,resolved,Shared upstream manufacturer caused second delay.
+HC-066,2024-11-17,S034,MC-166,upstream shortage,20,E,17228.67,resolved,Shared upstream manufacturer caused second delay.
+HC-067,2025-12-18,S049,MC-285,logistics disruption,29,E,13751.89,resolved,Early transfer avoided line stop.
+HC-068,2025-07-23,S018,MC-112,capacity shortfall,16,A,11906.92,resolved,Expedite fee lower than expected penalty.
+HC-069,2024-12-23,S016,MC-259,capacity shortfall,9,A,18757.83,resolved,Expedite fee lower than expected penalty.
+HC-070,2024-07-17,S007,MC-113,quality hold,21,C,9572.79,resolved,Expedite fee lower than expected penalty.
+HC-071,2025-06-20,S013,MC-92,certification lapse,26,D,64725.25,resolved,Stale e-mail figures misled the first estimate.
+HC-072,2026-08-29,S011,MC-140,logistics disruption,22,E,21169.2,resolved,Early transfer avoided line stop.
+HC-073,2025-10-13,S026,MC-132,logistics disruption,5,A,68031.95,partially resolved,Alternative supplier needed qualification check first.
+HC-074,2025-08-09,S046,MC-107,capacity shortfall,3,B,22073.96,resolved,Shared upstream manufacturer caused second delay.
+HC-075,2024-06-10,S038,MC-11,delay,11,E,3380.73,resolved,Early transfer avoided line stop.
+HC-076,2024-08-26,S033,MC-256,upstream shortage,15,D,16300.52,resolved,Early transfer avoided line stop.
+HC-077,2024-06-08,S017,MC-263,capacity shortfall,3,D,50113.72,resolved,Shared upstream manufacturer caused second delay.
+HC-078,2025-07-26,S036,MC-202,upstream shortage,7,D,17366.8,resolved,Early transfer avoided line stop.
+HC-079,2025-04-23,S027,MC-43,upstream shortage,4,B,19528.82,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-080,2025-01-26,S024,MC-39,upstream shortage,29,D,13344.93,resolved,Stale e-mail figures misled the first estimate.
+HC-081,2025-09-08,S048,MC-200,upstream shortage,19,B,45400.07,resolved,Expedite fee lower than expected penalty.
+HC-082,2025-03-09,S032,MC-40,capacity shortfall,6,A,50109.21,resolved,Expedite fee lower than expected penalty.
+HC-083,2025-04-19,S006,MC-17,capacity shortfall,25,E,44260.1,resolved,Expedite fee lower than expected penalty.
+HC-084,2024-07-13,S036,MC-23,logistics disruption,12,A,30399.75,resolved,Alternative supplier needed qualification check first.
+HC-085,2025-02-26,S020,MC-63,logistics disruption,17,D,56524.14,resolved,Alternative supplier needed qualification check first.
+HC-086,2026-01-27,S056,MC-118,capacity shortfall,24,A,68067.07,resolved,Early transfer avoided line stop.
+HC-087,2024-12-27,S040,MC-238,delay,18,C,13500.88,resolved,Stale e-mail figures misled the first estimate.
+HC-088,2026-04-22,S038,MC-242,delay,30,C,11277.35,resolved,Shared upstream manufacturer caused second delay.
+HC-089,2025-10-27,S018,MC-150,logistics disruption,20,D,63884.24,partially resolved,Expedite fee lower than expected penalty.
+HC-090,2024-12-09,S001,MC-17,delay,18,E,13751.25,resolved,Early transfer avoided line stop.
+HC-091,2025-02-06,S031,MC-125,capacity shortfall,19,A,37414.57,resolved,Expedite fee lower than expected penalty.
+HC-092,2024-07-17,S003,MC-17,quality hold,23,D,7452.59,resolved,Shared upstream manufacturer caused second delay.
+HC-093,2025-07-24,S028,MC-132,logistics disruption,27,E,38786.68,partially resolved,Alternative supplier needed qualification check first.
+HC-094,2026-03-18,S050,MC-225,delay,11,E,27755.19,resolved,Shared upstream manufacturer caused second delay.
+HC-095,2024-06-01,S015,MC-228,certification lapse,18,A,10244.21,resolved,Expedite fee lower than expected penalty.
+HC-096,2026-07-08,S043,MC-212,delay,10,A,13807.04,resolved,Alternative supplier needed qualification check first.
+HC-097,2025-03-04,S001,MC-17,delay,9,E,9833.42,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-098,2024-08-12,S004,MC-17,capacity shortfall,4,A,48657.85,partially resolved,Alternative supplier needed qualification check first.
+HC-099,2024-05-16,S012,MC-254,certification lapse,4,D,22670.36,resolved,Expedite fee lower than expected penalty.
+HC-100,2025-04-10,S030,MC-48,quality hold,14,E,23907.51,resolved,Shared upstream manufacturer caused second delay.
+HC-101,2026-05-10,S013,MC-159,upstream shortage,7,E,44806.2,partially resolved,Stale e-mail figures misled the first estimate.
+HC-102,2025-09-27,S031,MC-125,logistics disruption,23,A,49447.11,resolved,Early transfer avoided line stop.
+HC-103,2026-03-10,S042,MC-198,delay,13,C,40497.46,resolved,Early transfer avoided line stop.
+HC-104,2024-12-31,S036,MC-221,upstream shortage,16,E,21493.21,partially resolved,Alternative supplier needed qualification check first.
+HC-105,2024-08-06,S028,MC-99,certification lapse,24,A,62334.34,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-106,2025-09-11,S008,MC-214,capacity shortfall,19,B,58020.13,resolved,Stale e-mail figures misled the first estimate.
+HC-107,2025-01-27,S037,MC-232,capacity shortfall,6,E,58703.76,partially resolved,Stale e-mail figures misled the first estimate.
+HC-108,2024-10-22,S038,MC-72,capacity shortfall,16,B,3909.49,resolved,Early transfer avoided line stop.
+HC-109,2026-01-19,S045,MC-93,delay,13,B,62503.15,partially resolved,Shared upstream manufacturer caused second delay.
+HC-110,2024-09-15,S025,MC-278,capacity shortfall,7,D,30261.19,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-111,2026-08-10,S029,MC-26,delay,28,C,54352.85,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-112,2025-05-22,S011,MC-79,upstream shortage,25,C,8229.83,resolved,Early transfer avoided line stop.
+HC-113,2025-06-10,S033,MC-196,logistics disruption,30,B,46370.74,resolved,Alternative supplier needed qualification check first.
+HC-114,2026-04-18,S032,MC-19,logistics disruption,7,C,21818.81,resolved,Stale e-mail figures misled the first estimate.
+HC-115,2025-01-22,S053,MC-221,delay,3,D,50859.61,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-116,2025-11-17,S057,MC-19,capacity shortfall,5,B,49507.37,resolved,Shared upstream manufacturer caused second delay.
+HC-117,2025-03-20,S043,MC-76,quality hold,17,C,52285.87,resolved,Alternative supplier needed qualification check first.
+HC-118,2025-03-13,S002,MC-17,certification lapse,12,E,56790.61,resolved,Expedite fee lower than expected penalty.
+HC-119,2024-07-30,S021,MC-74,logistics disruption,7,E,12184.82,resolved,Alternative supplier needed qualification check first.
+HC-120,2024-12-06,S033,MC-269,certification lapse,9,D,20745.42,resolved,Early transfer avoided line stop.
+HC-121,2026-01-23,S026,MC-30,delay,18,B,8341.18,resolved,Alternative supplier needed qualification check first.
+HC-122,2025-04-18,S018,MC-21,upstream shortage,19,D,67403.09,partially resolved,Alternative supplier needed qualification check first.
+HC-123,2025-03-27,S023,MC-297,certification lapse,6,A,25550.54,partially resolved,Early transfer avoided line stop.
+HC-124,2025-06-25,S040,MC-227,capacity shortfall,16,E,48459.62,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-125,2024-06-25,S023,MC-297,capacity shortfall,5,C,11369.97,resolved,Shared upstream manufacturer caused second delay.
+HC-126,2025-07-29,S012,MC-44,quality hold,3,A,29356.09,resolved,Shared upstream manufacturer caused second delay.
+HC-127,2024-09-20,S012,MC-254,quality hold,3,A,46414.06,resolved,Alternative supplier needed qualification check first.
+HC-128,2025-04-30,S022,MC-170,certification lapse,8,E,41048.81,resolved,Shared upstream manufacturer caused second delay.
+HC-129,2025-04-13,S029,MC-149,certification lapse,20,D,42778.31,resolved,Alternative supplier needed qualification check first.
+HC-130,2025-07-10,S009,MC-110,delay,15,A,22711.08,resolved,Early transfer avoided line stop.
+HC-131,2026-01-05,S057,MC-256,capacity shortfall,3,C,39564.77,partially resolved,Expedite fee lower than expected penalty.
+HC-132,2026-06-17,S051,MC-31,logistics disruption,25,E,57005.22,resolved,Early transfer avoided line stop.
+HC-133,2026-06-23,S009,MC-236,upstream shortage,18,B,1038.88,resolved,Early transfer avoided line stop.
+HC-134,2025-07-20,S010,MC-249,logistics disruption,21,E,44565.15,resolved,Stale e-mail figures misled the first estimate.
+HC-135,2025-11-16,S001,MC-17,upstream shortage,24,C,25585.11,resolved,Shared upstream manufacturer caused second delay.
+HC-136,2026-09-14,S013,MC-71,logistics disruption,28,B,35322.1,partially resolved,Stale e-mail figures misled the first estimate.
+HC-137,2025-05-06,S020,MC-18,capacity shortfall,15,E,50271.18,resolved,Shared upstream manufacturer caused second delay.
+HC-138,2025-12-06,S024,MC-231,capacity shortfall,3,D,14250.74,resolved,Shared upstream manufacturer caused second delay.
+HC-139,2025-10-06,S039,MC-297,delay,13,B,55098.27,partially resolved,Alternative supplier needed qualification check first.
+HC-140,2025-12-15,S029,MC-149,quality hold,24,A,50528.92,resolved,Shared upstream manufacturer caused second delay.
+HC-141,2024-09-01,S004,MC-17,delay,13,D,40651.2,resolved,Stale e-mail figures misled the first estimate.
+HC-142,2024-12-03,S033,MC-196,delay,20,C,20261.12,resolved,Expedite fee lower than expected penalty.
+HC-143,2024-12-27,S043,MC-42,delay,11,A,63178.61,resolved,Shared upstream manufacturer caused second delay.
+HC-144,2026-08-22,S052,MC-206,upstream shortage,5,C,37664.65,resolved,Early transfer avoided line stop.
+HC-145,2026-08-17,S026,MC-149,logistics disruption,20,D,36090.15,resolved,Alternative supplier needed qualification check first.
+HC-146,2024-05-18,S025,MC-76,capacity shortfall,11,A,65252.4,resolved,Expedite fee lower than expected penalty.
+HC-147,2026-03-28,S008,MC-54,capacity shortfall,22,B,66521.81,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-148,2025-11-26,S031,MC-282,logistics disruption,23,C,52750.8,resolved,Stale e-mail figures misled the first estimate.
+HC-149,2025-08-23,S031,MC-75,upstream shortage,16,A,52048.27,resolved,Expedite fee lower than expected penalty.
+HC-150,2025-04-11,S008,MC-243,capacity shortfall,17,C,51467.54,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-151,2025-08-05,S026,MC-11,upstream shortage,19,E,28638.78,resolved,Early transfer avoided line stop.
+HC-152,2024-12-28,S018,MC-258,certification lapse,24,E,24286.15,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-153,2026-04-03,S022,MC-27,delay,17,B,41107.38,resolved,Expedite fee lower than expected penalty.
+HC-154,2025-09-18,S006,MC-17,upstream shortage,16,D,50863.39,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-155,2024-08-16,S015,MC-228,capacity shortfall,26,B,39416.91,resolved,Early transfer avoided line stop.
+HC-156,2026-05-24,S037,MC-45,logistics disruption,4,B,54798.97,resolved,Stale e-mail figures misled the first estimate.
+HC-157,2025-09-20,S015,MC-181,delay,6,C,40219.81,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-158,2026-08-25,S013,MC-73,delay,16,E,49754.54,resolved,Alternative supplier needed qualification check first.
+HC-159,2025-08-03,S025,MC-266,capacity shortfall,25,C,56948.83,resolved,Alternative supplier needed qualification check first.
+HC-160,2025-08-11,S036,MC-152,certification lapse,5,B,48184.76,resolved,Expedite fee lower than expected penalty.
+HC-161,2025-03-20,S001,MC-17,quality hold,21,B,35230.74,partially resolved,Alternative supplier needed qualification check first.
+HC-162,2024-09-29,S050,MC-155,certification lapse,11,C,62321.05,resolved,Shared upstream manufacturer caused second delay.
+HC-163,2025-04-17,S044,MC-299,certification lapse,17,E,29861.64,resolved,Alternative supplier needed qualification check first.
+HC-164,2024-07-10,S025,MC-22,logistics disruption,5,B,37317.8,resolved,Expedite fee lower than expected penalty.
+HC-165,2026-07-25,S040,MC-227,certification lapse,5,E,13038.25,resolved,Shared upstream manufacturer caused second delay.
+HC-166,2026-06-24,S037,MC-39,logistics disruption,30,B,49270.69,resolved,Stale e-mail figures misled the first estimate.
+HC-167,2025-02-11,S008,MC-247,delay,11,B,64686.38,resolved,Early transfer avoided line stop.
+HC-168,2026-08-04,S004,MC-17,upstream shortage,24,A,57240.68,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-169,2026-03-27,S025,MC-89,capacity shortfall,21,E,65061.76,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-170,2025-02-09,S052,MC-206,upstream shortage,13,A,25376.45,resolved,Early transfer avoided line stop.
+HC-171,2026-08-01,S046,MC-106,delay,7,A,59334.21,resolved,Stale e-mail figures misled the first estimate.
+HC-172,2024-07-05,S029,MC-246,delay,7,A,30113.76,resolved,Shared upstream manufacturer caused second delay.
+HC-173,2025-07-16,S023,MC-135,logistics disruption,19,E,38322.34,resolved,Expedite fee lower than expected penalty.
+HC-174,2025-10-29,S022,MC-186,quality hold,3,C,22405.0,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-175,2026-08-27,S053,MC-253,logistics disruption,26,B,39025.57,resolved,Expedite fee lower than expected penalty.
+HC-176,2025-04-25,S010,MC-247,logistics disruption,12,A,14528.37,resolved,Expedite fee lower than expected penalty.
+HC-177,2024-05-17,S044,MC-255,upstream shortage,7,A,1436.87,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-178,2024-12-01,S056,MC-295,logistics disruption,23,D,12472.61,resolved,Stale e-mail figures misled the first estimate.
+HC-179,2025-05-21,S052,MC-74,upstream shortage,8,E,21951.75,resolved,Early transfer avoided line stop.
+HC-180,2025-12-26,S044,MC-80,quality hold,9,B,68192.95,partially resolved,Alternative supplier needed qualification check first.
+HC-181,2025-07-16,S027,MC-86,capacity shortfall,9,C,23706.97,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-182,2025-01-19,S006,MC-17,certification lapse,10,C,54603.49,partially resolved,Expedite fee lower than expected penalty.
+HC-183,2026-06-01,S007,MC-209,capacity shortfall,11,E,2672.7,resolved,Alternative supplier needed qualification check first.
+HC-184,2024-07-24,S016,MC-112,logistics disruption,18,B,45933.21,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-185,2024-05-03,S048,MC-82,quality hold,16,C,5234.05,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-186,2025-04-20,S045,MC-136,capacity shortfall,29,C,34089.85,resolved,Alternative supplier needed qualification check first.
+HC-187,2024-07-25,S003,MC-17,capacity shortfall,8,D,65991.45,resolved,Shared upstream manufacturer caused second delay.
+HC-188,2025-06-02,S015,MC-234,upstream shortage,10,D,34088.15,resolved,Stale e-mail figures misled the first estimate.
+HC-189,2024-11-13,S038,MC-154,quality hold,22,D,68965.4,resolved,Early transfer avoided line stop.
+HC-190,2025-04-16,S033,MC-1,quality hold,10,D,17264.35,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-191,2026-06-25,S003,MC-17,quality hold,10,B,7188.99,resolved,Alternative supplier needed qualification check first.
+HC-192,2024-10-09,S031,MC-87,upstream shortage,4,B,59124.11,resolved,Alternative supplier needed qualification check first.
+HC-193,2026-09-08,S010,MC-45,certification lapse,13,D,30251.33,partially resolved,Shared upstream manufacturer caused second delay.
+HC-194,2025-12-19,S050,MC-297,capacity shortfall,3,D,64935.73,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-195,2026-01-19,S042,MC-73,logistics disruption,15,E,53306.15,resolved,Early transfer avoided line stop.
+HC-196,2025-07-14,S009,MC-228,upstream shortage,28,A,69441.15,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-197,2025-04-04,S050,MC-134,logistics disruption,11,E,6129.26,resolved,Shared upstream manufacturer caused second delay.
+HC-198,2025-07-31,S054,MC-31,logistics disruption,12,B,65326.69,resolved,Alternative supplier needed qualification check first.
+HC-199,2024-11-27,S016,MC-48,logistics disruption,13,B,43394.48,resolved,Shared upstream manufacturer caused second delay.
+HC-200,2025-07-22,S042,MC-57,delay,17,D,24307.62,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-201,2025-05-14,S016,MC-3,logistics disruption,11,D,6303.17,resolved,Expedite fee lower than expected penalty.
+HC-202,2026-06-03,S003,MC-17,capacity shortfall,15,D,25495.15,resolved,Alternative supplier needed qualification check first.
+HC-203,2025-08-27,S051,MC-211,delay,23,D,24615.71,resolved,Alternative supplier needed qualification check first.
+HC-204,2026-01-06,S048,MC-8,delay,16,A,63146.87,partially resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-205,2024-08-09,S013,MC-71,upstream shortage,22,A,22982.81,resolved,Alternative supplier needed qualification check first.
+HC-206,2024-06-30,S015,MC-191,upstream shortage,12,C,61822.74,resolved,Early transfer avoided line stop.
+HC-207,2025-08-14,S030,MC-59,upstream shortage,4,E,11924.18,resolved,Early transfer avoided line stop.
+HC-208,2024-11-28,S053,MC-190,upstream shortage,8,C,62063.83,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-209,2024-07-06,S024,MC-107,capacity shortfall,12,D,32900.32,resolved,Early transfer avoided line stop.
+HC-210,2025-10-01,S056,MC-262,upstream shortage,17,A,24355.65,resolved,Expedite fee lower than expected penalty.
+HC-211,2025-10-17,S028,MC-299,delay,23,B,15221.21,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-212,2024-08-22,S018,MC-258,capacity shortfall,20,C,3307.79,resolved,Shared upstream manufacturer caused second delay.
+HC-213,2025-01-24,S036,MC-179,certification lapse,16,D,41101.08,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-214,2026-07-20,S005,MC-17,certification lapse,23,B,6836.72,resolved,Alternative supplier needed qualification check first.
+HC-215,2025-12-09,S016,MC-145,quality hold,19,A,60903.77,resolved,Early transfer avoided line stop.
+HC-216,2025-07-05,S023,MC-297,logistics disruption,14,A,62947.49,resolved,Early transfer avoided line stop.
+HC-217,2025-11-01,S014,MC-278,certification lapse,20,A,16071.36,resolved,Stale e-mail figures misled the first estimate.
+HC-218,2024-08-26,S042,MC-84,capacity shortfall,3,D,16685.31,partially resolved,Alternative supplier needed qualification check first.
+HC-219,2025-05-09,S057,MC-236,upstream shortage,7,D,24722.8,resolved,Expedite fee lower than expected penalty.
+HC-220,2025-01-26,S042,MC-113,certification lapse,24,C,67939.33,resolved,Expedite fee lower than expected penalty.
+HC-221,2025-06-12,S010,MC-217,logistics disruption,5,D,64827.55,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-222,2026-06-03,S046,MC-124,quality hold,15,E,29114.32,partially resolved,Early transfer avoided line stop.
+HC-223,2024-07-25,S007,MC-197,quality hold,12,D,15157.77,resolved,Expedite fee lower than expected penalty.
+HC-224,2026-02-08,S033,MC-269,delay,22,C,35147.7,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-225,2026-08-30,S040,MC-1,logistics disruption,10,C,7924.98,resolved,Alternative supplier needed qualification check first.
+HC-226,2026-09-01,S029,MC-207,capacity shortfall,13,D,20926.31,resolved,Early transfer avoided line stop.
+HC-227,2026-03-12,S021,MC-287,capacity shortfall,8,D,22934.96,resolved,Alternative supplier needed qualification check first.
+HC-228,2024-05-22,S042,MC-161,certification lapse,6,C,23070.24,resolved,Shared upstream manufacturer caused second delay.
+HC-229,2025-05-05,S001,MC-17,upstream shortage,17,A,26256.25,resolved,Shared upstream manufacturer caused second delay.
+HC-230,2025-02-09,S024,MC-213,capacity shortfall,20,E,65751.73,partially resolved,Alternative supplier needed qualification check first.
+HC-231,2026-07-10,S037,MC-38,upstream shortage,27,A,45002.52,resolved,Shared upstream manufacturer caused second delay.
+HC-232,2025-02-26,S006,MC-17,delay,19,E,21830.79,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-233,2025-12-21,S052,MC-10,upstream shortage,9,C,36174.94,resolved,Shared upstream manufacturer caused second delay.
+HC-234,2026-04-25,S026,MC-280,capacity shortfall,23,B,68325.35,resolved,Shared upstream manufacturer caused second delay.
+HC-235,2025-09-29,S057,MC-177,capacity shortfall,12,B,4284.75,resolved,Alternative supplier needed qualification check first.
+HC-236,2025-03-29,S030,MC-237,delay,24,E,25595.46,resolved,Shared upstream manufacturer caused second delay.
+HC-237,2025-05-09,S032,MC-207,quality hold,30,A,52735.42,resolved,Alternative supplier needed qualification check first.
+HC-238,2025-07-22,S013,MC-174,quality hold,13,E,35317.45,resolved,Stale e-mail figures misled the first estimate.
+HC-239,2026-06-14,S003,MC-17,quality hold,10,C,58675.26,partially resolved,Early transfer avoided line stop.
+HC-240,2026-09-03,S043,MC-76,certification lapse,18,D,68928.7,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-241,2025-09-17,S023,MC-173,delay,15,D,69945.4,partially resolved,Shared upstream manufacturer caused second delay.
+HC-242,2026-05-18,S053,MC-221,capacity shortfall,15,E,12898.28,resolved,Stale e-mail figures misled the first estimate.
+HC-243,2024-09-25,S031,MC-163,quality hold,10,C,42326.35,partially resolved,Alternative supplier needed qualification check first.
+HC-244,2026-08-30,S037,MC-106,quality hold,22,B,45036.58,resolved,Stale e-mail figures misled the first estimate.
+HC-245,2025-05-05,S033,MC-196,capacity shortfall,15,B,63630.65,partially resolved,Expedite fee lower than expected penalty.
+HC-246,2026-07-11,S024,MC-52,capacity shortfall,15,B,24938.4,resolved,Alternative supplier needed qualification check first.
+HC-247,2025-12-19,S017,MC-135,quality hold,8,C,49613.35,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-248,2026-09-29,S037,MC-54,delay,15,D,58102.35,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-249,2025-12-18,S002,MC-17,certification lapse,22,D,36756.12,resolved,Shared upstream manufacturer caused second delay.
+HC-250,2026-07-18,S050,MC-213,delay,18,B,2204.04,resolved,Shared upstream manufacturer caused second delay.
+HC-251,2024-11-06,S054,MC-9,delay,27,E,15417.78,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-252,2025-12-22,S009,MC-87,logistics disruption,14,D,52912.14,resolved,Stale e-mail figures misled the first estimate.
+HC-253,2025-10-16,S002,MC-17,quality hold,19,B,14946.63,resolved,Stale e-mail figures misled the first estimate.
+HC-254,2025-06-27,S049,MC-75,quality hold,30,D,53593.01,resolved,Early transfer avoided line stop.
+HC-255,2024-12-31,S018,MC-158,quality hold,16,D,10340.59,resolved,Alternative supplier needed qualification check first.
+HC-256,2024-05-29,S057,MC-256,certification lapse,19,B,42204.71,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-257,2025-06-17,S017,MC-6,delay,24,A,9277.42,resolved,Early transfer avoided line stop.
+HC-258,2025-07-16,S010,MC-12,quality hold,25,A,59134.23,resolved,Early transfer avoided line stop.
+HC-259,2024-06-22,S017,MC-253,logistics disruption,26,A,40929.5,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-260,2026-06-04,S012,MC-103,certification lapse,5,D,64715.83,resolved,Expedite fee lower than expected penalty.
+HC-261,2025-05-25,S009,MC-228,upstream shortage,22,E,63690.2,resolved,Early transfer avoided line stop.
+HC-262,2026-03-18,S047,MC-148,delay,20,C,67988.28,resolved,Shared upstream manufacturer caused second delay.
+HC-263,2026-06-16,S003,MC-17,delay,30,E,42306.99,partially resolved,Shared upstream manufacturer caused second delay.
+HC-264,2025-10-07,S006,MC-17,capacity shortfall,22,B,63117.65,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-265,2026-04-18,S047,MC-3,quality hold,5,C,31877.89,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-266,2024-07-14,S038,MC-88,capacity shortfall,16,D,58039.22,partially resolved,Alternative supplier needed qualification check first.
+HC-267,2024-09-01,S053,MC-81,quality hold,6,A,36606.55,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-268,2026-07-25,S054,MC-26,quality hold,11,C,29864.88,resolved,Expedite fee lower than expected penalty.
+HC-269,2025-03-25,S030,MC-223,upstream shortage,20,D,67624.46,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-270,2024-05-16,S047,MC-95,delay,29,A,5859.76,resolved,Early transfer avoided line stop.
+HC-271,2024-12-13,S015,MC-191,logistics disruption,16,A,53333.9,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-272,2026-08-02,S002,MC-17,quality hold,21,D,34222.28,resolved,Early transfer avoided line stop.
+HC-273,2025-06-09,S037,MC-259,upstream shortage,22,D,53870.47,resolved,Expedite fee lower than expected penalty.
+HC-274,2025-11-25,S040,MC-111,delay,25,E,20758.05,resolved,Shared upstream manufacturer caused second delay.
+HC-275,2025-06-11,S015,MC-138,capacity shortfall,3,C,22913.67,resolved,Expedite fee lower than expected penalty.
+HC-276,2024-05-04,S020,MC-255,certification lapse,9,D,18021.89,resolved,Early transfer avoided line stop.
+HC-277,2024-09-13,S056,MC-94,quality hold,15,C,49904.22,resolved,Alternative supplier needed qualification check first.
+HC-278,2024-09-20,S020,MC-63,quality hold,11,B,52980.03,resolved,Stale e-mail figures misled the first estimate.
+HC-279,2025-06-06,S031,MC-125,quality hold,9,A,43923.59,resolved,Expedite fee lower than expected penalty.
+HC-280,2026-06-07,S011,MC-27,logistics disruption,5,A,34198.29,resolved,Expedite fee lower than expected penalty.
+HC-281,2024-11-21,S042,MC-198,logistics disruption,11,A,39616.29,resolved,Expedite fee lower than expected penalty.
+HC-282,2025-01-06,S025,MC-125,upstream shortage,24,E,62605.71,resolved,Expedite fee lower than expected penalty.
+HC-283,2025-12-10,S044,MC-224,quality hold,27,A,32301.67,partially resolved,Stale e-mail figures misled the first estimate.
+HC-284,2026-07-05,S032,MC-267,upstream shortage,8,C,21553.74,partially resolved,Expedite fee lower than expected penalty.
+HC-285,2025-10-27,S050,MC-134,logistics disruption,4,E,22963.56,resolved,Early transfer avoided line stop.
+HC-286,2024-11-19,S013,MC-174,capacity shortfall,26,B,36485.14,resolved,Shared upstream manufacturer caused second delay.
+HC-287,2026-01-03,S050,MC-44,quality hold,29,D,22975.11,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-288,2025-01-17,S037,MC-38,upstream shortage,10,C,13898.41,resolved,Expedite fee lower than expected penalty.
+HC-289,2026-04-01,S018,MC-273,quality hold,20,C,25922.51,resolved,Reserved stock had to be reallocated for tier-1 order.
+HC-290,2024-09-03,S026,MC-124,delay,22,A,27703.62,resolved,Shared upstream manufacturer caused second delay.
+HC-291,2025-10-08,S033,MC-29,logistics disruption,18,E,6206.6,resolved,Early transfer avoided line stop.
+HC-292,2025-07-08,S035,MC-206,quality hold,26,A,63750.06,partially resolved,Alternative supplier needed qualification check first.
+HC-293,2026-06-22,S031,MC-163,logistics disruption,19,B,49144.27,resolved,Stale e-mail figures misled the first estimate.
+HC-294,2025-05-17,S038,MC-41,delay,25,D,9565.78,resolved,Expedite fee lower than expected penalty.
+HC-295,2025-11-09,S057,MC-204,delay,8,D,19015.34,resolved,Expedite fee lower than expected penalty.
+HC-296,2025-03-10,S036,MC-165,certification lapse,28,E,18933.14,resolved,Alternative supplier needed qualification check first.
+HC-297,2026-06-16,S007,MC-257,logistics disruption,29,E,41601.78,resolved,Shared upstream manufacturer caused second delay.
+HC-298,2026-07-29,S045,MC-139,logistics disruption,9,D,27298.97,resolved,Alternative supplier needed qualification check first.
+HC-299,2025-07-06,S033,MC-191,capacity shortfall,24,B,61383.55,resolved,Alternative supplier needed qualification check first.
+HC-300,2025-06-15,S004,MC-17,capacity shortfall,24,A,15797.6,resolved,Early transfer avoided line stop.

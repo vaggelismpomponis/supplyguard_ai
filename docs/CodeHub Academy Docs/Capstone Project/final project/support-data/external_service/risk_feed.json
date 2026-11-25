@@ -1,0 +1,35 @@
+{
+  "generated": "2026-10-19",
+  "alerts": [
+    {
+      "region": "TW",
+      "topic": "wafer supply",
+      "severity": "high",
+      "text": "Wafer fab maintenance extends lead times for Veltro Semiconductor customers by 2-3 weeks."
+    },
+    {
+      "region": "RO",
+      "topic": "road freight",
+      "severity": "medium",
+      "text": "Border queues add 2-3 days for road freight from Cluj."
+    },
+    {
+      "region": "CZ",
+      "topic": "none",
+      "severity": "low",
+      "text": "No known disruption."
+    },
+    {
+      "region": "SE",
+      "topic": "port strike",
+      "severity": "medium",
+      "text": "Gothenburg port strike announced for next week."
+    },
+    {
+      "region": "NL",
+      "topic": "none",
+      "severity": "low",
+      "text": "Normal operations."
+    }
+  ]
+}

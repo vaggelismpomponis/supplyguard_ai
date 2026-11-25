@@ -1,0 +1,6 @@
+user_id,name,role,document_scopes,factory_access
+u-pm-01,Maria Keller,procurement_manager,public;internal;procurement,F1;F2;F3
+u-an-01,Jon Weber,operations_analyst,public;internal;procurement,F1
+u-ic-01,Ines Duarte,incident_coordinator,public;internal;procurement,F2;F3
+u-fc-01,Paul Novak,finance_controller,public;internal;procurement;finance-confidential,F1;F2;F3
+u-ro-01,Read Only Guest,viewer,public,
