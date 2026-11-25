@@ -20,7 +20,9 @@ def test_every_demo_step_passes(monkeypatch, capsys):
 
 
 def test_demo_messages_match_the_script():
-    script = (demo_check.__file__.rsplit("/eval/", 1)[0] + "/docs/DEMO_SCRIPT.md")
-    text = open(script, encoding="utf-8").read()
+    from pathlib import Path
+
+    script = Path(demo_check.__file__).resolve().parents[1] / "docs" / "DEMO_SCRIPT.md"
+    text = script.read_text(encoding="utf-8")
     for step in demo_check.DEMO_STEPS:
         assert step.message in text, f"{step.segment}: message not in DEMO_SCRIPT.md"
