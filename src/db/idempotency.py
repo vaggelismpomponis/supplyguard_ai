@@ -187,21 +187,26 @@ def execute_idempotent(
                 return True, result
 
 
+def _ensure_thread_states_table(cur: Any) -> None:
+    """Ensure the durable thread_states table exists on older unmigrated Postgres volumes."""
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS thread_states (
+            thread_id TEXT PRIMARY KEY,
+            case_state JSONB NOT NULL,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+    )
+
+
 def save_thread_state(thread_id: str, case_state: Dict[str, Any]) -> None:
     """Persist serialized thread state to PostgreSQL for container-restart durability."""
     payload_json = json.dumps(case_state, default=str)
     with get_pooled_connection() as conn:
         with conn.transaction():
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS thread_states (
-                        thread_id TEXT PRIMARY KEY,
-                        case_state JSONB NOT NULL,
-                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                    );
-                    """
-                )
+                _ensure_thread_states_table(cur)
                 cur.execute(
                     """
                     INSERT INTO thread_states (thread_id, case_state, updated_at)
@@ -218,35 +223,39 @@ def save_thread_state(thread_id: str, case_state: Dict[str, Any]) -> None:
 def load_thread_state(thread_id: str) -> Optional[Dict[str, Any]]:
     """Load persisted thread state from PostgreSQL."""
     with get_pooled_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT case_state
-                FROM thread_states
-                WHERE thread_id = %s;
-                """,
-                (thread_id,),
-            )
-            row = cur.fetchone()
-            if not row:
-                return None
-            return row[0] if isinstance(row[0], dict) else json.loads(row[0])
+        with conn.transaction():
+            with conn.cursor() as cur:
+                _ensure_thread_states_table(cur)
+                cur.execute(
+                    """
+                    SELECT case_state
+                    FROM thread_states
+                    WHERE thread_id = %s;
+                    """,
+                    (thread_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return row[0] if isinstance(row[0], dict) else json.loads(row[0])
 
 
 def load_latest_thread_state() -> Optional[Tuple[str, Dict[str, Any]]]:
     """Load the most recently updated SupplyGuard thread state from PostgreSQL."""
     with get_pooled_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT thread_id, case_state
-                FROM thread_states
-                ORDER BY updated_at DESC
-                LIMIT 1;
-                """
-            )
-            row = cur.fetchone()
-            if not row:
-                return None
-            raw = row[1] if isinstance(row[1], dict) else json.loads(row[1])
-            return str(row[0]), raw
+        with conn.transaction():
+            with conn.cursor() as cur:
+                _ensure_thread_states_table(cur)
+                cur.execute(
+                    """
+                    SELECT thread_id, case_state
+                    FROM thread_states
+                    ORDER BY updated_at DESC
+                    LIMIT 1;
+                    """
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                raw = row[1] if isinstance(row[1], dict) else json.loads(row[1])
+                return str(row[0]), raw

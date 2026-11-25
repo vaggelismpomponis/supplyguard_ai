@@ -130,6 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_incident_memories_embedding ON incident_memories 
 CREATE INDEX IF NOT EXISTS idx_incident_memories_filters ON incident_memories(component_type, severity);
 
 -- 6. SupplyGuard purchase_orders idempotency tracking
-ALTER TABLE IF EXISTS purchase_orders ADD COLUMN IF NOT EXISTS action_id VARCHAR(64);
+ALTER TABLE IF EXISTS purchase_orders ADD COLUMN IF NOT EXISTS action_id VARCHAR(64) UNIQUE;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_orders_action_id_unique ON purchase_orders(action_id);
 
 COMMIT;
