@@ -70,12 +70,83 @@ def _deterministic_po_id(action_id: str) -> str:
     return f"PO-SUP-2026-{digest}"
 
 
+def _op_action_id(op_key: str) -> str:
+    """Derive a deterministic <=64-char audit_log action_id for complementary MCP ops."""
+    digest = hashlib.sha256(op_key.encode("utf-8")).hexdigest()[:24]
+    return f"op-{digest}"
+
+
 class SimulatedProcurementSystem:
     """Simulated ERP procurement engine with strict DB-backed idempotency."""
 
     def __init__(self) -> None:
         self._executed_orders: Dict[str, PurchaseOrderReceipt] = {}
         self._executed_ops: Dict[str, Dict[str, Any]] = {}
+
+    def _load_persisted_op(self, op_key: str) -> Optional[Dict[str, Any]]:
+        """Restore a previously executed complementary MCP operation from PostgreSQL audit_log."""
+        try:
+            from src.db.connection import is_postgres_available
+
+            if not is_postgres_available():
+                return None
+            from src.db.idempotency import get_action_record
+
+            rec = get_action_record(_op_action_id(op_key))
+            if rec and rec.get("status") == "executed":
+                params = rec.get("parameters") or {}
+                if isinstance(params, str):
+                    params = json.loads(params)
+                receipt = params.get("receipt") if isinstance(params, dict) else None
+                if isinstance(receipt, dict):
+                    self._executed_ops[op_key] = receipt
+                    return receipt
+        except Exception:
+            pass
+        return None
+
+    def _persist_op(
+        self,
+        op_key: str,
+        *,
+        action_type: str,
+        thread_id: Optional[str],
+        component_id: Optional[str],
+        result: Dict[str, Any],
+        rationale: str,
+    ) -> None:
+        """Persist a complementary MCP write operation to PostgreSQL audit_log."""
+        try:
+            from src.db.connection import get_pooled_connection, is_postgres_available
+
+            if not is_postgres_available():
+                return
+            op_id = _op_action_id(op_key)
+            with get_pooled_connection() as conn:
+                with conn.transaction():
+                    with conn.cursor() as cur:
+                        cur.execute("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor VARCHAR(128);")
+                        cur.execute("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS component_id VARCHAR(64);")
+                        cur.execute(
+                            """
+                            INSERT INTO audit_log (
+                                action_id, thread_id, action_type, component_id, status,
+                                parameters, rationale, executed_at
+                            )
+                            VALUES (%s, %s, %s, %s, 'executed', %s::jsonb, %s, CURRENT_TIMESTAMP)
+                            ON CONFLICT (action_id) DO NOTHING;
+                            """,
+                            (
+                                op_id,
+                                thread_id or f"thread-{op_id[:12]}",
+                                action_type,
+                                component_id,
+                                json.dumps({"op_key": op_key, "receipt": result}, default=str),
+                                rationale,
+                            ),
+                        )
+        except Exception:
+            pass
 
     def create_purchase_order(
         self,
@@ -150,7 +221,13 @@ class SimulatedProcurementSystem:
                 with get_pooled_connection() as conn:
                     with conn.transaction():
                         with conn.cursor() as cur:
-                            cur.execute("ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS action_id VARCHAR(64);")
+                            cur.execute(
+                                "ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS action_id VARCHAR(64) UNIQUE;"
+                            )
+                            cur.execute(
+                                "CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_orders_action_id_unique "
+                                "ON purchase_orders(action_id);"
+                            )
                             cur.execute(
                                 "SELECT status FROM audit_log WHERE action_id = %s;",
                                 (action_id,),
@@ -185,7 +262,7 @@ class SimulatedProcurementSystem:
                                     order_date, promised_date, status, action_id
                                 )
                                 VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, %s, 'confirmed', %s)
-                                ON CONFLICT (po_id) DO NOTHING;
+                                ON CONFLICT DO NOTHING;
                                 """,
                                 (
                                     order_id,
@@ -210,24 +287,61 @@ class SimulatedProcurementSystem:
         fee_pct: float = 6.0,
         thread_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Idempotently expedite an existing open purchase order."""
+        """Idempotently expedite an existing open purchase order (persisted in Postgres)."""
         op_key = f"{action_id}:expedite:{po_id}"
         if op_key in self._executed_ops:
             return {**self._executed_ops[op_key], "idempotent_replay": True}
+        persisted = self._load_persisted_op(op_key)
+        if persisted is not None:
+            return {**persisted, "idempotent_replay": True}
 
-        expedite_allowed = True
-        po_qty = 1500
-        unit_price = 9.80
-        po_csv = REPO_ROOT / "src" / "support-data" / "structured" / "purchase_orders.csv"
-        if po_csv.exists():
-            with po_csv.open("r", encoding="utf-8") as fh:
-                for row in csv.DictReader(fh):
-                    if row.get("po_id") == po_id:
-                        expedite_allowed = (row.get("expedite_allowed") or "").lower() in ("yes", "true", "1")
-                        po_qty = int(row.get("qty") or po_qty)
-                        unit_price = float(row.get("unit_price_eur") or unit_price)
-                        break
+        found = False
+        expedite_allowed = False
+        po_qty = 0
+        unit_price = 0.0
+        component_id: Optional[str] = None
 
+        # 1. Check PostgreSQL purchase_orders when available
+        try:
+            from src.db.connection import get_pooled_connection, is_postgres_available
+
+            if is_postgres_available():
+                with get_pooled_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            SELECT expedite_allowed, qty, unit_price_eur, component_id
+                            FROM purchase_orders
+                            WHERE po_id = %s;
+                            """,
+                            (po_id,),
+                        )
+                        row = cur.fetchone()
+                        if row is not None:
+                            found = True
+                            expedite_allowed = bool(row[0])
+                            po_qty = int(row[1] or 0)
+                            unit_price = float(row[2] or 0.0)
+                            component_id = str(row[3]) if row[3] else None
+        except Exception:
+            pass
+
+        # 2. Fall back to support-data CSV lookup
+        if not found:
+            po_csv = REPO_ROOT / "src" / "support-data" / "structured" / "purchase_orders.csv"
+            if po_csv.exists():
+                with po_csv.open("r", encoding="utf-8") as fh:
+                    for row in csv.DictReader(fh):
+                        if row.get("po_id") == po_id:
+                            found = True
+                            expedite_allowed = (row.get("expedite_allowed") or "").lower() in ("yes", "true", "1")
+                            po_qty = int(row.get("qty") or 0)
+                            unit_price = float(row.get("unit_price_eur") or 0.0)
+                            component_id = row.get("component_id") or None
+                            break
+
+        if not found:
+            raise ValueError(f"Purchase order '{po_id}' not found.")
         if not expedite_allowed:
             raise ValueError(f"Purchase order '{po_id}' is not eligible for expediting.")
 
@@ -246,6 +360,14 @@ class SimulatedProcurementSystem:
             "idempotent_replay": False,
         }
         self._executed_ops[op_key] = result
+        self._persist_op(
+            op_key,
+            action_type="expedite_order",
+            thread_id=thread_id,
+            component_id=component_id,
+            result=result,
+            rationale=f"Expedited open PO {po_id} (+{days_gain}d, fee EUR {fee_eur:.2f})",
+        )
         return result
 
     def request_stock_transfer(
@@ -257,10 +379,13 @@ class SimulatedProcurementSystem:
         qty: int,
         thread_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Idempotently request an internal stock transfer (€0.12/unit, 2 days)."""
+        """Idempotently request an internal stock transfer (€0.12/unit, 2 days; persisted in Postgres)."""
         op_key = f"{action_id}:transfer:{from_location}:{to_location}"
         if op_key in self._executed_ops:
             return {**self._executed_ops[op_key], "idempotent_replay": True}
+        persisted = self._load_persisted_op(op_key)
+        if persisted is not None:
+            return {**persisted, "idempotent_replay": True}
 
         usable = self.check_inventory_balance(component_id).get("usable", 0)
         if qty > usable:
@@ -282,6 +407,14 @@ class SimulatedProcurementSystem:
             "idempotent_replay": False,
         }
         self._executed_ops[op_key] = result
+        self._persist_op(
+            op_key,
+            action_type="transfer_inventory",
+            thread_id=thread_id,
+            component_id=component_id,
+            result=result,
+            rationale=f"Transfer {qty} units of {component_id} from {from_location} to {to_location}",
+        )
         return result
 
     def update_production_schedule(
@@ -292,10 +425,13 @@ class SimulatedProcurementSystem:
         planned_units: int,
         thread_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Idempotently update a factory production schedule slot."""
+        """Idempotently update a factory production schedule slot (persisted in Postgres)."""
         op_key = f"{action_id}:schedule:{product_id}:{week_start}"
         if op_key in self._executed_ops:
             return {**self._executed_ops[op_key], "idempotent_replay": True}
+        persisted = self._load_persisted_op(op_key)
+        if persisted is not None:
+            return {**persisted, "idempotent_replay": True}
 
         digest = hashlib.sha256(op_key.encode("utf-8")).hexdigest()[:6].upper()
         result = {
@@ -310,6 +446,14 @@ class SimulatedProcurementSystem:
             "idempotent_replay": False,
         }
         self._executed_ops[op_key] = result
+        self._persist_op(
+            op_key,
+            action_type="reschedule_production",
+            thread_id=thread_id,
+            component_id=None,
+            result=result,
+            rationale=f"Update production schedule for {product_id} (week {week_start}, {planned_units} units)",
+        )
         return result
 
     def get_supplier_risk(
