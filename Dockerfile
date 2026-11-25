@@ -56,6 +56,9 @@ RUN mkdir -p /app/.chainlit && chown -R appuser:appuser /app
 COPY src/ /app/src/
 COPY scripts/ /app/scripts/
 COPY chainlit.md /app/chainlit.md
+COPY .chainlit/config.toml /app/.chainlit/config.toml
+# Custom logo, favicon and assistant avatar served by Chainlit from /app/public
+COPY public/ /app/public/
 # Evaluation, docs, red-team, restart and pre-demo scripts run inside the container (docs/EVALUATION.md)
 COPY docs/ /app/docs/
 COPY eval/ /app/eval/

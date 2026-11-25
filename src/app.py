@@ -79,6 +79,13 @@ SUBAGENT_STEP_NAMES: dict[str, str] = {
     "procurement_mcp": "8. Simulated Procurement System (MCP)",
 }
 
+# Collapsed parent step that groups the specialist subagent steps into one dropdown row.
+INVESTIGATION_STEP_NAME = "🧠 Multi-Agent Investigation"
+
+# Progressive rendering of final answers: chunk pacing and an upper bound on total stream time.
+STREAM_TOKEN_DELAY_S = 0.015
+STREAM_MAX_DURATION_S = 1.5
+
 # Per-action asyncio locks and in-process guard sets (DB audit_log provides durable cross-restart guard)
 _action_locks: dict[str, asyncio.Lock] = {}
 _handled_actions: set[str] = set()
@@ -89,6 +96,48 @@ def _get_lock(key: str) -> asyncio.Lock:
     if key not in _action_locks:
         _action_locks[key] = asyncio.Lock()
     return _action_locks[key]
+
+
+def split_stream_chunks(text: str) -> list[str]:
+    """Split markdown into stream chunks that concatenate back to `text` exactly.
+
+    Prose is split by word; table rows and fenced code blocks are emitted as whole lines so they
+    never render half-drawn while streaming.
+    """
+    chunks: list[str] = []
+    in_fence = False
+    for line in text.splitlines(keepends=True):
+        stripped = line.lstrip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            chunks.append(line)
+        elif in_fence or stripped.startswith("|"):
+            chunks.append(line)
+        else:
+            chunks.extend(re.findall(r"\s*\S+\s*|\s+", line))
+    return chunks
+
+
+async def stream_message(content: str, **kwargs: Any) -> Any:
+    """Send an assistant message progressively instead of all at once.
+
+    Total stream time is bounded by STREAM_MAX_DURATION_S by grouping chunks for long answers.
+    Falls back to a plain send when the Chainlit message API has no streaming support.
+    """
+    msg = cl.Message(content="", **kwargs)
+    if not content or not hasattr(msg, "stream_token"):
+        msg.content = content
+        await msg.send()
+        return msg
+
+    chunks = split_stream_chunks(content)
+    max_emits = max(1, int(STREAM_MAX_DURATION_S / STREAM_TOKEN_DELAY_S))
+    group = max(1, -(-len(chunks) // max_emits))
+    for i in range(0, len(chunks), group):
+        await msg.stream_token("".join(chunks[i : i + group]))
+        await asyncio.sleep(STREAM_TOKEN_DELAY_S)
+    await msg.send()
+    return msg
 
 
 def sanitize_evidence_text(text: str) -> str:
@@ -841,13 +890,53 @@ async def _emit_supplyguard_subagent_steps(
     challenger_res: Optional[dict[str, Any]] = None,
     approval_payload: Optional[ApprovalPayload] = None,
 ) -> None:
-    """Emit live Chainlit Step telemetry indicators for each specialist Deep Agent subagent (#44)."""
+    """Emit Chainlit Step telemetry for each specialist Deep Agent subagent (#44).
+
+    All subagent steps are nested under one collapsed parent step so the chat shows a single
+    compact dropdown row instead of one row per subagent.
+    """
+    async with cl.Step(name=INVESTIGATION_STEP_NAME, type="run") as parent:
+        if not fact.is_complete():
+            parent.name = f"{INVESTIGATION_STEP_NAME} · clarification needed"
+            await _emit_subagent_child_steps(fact, user_profile=user_profile)
+            parent.output = "Triage could not identify the supplier and component unambiguously."
+            return
+
+        within_cap, injection_count = await _emit_subagent_child_steps(
+            fact,
+            impact=impact,
+            findings=findings,
+            options=options,
+            user_profile=user_profile,
+            graph_res=graph_res,
+            challenger_res=challenger_res,
+            approval_payload=approval_payload,
+        )
+        parent.name = f"{INVESTIGATION_STEP_NAME} · 6 specialist subagents"
+        parent.output = (
+            f"{'✅ Within spending cap' if within_cap else '⚠️ Spending cap violation'} · "
+            f"{injection_count} prompt-injection alert(s) neutralized"
+        )
+
+
+async def _emit_subagent_child_steps(
+    fact: DisruptionFact,
+    impact: Optional[OperationalImpact] = None,
+    findings: Optional[List[DocumentaryFinding]] = None,
+    options: Optional[List[RecoveryOption]] = None,
+    user_profile: Optional[UserProfile] = None,
+    *,
+    graph_res: Optional[dict[str, Any]] = None,
+    challenger_res: Optional[dict[str, Any]] = None,
+    approval_payload: Optional[ApprovalPayload] = None,
+) -> tuple[bool, int]:
+    """Emit one child step per subagent; return (within_cap, injection_alert_count)."""
     profile = user_profile or get_active_user_profile()
     async with cl.Step(name=SUBAGENT_STEP_NAMES["triage_subagent"], type="run") as step:
         step.output = format_step_output("triage_subagent", {"disruption_fact": fact})
 
     if not fact.is_complete():
-        return
+        return True, 0
 
     async with cl.Step(name=SUBAGENT_STEP_NAMES["impact_subagent"], type="run") as step:
         step.output = format_step_output("impact_subagent", {"operational_impact": impact})
@@ -892,6 +981,7 @@ async def _emit_supplyguard_subagent_steps(
                 "violations": violations,
             },
         )
+    return within_cap, len(injection_alerts)
 
 
 # ==============================================================================
@@ -1067,7 +1157,7 @@ async def on_message(message: cl.Message) -> None:
         if status == "awaiting_clarification":
             fact: DisruptionFact = case_state["disruption_fact"]
             await _emit_supplyguard_subagent_steps(fact=fact, user_profile=profile)
-            await cl.Message(content=case_state.get("clarification_question") or case_state["last_answer"]).send()
+            await stream_message(case_state.get("clarification_question") or case_state["last_answer"])
             return
 
         # Fresh full investigation completed (new approval payload or completed impact)
@@ -1114,13 +1204,13 @@ async def on_message(message: cl.Message) -> None:
                 fact=fact,
                 impact=impact,
             )
-            await cl.Message(content=f"{dashboard_md}\n\n---\n\n{matrix_md}").send()
+            await stream_message(f"{dashboard_md}\n\n---\n\n{matrix_md}")
             if new_payload_obj is not None:
                 await _send_approval_card(case_state, thread_id, user_profile=profile)
             return
 
         # Follow-up Q&A, RBAC denial, policy challenge, or security refusal
-        await cl.Message(content=case_state.get("last_answer") or "Request processed.").send()
+        await stream_message(case_state.get("last_answer") or "Request processed.")
         if new_payload_obj is not None and new_payload_obj.action_id != prev_action_id:
             await _send_approval_card(case_state, thread_id, user_profile=profile)
     except Exception as exc:
