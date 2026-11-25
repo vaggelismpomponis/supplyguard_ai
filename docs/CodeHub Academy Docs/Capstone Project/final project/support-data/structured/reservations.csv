@@ -1,0 +1,7 @@
+component_id,location_id,customer_order_id,reserved_qty
+MC-17,W-STU,CO-00022,250
+MC-17,W-STU,CO-00244,250
+MC-17,W-KAT,CO-00005,300
+MC-17,W-LYO,CO-00173,300
+MC-17,W-LYO,CO-00073,200
+MC-17,W-LYO,CO-00410,100

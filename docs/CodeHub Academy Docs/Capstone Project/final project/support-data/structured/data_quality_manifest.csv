@@ -1,0 +1,128 @@
+issue_type,file,record_ref,note
+stale_status,structured/suppliers.csv,S003,ERP still says 'approved' but ISO 9001 certificate expired 2026-09-30
+ambiguous_supplier_name,structured/suppliers.csv,S001/S006,'Atlas Components' vs 'Atlas Logistik GmbH' - 'Atlas' alone is ambiguous
+disconnected_entity,structured/supplier_components.csv,"S058,S059,S060",Suppliers exist but supply no component
+disconnected_entity,structured/components.csv,MC-296..MC-300,Components exist but are used in no product BOM
+stale_record,structured/inventory.csv,MC-282@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-96@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-243@W-STU,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-36@W-LYO,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-199@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-83@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-75@W-LYO,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-27@W-STU,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-98@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-260@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-10@W-STU,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-93@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-246@W-LYO,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-61@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-9@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-185@W-LYO,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-21@W-LYO,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-197@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-73@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-115@W-STU,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-97@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-79@W-LYO,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-133@W-STU,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-210@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-290@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-79@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-88@W-STU,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-218@W-KAT,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-100@W-HUB,last_counted_date older than 180 days
+stale_record,structured/inventory.csv,MC-289@W-HUB,last_counted_date older than 180 days
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0408,entered as 'quanta electronics'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-0785,entered as 'Orion Supply Ltd'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0336,entered as 'Silva Industrial Ltd'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0222,entered as 'borda industrial'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-1291,entered as 'Ferro Comp.'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0092,entered as 'Altair Metals Ltd'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-1750,entered as 'Trident Comp.'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-0105,entered as 'Orion Metals Ltd'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0338,entered as 'vector metals'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0831,entered as 'trident systems'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-1623,entered as 'Argo Comp.'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-1000,entered as 'Cobalt Comp.'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-1702,entered as 'Argo Dynamics Ltd'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0041,entered as 'Zenith Comp.'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0379,entered as 'Praxis Comp.'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-1032,entered as 'hydra works'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-1418,entered as 'ionic components'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-0138,entered as 'Argo Dynamics Ltd'
+supplier_name_variant,structured/purchase_orders.csv,PO-2025-1879,entered as 'aurum works'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-1393,entered as 'hydra components'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0828,entered as 'Argo Electronics Ltd'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0040,entered as 'meridian industrial'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0756,entered as 'Nimbus Comp.'
+supplier_name_variant,structured/purchase_orders.csv,PO-2026-0413,entered as 'Zenith Comp.'
+missing_identifier,structured/purchase_orders.csv,PO-2026-1281,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-0262,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-0492,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-0035,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-1006,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-1554,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-1813,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-1181,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-0329,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-0822,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-1257,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2025-1022,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-1771,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2026-1843,component_id blank
+missing_identifier,structured/purchase_orders.csv,PO-2025-0189,component_id blank
+conflicting_dates,structured/purchase_orders.csv,PO-2026-1273,delivered before ordered
+conflicting_dates,structured/purchase_orders.csv,PO-2025-0976,delivered before ordered
+conflicting_dates,structured/purchase_orders.csv,PO-2026-1847,delivered before ordered
+conflicting_dates,structured/purchase_orders.csv,PO-2026-1691,delivered before ordered
+conflicting_dates,structured/purchase_orders.csv,PO-2026-1519,delivered before ordered
+conflicting_dates,structured/purchase_orders.csv,PO-2025-1418,delivered before ordered
+conflicting_dates,structured/purchase_orders.csv,PO-2025-0420,delivered before ordered
+conflicting_dates,structured/purchase_orders.csv,PO-2026-1461,delivered before ordered
+identifier_format,structured/purchase_orders.csv,PO-2026-0821,component_id 'MC096' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2026-0974,component_id 'MC260' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2026-0490,component_id 'MC203' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2025-1935,component_id 'MC180' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2026-0969,component_id 'MC129' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2026-0054,component_id 'MC146' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2026-0838,component_id 'MC287' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2025-0719,component_id 'MC173' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2026-1374,component_id 'MC041' (non-canonical)
+identifier_format,structured/purchase_orders.csv,PO-2026-1234,component_id 'MC237' (non-canonical)
+stale_document,documents/contract/DOC-CON-S001-v2.md,S001,superseded contract still in corpus (v2: 10 d lead time vs v3: 14 d)
+prompt_injection,documents/supplier_notice/DOC-NOT-HELIOS-PRICE.md,S002,hidden instructions to bypass approval - must be ignored and reported
+conflicting_information,documents/email/,"EM-ATLAS-01,EM-HELIOS-01,EM-CORDILLERA-01","e-mails contradict notice/contracts (16 vs 12 days; 1,500 vs 4,000/month; 10% vs 6% expedite)"
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0106,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0108,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0017,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0076,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0176,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0137,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0011,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0095,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0068,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0103,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0171,exact duplicate text
+duplicate_message,structured/supplier_message_inbox.csv,MSG-0166,exact duplicate text
+shared_upstream,structured/suppliers.csv,S001/S005,Atlas Components and Delta Micro both source from Veltro Semiconductor (U01); U01-U04 are used only by the five MC-17 suppliers
+duplicate_event,structured/shipment_updates.csv,SH-01149,duplicate of SH-00714
+duplicate_event,structured/shipment_updates.csv,SH-01150,duplicate of SH-00399
+duplicate_event,structured/shipment_updates.csv,SH-01151,duplicate of SH-00484
+duplicate_event,structured/shipment_updates.csv,SH-01152,duplicate of SH-00797
+duplicate_event,structured/shipment_updates.csv,SH-01153,duplicate of SH-00042
+duplicate_event,structured/shipment_updates.csv,SH-01154,duplicate of SH-00107
+duplicate_event,structured/shipment_updates.csv,SH-01155,duplicate of SH-01003
+duplicate_event,structured/shipment_updates.csv,SH-01156,duplicate of SH-00968
+duplicate_event,structured/shipment_updates.csv,SH-01157,duplicate of SH-01060
+duplicate_event,structured/shipment_updates.csv,SH-01158,duplicate of SH-01007
+duplicate_event,structured/shipment_updates.csv,SH-01159,duplicate of SH-00966
+duplicate_event,structured/shipment_updates.csv,SH-01160,duplicate of SH-00227
+duplicate_event,structured/shipment_updates.csv,SH-01161,duplicate of SH-00079
+duplicate_event,structured/shipment_updates.csv,SH-01162,duplicate of SH-00640
+conflicting_dates,structured/shipment_updates.csv,SH-00318,eta before event_date
+conflicting_dates,structured/shipment_updates.csv,SH-00917,eta before event_date
+conflicting_dates,structured/shipment_updates.csv,SH-00541,eta before event_date
+conflicting_dates,structured/shipment_updates.csv,SH-00033,eta before event_date
+conflicting_dates,structured/shipment_updates.csv,SH-00117,eta before event_date
+conflicting_dates,structured/shipment_updates.csv,SH-00195,eta before event_date

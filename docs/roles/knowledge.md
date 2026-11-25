@@ -1,49 +1,67 @@
-# Role: Knowledge
+# Role: Knowledge – SupplyGuard AI
 
-**Ευθύνη:** policy ingestion (chunking, embeddings, metadata με effective date), Neo4j seeding, retrieval και graph tools.
-**Παραδοτέο:** scripts και tools.
-**Scopes commit:** `policy`, `neo4j`, `db`. **Branches:** `feature/policy-ingestion`, `feature/neo4j-seeding`, `feature/retrieval-tool`, κλπ.
+**Ευθύνη:** Data engineering & ingestion του συνθετικού πακέτου `support-data/`, Neo4j multi-tier supply chain graph, pgvector & ChromaDB vector indexing, hybrid retrieval (Vector + BM25 + Graph), provenance metadata, ανίχνευση & επίλυση φυτεμένων προβλημάτων ποιότητας δεδομένων, και tool contracts.  
+**Παραδοτέο:** Πλήρες σύστημα αποθήκευσης και ανάκτησης γνώσης με τεκμηριωμένη προέλευση (provenance) και εργαλεία για τους Deep Agents.  
+**Scopes commit:** `db`, `neo4j`, `retrieval`, `policy`.  
+**Branches:** `feature/supply-data-ingestion`, `feature/neo4j-multitier-graph`, `feature/chroma-indexing`, `feature/hybrid-retrieval-tool`, κλπ.
 
 ## Αρχή
-Τα δεδομένα καθορίζουν την ποιότητα των αποτελεσμάτων. Ο Knowledge φτιάχνει νωρίς dataset και τα προσφέρει και στον Quality για τα test cases.
+Τα δεδομένα αποτελούν τον θεμέλιο λίθο της αξιοπιστίας του SupplyGuard AI. Ο ρόλος Knowledge φορτώνει ολόκληρο το συνθετικό επιχειρησιακό οικοσύστημα, συνδέει τα multi-tier dependencies στο Neo4j, ευρετηριάζει έγγραφα σε δύο διαφορετικά vector stores (`pgvector` και `ChromaDB`) για benchmark, και παρέχει ασφαλή εργαλεία ανάκτησης με αυστηρή διατήρηση προέλευσης (`source_id`, `version`/`effective_date`, `access_scope`).
 
 ## Βήματα
 
-### Φάση 1 – Kick-off (Ημ. 1)
-1. Συμμετοχή στα contracts. Ορίζει τα output models των tools: `PolicyResult` (text, `doc_id`, `effective_date`, source) και `GraphResult` (εξαρτήσεις, ενεργά outages). ✋ με Workflow.
+### Φάση 1 – Kick-off & Contracts (Εβδ. 1, Ημ. 1–2)
+1. Συμμετοχή στα contracts (`docs/ARCHITECTURE_CONTRACTS.md`): Ορισμός schemas για επιχειρησιακές οντότητες και επιστρεφόμενα Pydantic models εργαλείων: `InventoryStatusResult`, `BOMResult`, `DocumentResult`, `SupplierGraphResult`. ✋ με Workflow.
+2. Ανάλυση του συνθετικού πακέτου `support-data/` και καταγραφή των φυτεμένων προβλημάτων ποιότητας δεδομένων (conflicting dates, stale docs, duplicate messages).
 
-### Φάση 2 – Dataset και πρώτα scripts (Ημ. 2–4)
-2. Dataset policies: μικρά έγγραφα, με **παλιές και νέες εκδόσεις** της ίδιας policy (`doc_id` κοινό, διαφορετικό `effective_date`).
-3. Graph model στο Neo4j: Employee, Team, Application, Service, Outage και οι σχέσεις (`DEPENDS_ON`, `MEMBER_OF`, `HAS_OUTAGE`, κλπ). Τεκμηρίωση σε σύντομο διάγραμμα.
-4. Ingestion script: chunking, embeddings, αποθήκευση στο pgvector με `doc_id` και `effective_date` σε κάθε chunk. ✋ με Platform για το schema.
-5. Seeding script για Neo4j. Idempotent (ξανατρέχει χωρίς διπλότυπα).
-6. Mock/πρώτη έκδοση των tools με τις συμφωνημένες υπογραφές, ώστε ο Workflow να τα καλεί νωρίς.
+### Φάση 2 – Επιχειρησιακή Βάση & Neo4j Multi-Tier Graph (Ημ. 2–4)
+3. **Σχεδιασμός Σχεσιακού Σχήματος PostgreSQL:**
+   - Δημιουργία πινάκων για: `suppliers` (60), `components` (300), `products` (80), `bom_lines` (616), `purchase_orders` (2,000), `shipment_updates` (1,100+), `supplier_messages` (190+), `inventory_lots` (1,000 εγγραφές με διακριτά πεδία `physical_quantity`, `reserved_quantity`, `quarantined_quantity`, `location`), `production_schedules` (12 εβδομάδες), `customer_orders` (1,500 παραγγελίες για 25 πελάτες).
+4. **Neo4j Multi-Tier Supply Chain Graph Model:**
+   - Κόμβοι: `Supplier`, `Component`, `Product`, `Factory`, `Customer`, `CustomerOrder`, `UpstreamManufacturer`.
+   - Σχέσεις: `(:Supplier)-[:SUPPLIES {lead_time, capacity}]->(:Component)`, `(:Component)-[:PART_OF {quantity_per_unit}]->(:Product)`, `(:Product)-[:PRODUCED_AT]->(:Factory)`, `(:CustomerOrder)-[:REQUIRES]->(:Product)`, `(:Supplier)-[:DEPENDS_ON_UPSTREAM]->(:UpstreamManufacturer)`.
+   - **Κρίσιμη σχέση:** Μοντελοποίηση της κοινής εξάρτησης Atlas (S001) και Delta (S004) από τον ίδιο upstream κατασκευαστή chip fab.
+5. Ingestion scripts: Idempotent φόρτωση των CSV αρχείων του φακέλου `support-data/graph/` στο Neo4j.
 
-### Φάση 3 – Milestone (Ημ. 5)
-7. Scripts τρέχουν μέσα στο compose, χωρίς χειροκίνητα βήματα. ✋ με Platform.
+### Φάση 3 – Multi-Vector Indexing & Hybrid Retrieval Pipeline (Ημ. 4–6)
+6. **Chunking & Ευρετηρίαση Εγγράφων (212 documents):**
+   - Κατάτμηση συμβολαίων, πιστοποιήσεων, διαδικασιών, επιστολών προμηθευτών και ιστορικών αναφορών.
+   - Εμπλουτισμός κάθε chunk με metadata: `source_id`, `version`/`effective_date`, `access_scope` (`procurement`, `finance`, `public`), `document_type`.
+   - Αποθήκευση στο **PostgreSQL `pgvector`** με HNSW index.
+   - Παράλληλη αποθήκευση στο **ChromaDB** για τη διεξαγωγή του retrieval benchmark.
+7. **Ευρετηρίαση Approved Incident Memories:**
+   - Ευρετηρίαση 300 ιστορικών disruption cases και 40 approved incident memories σε ξεχωριστό collection/table για semantic search ανακτήσεων παρόμοιων περιστατικών.
+8. **Υλοποίηση Hybrid Retrieval Tool:**
+   - Συνδυασμός Dense Vector Search (cosine similarity) + BM25 Lexical Search + Graph contextual filtering.
+   - Εφαρμογή δυναμικού φίλτρου `access_scope` με βάση το session role του χρήστη (αποτροπή διαρροής finance-confidential δεδομένων σε guest).
 
-### Φάση 4 – Ολοκλήρωση (Ημ. 6–10)
-8. `retrieve_policy`: semantic search και κανόνας **πιο πρόσφατης effective date** όταν οι εκδόσεις συγκρούονται. Επιστρέφει citation.
-9. `check_graph`: εξαρτήσεις και ενεργά outages για μια εφαρμογή (parameterised Cypher queries).
-10. Unit tests για: παλιά vs νέα έκδοση, εφαρμογή με/χωρίς outage, άγνωστη εφαρμογή.
-11. Παροχή δεδομένων στον Quality για τα 10 requests. ✋
-12. Διορθώσεις από το evaluation run (π.χ. λάθος citation).
+### Φάση 4 – Επίλυση Προβλημάτων Ποιότητας Δεδομένων & Integration (Ημ. 6–8)
+9. Υλοποίηση κανόνων επίλυσης συγκρούσεων:
+   - Όταν email και συμβόλαιο διαφωνούν για lead time ή τιμή, επισήμανση της αβεβαιότητας και ιεράρχηση βάσει ημερομηνίας ισχύος / επίσημης τροποποίησης (amendment).
+   - Αναγνώριση ληγμένης πιστοποίησης (Borealis ISO expired) και επιστροφή operational warning.
+10. Αυτοματοποίηση του πλήρους seeding script (`scripts/seed_supply_chain.py`) για ένταξη στο Compose `seed` service. ✋ με Platform.
+11. Παροχή δεδομένων και ground truth στον ρόλο Quality για τα 105 evaluation cases. ✋ με Quality.
+
+### Φάση 5 – Retrieval Benchmark & Demo Rehearsal (Ημ. 8–10)
+12. Εκτέλεση benchmarks ανάκτησης σε συνεργασία με τον Quality: σύγκριση Recall@K, Precision@K, και χρόνου απόκρισης μεταξύ `pgvector`, `ChromaDB` και `Hybrid Retrieval`.
+13. Συμμετοχή στις πρόβες του demo και επεξήγηση του Knowledge Graph και της προέλευσης τεκμηρίων (provenance).
 
 ## Role checklist
 
-- [ ] Output models των tools συμφωνημένα
-- [ ] Dataset policies με παλιές/νέες εκδόσεις
-- [ ] Graph model Neo4j τεκμηριωμένο
-- [x] Ingestion script (chunking, embeddings, `doc_id`, `effective_date`)
-- [x] Seeding script Neo4j, idempotent
-- [ ] Mock tools με τελικές υπογραφές διαθέσιμα στον Workflow
-- [x] Scripts τρέχουν χωρίς χειροκίνητα βήματα μέσα στο compose
-- [ ] `retrieve_policy`: κερδίζει η πιο πρόσφατη έκδοση και επιστρέφει citation
-- [ ] `check_graph`: εξαρτήσεις και ενεργά outages
-- [ ] Unit tests tools
-- [ ] Δεδομένα παραδόθηκαν στον Quality για τα test requests
+- [x] Σχεσιακό σχήμα PostgreSQL για όλα τα operational datasets του `support-data/`
+- [x] Neo4j multi-tier graph model τεκμηριωμένο με upstream supplier dependencies
+- [x] Ingestion scripts για Neo4j CSVs πλήρως idempotent
+- [x] 212 έγγραφα κατατμημένα με `source_id`, `version`/`effective_date`, `access_scope`
+- [x] Αποθήκευση σε `pgvector` και `ChromaDB`
+- [x] Ευρετηρίαση 300 ιστορικών περιπτώσεων και 40 approved memories
+- [x] Υλοποίηση Hybrid Retrieval tool (Vector + BM25 + Graph)
+- [x] Δυναμικό filtering βάσει ρόλου χρήστη (`access_scope`)
+- [x] Κανόνες επίλυσης συγκρούσεων μεταξύ συμβολαίων και emails
+- [x] Εντοπισμός ληγμένων πιστοποιήσεων προμηθευτών
+- [x] Seeding script ενταγμένο στο Compose `seed` service
+- [x] Παροχή δεδομένων στον Quality για τα 105 evaluation cases
 - [ ] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
-- [ ] Μπορώ να εξηγήσω ολόκληρη τη ροή
+- [ ] Μπορώ να εξηγήσω ολόκληρη τη δομή των δεδομένων και της ανάκτησης στο demo
 
 ## Backup
 Ορίζεται στο `CONTRIBUTING_LOG.md`. Προτείνεται: Platform.

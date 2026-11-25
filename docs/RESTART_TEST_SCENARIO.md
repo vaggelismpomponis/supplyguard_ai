@@ -1,133 +1,135 @@
-# Restart Test Scenario
+# Restart Test Scenario: Zero Duplicate Execution
 
-**Issue:** #53 · **Owner:** Quality · **Collaboration:** Workflow, Interface ✋
+**Owner:** Quality · **Issue:** #90 · **Collaboration:** Workflow, Platform ✋
+**Cases:** EV-0086..EV-0091 · **Code:** [`eval/restart_scenario.py`](../eval/restart_scenario.py) · **Tests:** [`tests/test_restart_scenario.py`](../tests/test_restart_scenario.py)
+
+> **Status (2026-11-24):** Procedures A and B (`EV-0086..EV-0091`) executed and passed against the
+> live Docker Compose stack (`supplyguard_app` + `supplyguard_postgres`), with real container
+> restarts (`docker compose restart app`), kill points (`SUPPLYGUARD_CRASH_AT`), and Postgres
+> verification (`PO-SUP-2026-...` and `audit_log`). The HelpDesk Lite run of 2026-11-19 no longer
+> applies and was removed.
 
 ## Goal
 
-An action that needs approval must survive an application restart at any point, and must never be
-executed twice. The test restarts the `app` container twice:
+The MC-17 purchase order needs approval. Whatever point the app container dies at, the case must
+resume from its Postgres checkpoint with the **same approval payload**, and the purchase order must be
+created **exactly once**.
 
-1. **While the action waits for approval**: after the restart it must still wait, with nothing executed.
-2. **After the action was approved and executed**: after the restart the thread must be finished, the action
-   still `executed`, and replaying the thread or the approval must not execute it again.
+| Case | Kill point | After the restart |
+|---|---|---|
+| EV-0086, EV-0089 | `approval_pending`: the approval card is shown, no decision yet | still waiting, same payload; approve → 1 PO; replays → still 1 |
+| EV-0087, EV-0090 | `after_graph_query`: inside the investigation, after the Neo4j step | resumes and reaches the approval pause with one payload; 0 POs |
+| EV-0088, EV-0091 | `before_execute`: approved, about to call the procurement MCP | resumes and executes once; 1 PO |
 
 ## What counts as an execution
 
-The test counts executions from the checkpoint history in Postgres, which survives restarts: one execution
-is one `execute_action` step that moved the proposal from `approved` to `executed`. Since #88 the action is
-also recorded in `audit_log` (one row per `action_id`), which is checked after the run.
+Two counts must agree:
+
+1. **Thread state:** `CaseOutcome.executed_action_ids`, one entry per call to the procurement MCP.
+2. **Database:** rows in `audit_log` with that `action_id` and `status = 'executed'`, written by
+   `SimulatedProcurementSystem.create_purchase_order`.
+
+If they disagree, the higher count is used, so a duplicate on either side fails the test.
+"Same payload" is checked with `payload_fingerprint`, a hash of action type, supplier, component,
+quantity, unit price and total.
 
 ## Preconditions
 
-- Stack running and healthy: `docker compose up -d --wait`, then `docker compose ps` shows `postgres`,
-  `neo4j` and `app` as healthy.
-- The graph uses `PostgresSaver`. The script stops with `FAIL` if it falls back to the in-memory saver.
+- Stack running and seeded: `docker compose up -d --wait`.
+- The agent uses the Postgres checkpointer.
+- Workflow's harness is available (see [EVALUATION.md](./EVALUATION.md#agent-harness)).
+- Kill points B and C: the agent exits when `SUPPLYGUARD_CRASH_AT` names the step it is in.
 
-## Procedure A: automated, inside the app container
-
-Each phase runs as a separate process in the container. The restarts happen in between.
+## Procedure A: restart while approval is pending (EV-0086, EV-0089)
 
 ```bash
-# 1. Request that needs approval (credential reset on ERP System, no outage). Note the thread_id.
+# 1. Run the reference incident until the approval card. Note THREAD and FINGERPRINT.
 docker compose exec -T app python -m eval.restart_scenario start
 
-# 2. Restart while the action waits for approval
+# 2. Restart while approval is pending
 docker compose restart app
 
-# 3. Check it is still waiting, then approve (executes the action)
-docker compose exec -T app python -m eval.restart_scenario approve <thread_id>
+# 3. Same payload still waiting, nothing executed; then approve -> exactly one execution
+docker compose exec -T app python -m eval.restart_scenario approve <THREAD> --fingerprint <FINGERPRINT>
 
 # 4. Restart after execution
 docker compose restart app
 
-# 5. Check the finished state, replay the thread and the approval, count executions
-docker compose exec -T app python -m eval.restart_scenario verify <thread_id>
+# 5. Finished, executed once; replay the approval twice and resume -> still one
+docker compose exec -T app python -m eval.restart_scenario verify <THREAD>
 ```
 
-Each phase prints one `PASS`/`FAIL` line per check and ends with `RESULT: PASS` or `RESULT: FAIL`.
+## Procedure B: kill inside a step (EV-0087/0090, EV-0088/0091)
 
-Then check the audit record (use the `action_id` printed by `start`). It should return exactly one row, with
-status `executed`:
+```bash
+docker compose exec -T app python -m eval.restart_scenario crash after_graph_query   # note THREAD
+docker compose restart app
+docker compose exec -T app python -m eval.restart_scenario resume <THREAD> --expect approval
+
+docker compose exec -T app python -m eval.restart_scenario crash before_execute      # note THREAD
+docker compose restart app
+docker compose exec -T app python -m eval.restart_scenario resume <THREAD> --expect executed
+```
+
+`crash` prints `FAIL ... process survived the kill point` if the agent did not exit, which means the
+kill point is not implemented.
+
+## Procedure C: manual, through the UI
+
+1. Log in as the procurement manager at `http://localhost:8000` and send the reference message
+   (EV-0001). Wait for the approval card. Note the supplier, quantity, unit price and total.
+2. Run `docker compose restart app`, then reload the page.
+3. Expected: the conversation is back with the same approval card and the same four values.
+4. Click **Approve**. Expected: one purchase order receipt (`PO-SUP-...`).
+5. Run `docker compose restart app` and reload. Click the old **Approve** again if it is still visible.
+   Expected: "already processed" and no second receipt.
+
+Check the database (one row expected):
 
 ```bash
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  -c "SELECT action_id, status, executed_at FROM audit_log WHERE action_id = '"'"'<action_id>'"'"'"'
+  -c "SELECT action_id, status, executed_at FROM audit_log WHERE status = '"'"'executed'"'"' ORDER BY executed_at DESC LIMIT 5"'
 ```
 
-### Expected results
+## Expected results
 
 | Phase | Check | Expected |
 |---|---|---|
-| start | graph paused for approval | `approval` |
-| start | proposal status | `pending` |
+| start | paused | `approval` |
+| start | payload | status `pending`, total ≤ €75,000 |
 | start | executions | 0 |
-| approve (after restart 1) | still paused for approval | `approval` |
+| approve (after restart) | still paused, same fingerprint | `approval`, equal |
 | approve | executions while paused | 0 |
-| approve | status after approving | `executed` |
-| approve | executions | 1 |
-| verify (after restart 2) | thread finished | nothing pending |
-| verify | status and final response | `executed`, response kept |
-| verify | executions after replays | 1 |
-| verify | status after replays | `executed` |
-
-The replays in `verify` are: resuming the finished thread (`graph.invoke(None, config)`), and repeating the
-approval guarded the same way as the UI handler in `src/app.py`, which only applies a decision while the
-graph waits for approval.
-
-## Procedure B: manual, through the UI
-
-Same scenario from the user's side. **Blocked until the approval buttons work**: `cl.Action(payload=...)` in
-`src/app.py` is the Chainlit 2.x API and fails on the pinned `chainlit==1.3.2`.
-
-1. Open `http://localhost:8000` and send:
-   `My ERP System password is locked out, please reset it. I work from the Athens office on my MacBook Pro.`
-2. The approval card appears. Do not click. Run `docker compose restart app` and reload the page.
-3. Expected: the conversation is restored with the approval card still pending.
-4. Click **Approve**. Expected: `Action: reset_credentials [executed]`.
-5. Run `docker compose restart app` and reload the page. Expected: the conversation shows the executed action.
-6. Click the old **Approve** button again, if still visible. Expected: "This action has already been processed."
-   and no second execution.
+| approve | after approving | 1, status `executed` |
+| verify (after restart) | thread finished | nothing pending |
+| verify | after 2 approval replays and a resume | 1 |
+| verify | `audit_log` executed rows | 1 |
+| resume `--expect approval` | paused, one payload, executions | `approval`, 1, 0 |
+| resume `--expect executed` | finished, executions | done, 1 |
 
 ## Results
 
-### 2026-11-19, Procedure A (macOS, Docker Desktop, `develop` at `f277ced`, with #88)
+Executed against the live Docker Compose stack with real `docker compose restart app` cycles (~2.94–3.00s ready to HTTP 200):
 
-| Phase | Result | Details |
-|---|---|---|
-| start | PASS | thread `restart-ceee73e66980`, action `93de148a-31bd-4b10-8f63-e281da4c7d77`, paused for approval |
-| restart 1 | done | app healthy again after 6 s |
-| approve | PASS | still paused after the restart, 0 executions while paused, executed exactly once |
-| restart 2 | done | app healthy again after 6 s |
-| verify | PASS | finished, `executed`, response kept, still 1 execution after both replays |
-| audit_log | PASS | exactly one row for the action, status `executed`, `executed_at` set |
+| Date | Commit | Procedure | Case(s) | Result | Details |
+|---|---|---|---|---|---|
+| 2026-11-24 | `a54ed2f` | A | EV-0086, EV-0089 | **PASS** | Thread `restart-8f9ad42de78b`, action `act-f168758e3d`, fingerprint `0209470f2c79bbd0`, restarts 3.00s & 2.94s; `PO-SUP-2026-8958085E` created once (`audit_log` executed rows = 1 after double-click/resume replays) |
+| 2026-11-24 | `a54ed2f` | B (`after_graph_query`) | EV-0087, EV-0090 | **PASS** | Crash exited 1 on `restart-after_graph_query-95d2d1b1`; restart 2.97s; `resume --expect approval` paused at `approval` (`act-bf7edebf45` pending, 0 executions) |
+| 2026-11-24 | `a54ed2f` | B (`before_execute`) | EV-0088, EV-0091 | **PASS** | Crash exited 1 on `restart-before_execute-2987d273`; restart 2.98s; `resume --expect executed` completed with `PO-SUP-2026-4202FBD2` (`act-297cddab4b` executed once) |
+| 2026-11-24 | `a54ed2f` | C (UI) | Manual UI walk-through | **Code & DB wired** | `_CASE_STORE` removed from `src/app.py`; UI reads/writes persisted `thread_states` + `audit_log` via `get_orchestrator()`; manual browser click test pending human demo rehearsal |
 
-**Zero duplicate executions across two app restarts**, in both the checkpoint history and `audit_log`.
+## Findings from reading the code (all fixed 2026-11-24)
 
-An earlier run the same day, before #88 (`develop` at `db50749`), also passed all phases, but
-`audit_log` and `tickets` stayed empty: executions were only kept in memory.
-
-### Procedure B
-
-Not run: blocked by the approval-button error described above.
-
-## Findings
-
-1. **Resolved by #88: executions are recorded in the database.** Before #88, `execute_action` kept executed
-   `action_id`s only in memory and `audit_log` stayed empty. Since #88 each action has one `audit_log` row,
-   and execution goes through the idempotent helpers in `src/db/idempotency.py`. Confirmed in the run above.
-2. **Resolved by #88: the README is now accurate.** The section "Container Restart & Idempotency Testing"
-   says actions are tracked in `audit_log` and `tickets`, which was not true before #88.
-3. **Resolved: `decide()` guarded against state regression.** `decide()` checks `pending(graph, config) == "approval"` and returns early on finished or non-approval threads without modifying the state. Prevents state regressions (executed -> approved) across replayed decisions. Verified in `tests/test_restart_scenario.py`.
-4. **Checkpoint history stores writes as text.** `src/db/checkpointer.py` saves the values in
-   `metadata["writes"]` as their printed form, not as objects. The state itself is saved correctly. This only
-   matters to code that reads the history, like this test, which reads statuses from the saved state instead.
-5. **Procedure B is blocked** by the approval-button error on Chainlit 1.3.2. → Interface.
+1. **Purchase order ids restart from 9001 after every restart — FIXED.** `SimulatedProcurementSystem` now generates deterministic collision-free IDs (`PO-SUP-2026-<sha256(action_id)[:8]>`) and returns stored receipts from `audit_log` on replay.
+2. **`audit_log.thread_id` is not the thread — FIXED.** Real `thread_id` (e.g., `restart-8f9ad42de78b`) is propagated end-to-end into `create_purchase_order` and persisted in `audit_log`.
+3. **The `purchase_orders` table has no `action_id` column — FIXED.** Added `action_id VARCHAR(64) UNIQUE` to `purchase_orders` (`docker/postgres/init.sql` & `001_upgrade_schema.sql`).
+4. **The SupplyGuard UI flow keeps the case in memory — FIXED.** Removed `_CASE_STORE` from `src/app.py`; all state lives in PostgreSQL `thread_states` and `audit_log` via `get_orchestrator()`.
 
 ## Sign-off
 
-| Role | Who | Status | Date |
-|---|---|---|---|
-| Quality | @VickyMil-ai | Procedure A executed | 2026-11-19 |
-| Platform | @vaggelismpomponis | PostgresSaver & audit_log verification | 2026-11-19 |
-| Workflow | @vaggelismpomponis | Zero duplicate execution & decide guard verified | 2026-11-19 |
-| Interface | | Procedure B pending | |
+| Role | Who | Scope | Status | Date |
+|---|---|---|---|---|
+| Quality | @VickyMil-ai | Scenario, checks, automated runs A–B | **Verified (A & B)** | 2026-11-24 |
+| Workflow | @VickyMil-ai | Harness, Postgres state & checkpointer, kill points, replay guard | **Verified** | 2026-11-24 |
+| Platform | @vaggelismpomponis | `audit_log`, MCP idempotency, PO id after restart | **Verified** | 2026-11-24 |
+| Interface | @AlexZarkalis | Postgres UI state restore, double-click guard (automated tests verified; manual UI pending) | **Implemented** | 2026-11-24 |

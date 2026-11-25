@@ -1,0 +1,6 @@
+user_id,name,role,document_scopes,factory_access,username,email
+u-pm-01,Maria Keller,procurement_manager,public;internal;procurement,F1;F2;F3,maria.keller,maria.keller@supplyguard.eu
+u-an-01,Jon Weber,operations_analyst,public;internal;procurement,F1,jon.weber,jon.weber@supplyguard.eu
+u-ic-01,Ines Duarte,incident_coordinator,public;internal;procurement,F2;F3,ines.duarte,ines.duarte@supplyguard.eu
+u-fc-01,Paul Novak,finance_controller,public;internal;procurement;finance-confidential,F1;F2;F3,paul.novak,paul.novak@supplyguard.eu
+u-ro-01,Read Only Guest,viewer,public,,guest,guest@supplyguard.eu

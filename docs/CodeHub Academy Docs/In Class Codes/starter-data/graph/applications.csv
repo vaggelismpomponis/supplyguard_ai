@@ -1,0 +1,13 @@
+app_id,name,description,runs_on_service_id
+A01,Corporate VPN,Remote access client,S02
+A02,Webmail & Calendar,Browser and desktop mail,S03
+A03,Finance Reports Portal,Monthly finance reporting,S05
+A04,Document Library,Shared documents,S04
+A05,Team Chat,Instant messaging,S08
+A06,Video Meetings,Online meetings,S08
+A07,HR Portal,Leave and payroll self-service,S09
+A08,Expense Tool,Expense claims,S09
+A09,Client CRM,"Sales CRM, uses its own local credentials",S09
+A10,Print Manager,Print queues and release,S07
+A11,Timesheet App,Time recording,S05
+A12,Office Wi-Fi,Corporate wireless access,S06

@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SupplyGuard AI — Team 1 · Code.Hub × PwC Capstone</title>
+<style>
+:root{
+  --orange:#fd5108;--orange-400:#fe7c39;--orange-300:#ffaa72;--orange-200:#ffcda8;--orange-100:#ffe8d4;--orange-50:#fff5ed;
+  --grey-500:#a1a8b3;--grey-400:#b5bcc4;--grey-300:#cbd1d6;--grey-200:#dfe3e6;--grey-100:#eeeff1;--grey-50:#f5f7f8;
+  --bg-grey:#ebebeb;--grey-surface:#d9d9d9;--grid:#d9d9d9;--total-row:#f2f2f2;
+  --status-green:#059669;--status-amber:#e9b01f;--status-red:#dc2626;
+  --black:#000;--white:#fff;--ink:#1a1a1a;
+  --serif:Georgia,"Times New Roman",serif;
+  --sans:Arial,Helvetica,"Helvetica Neue",sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  --gradient:radial-gradient(120% 130% at 96% 2%,#f9ab88 0%,rgba(249,171,136,0) 55%),linear-gradient(48deg,#ffffff 0%,#ffffff 26%,#fef2ed 48%,#fde6dc 64%,#fcd9c4 80%,#fabb9f 100%);
+  --gradient-bold:radial-gradient(130% 130% at 90% 4%,#ff7a3c 0%,rgba(255,122,60,0) 55%),linear-gradient(48deg,#c0390a 0%,#fd5108 50%,#fe7c39 100%);
+  --ease:cubic-bezier(.22,.61,.36,1);--slow:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0c0c0d;font-family:var(--sans);color:var(--ink);overflow:hidden}
+#stage{position:fixed;top:50%;left:50%;width:1280px;height:720px;transform:translate(-50%,-50%) scale(var(--scale,1));transform-origin:center center}
+#deck{position:absolute;inset:0}
+.slide{position:absolute;inset:0;padding:64px 88px;background:var(--white);opacity:0;visibility:hidden;transform:translateX(36px) scale(.992);transition:opacity .55s var(--ease),transform .55s var(--ease),visibility 0s linear .55s;overflow:hidden}
+.slide.active{opacity:1;visibility:visible;transform:none;transition:opacity .55s var(--ease),transform .55s var(--ease)}
+.reveal{opacity:0;transform:translate(-14px,22px);transition:opacity .6s var(--slow),transform .6s var(--slow);transition-delay:calc(var(--i,0)*90ms)}
+.slide.active .reveal{opacity:1;transform:none}
+.kicker{font-family:var(--sans);font-weight:700;font-size:15px;color:var(--black);margin-bottom:14px;letter-spacing:.01em}
+h1,h2,.headline{font-family:var(--serif);font-weight:400;line-height:1.05;color:var(--black)}
+.fig{font-family:var(--sans)}
+.headline{font-size:48px;max-width:24ch}
+.headline.lg{font-size:70px}
+.headline .accent{color:var(--orange)}
+p{font-size:19px;line-height:1.45;color:var(--black);max-width:68ch}
+p.lead{font-size:23px}
+code{font-family:var(--mono);font-size:.86em;background:var(--grey-100);padding:1px 5px;color:var(--ink);white-space:nowrap}
+.chrome{position:absolute;left:88px;right:88px;bottom:28px;display:flex;align-items:center;justify-content:space-between;font-family:var(--sans);font-size:13px;color:var(--black)}
+.chrome-mark{font-family:var(--sans);font-weight:700;font-size:16px;color:var(--black);letter-spacing:0}
+.page-num{color:var(--black);font-variant-numeric:tabular-nums}
+.chrome .source{flex:1;margin:0 48px 0 32px;font-size:11px;line-height:1.35;color:var(--black);text-align:left}
+.notes{display:none!important}
+.slide--hero{background:var(--gradient);color:var(--ink)}
+.slide--hero .headline,.slide--hero h1{color:var(--black)}
+.slide--hero .kicker{color:var(--black)}
+.slide--hero .chrome{color:var(--black)}
+.slide--bold{background:var(--gradient-bold);color:var(--white)}
+.slide--bold .headline,.slide--bold h1{color:var(--white)}
+.slide--bold .kicker{color:rgba(255,255,255,.92)}
+.slide--bold .chrome{color:rgba(255,255,255,.85)}
+.slide--tint{background:var(--orange-100)}
+.slide--grey{background:var(--grey-surface)}
+@keyframes markIn{from{opacity:0;transform:translate(18px,-10px)}to{opacity:1;transform:none}}
+.cover-logo{position:absolute;left:39px;top:36px;width:129px;height:auto}
+.cover-logo .wm{fill:var(--black)}
+.cover-logo .mk{fill:var(--orange)}
+.cover-mark{position:absolute;left:470px;top:332px;width:766px;height:160px;pointer-events:none}
+.cover-mark polygon{fill:var(--orange)}
+.slide.active .cover-mark{animation:markIn .9s var(--slow) both}
+.cover-titles2{position:absolute;left:39px;top:148px;right:88px;max-width:740px}
+.cover-titles2 .headline{font-size:62px;max-width:16ch}
+.cover-sub{font-family:var(--sans);font-size:18px;line-height:1.4;color:var(--ink);margin-top:16px;max-width:44ch}
+.cover-foot{position:absolute;left:39px;right:39px;bottom:34px;font-family:var(--sans);color:var(--black);border-top:1.5px solid rgba(0,0,0,.18);padding-top:14px}
+.cover-foot-meta{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--black);margin-bottom:10px}
+.cover-foot-meta .accent{color:var(--orange)}
+.cover-team{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.cover-member{border-left:3px solid var(--orange);padding-left:10px}
+.cover-member .mn{font-size:16px;font-weight:700;line-height:1.2;color:var(--black)}
+.cover-member .mr{font-size:13px;color:var(--ink);margin-top:3px;line-height:1.25}
+.col{display:flex;flex-direction:column}
+.grid{display:grid;gap:24px}
+.g-2{grid-template-columns:1fr 1fr}
+.g-3{grid-template-columns:repeat(3,1fr)}
+.g-4{grid-template-columns:repeat(4,1fr)}
+.center-y{height:100%;justify-content:center}
+.fill{height:100%}
+.spread{display:flex;gap:56px;align-items:center;height:100%}
+.eyebrow-row{display:flex;align-items:baseline;gap:14px}
+.card{background:var(--grey-50);border-radius:0;padding:24px 22px;border:1px solid var(--grey-100)}
+.card h3{font-family:var(--sans);font-weight:700;font-size:18px;margin-bottom:6px;color:var(--black)}
+.card p{font-size:14.5px;line-height:1.42;color:var(--black)}
+.picoblock{display:flex;flex-direction:column;gap:14px}
+.picoblock h3{font-family:var(--sans);font-weight:700;font-size:20px;color:var(--black);margin:0}
+.picoblock p{font-size:15.5px;line-height:1.45;color:var(--black);margin:0}
+.picoblock--panel{background:var(--grey-50);padding:26px 24px}
+.picoblock--box{border:1.5px solid var(--orange);padding:26px 24px}
+.picoblock--bar{border-left:4px solid var(--orange);padding-left:20px}
+.picoblock--tint{background:var(--orange-100);padding:26px 24px}
+.picorow{display:flex;align-items:flex-start;gap:22px}
+.picorow .pico{flex:0 0 auto;width:82px;height:82px}
+.picorow h3{font-family:var(--sans);font-weight:700;font-size:19px;color:var(--black);margin:0 0 5px}
+.picorow p{font-size:15.5px;line-height:1.45;color:var(--black);margin:0;max-width:74ch}
+.stat{font-family:var(--sans);font-weight:400;color:var(--orange);font-size:128px;line-height:.92;font-variant-numeric:tabular-nums}
+.stat .unit{font-size:.5em}
+.stat-cap{font-family:var(--sans);font-size:20px;color:var(--black);margin-top:10px;max-width:24ch}
+.statbox{padding:24px 22px;border-top:5px solid var(--orange);background:var(--grey-50);border-radius:0}
+.statbox .num{font-family:var(--sans);font-weight:400;font-size:52px;color:var(--orange);font-variant-numeric:tabular-nums;line-height:1}
+.statbox .lbl{font-size:14.5px;line-height:1.38;color:var(--black);margin-top:10px}
+.statbox--compact{padding:18px 18px}
+.statbox--compact .num{font-size:44px}
+.statbox--compact .lbl{font-size:13.5px;margin-top:7px}
+.flow{display:flex;align-items:stretch;gap:0;width:100%}
+.step{flex:1;position:relative;padding:22px 18px 22px 20px;background:var(--grey-50);border-radius:0;margin-right:28px}
+.step:last-child{margin-right:0}
+.step:not(:last-child)::after{content:"";position:absolute;right:-24px;top:50%;width:24px;height:2px;background:var(--black)}
+.step:not(:last-child)::before{content:"";position:absolute;right:-24px;top:50%;width:8px;height:8px;border-top:2px solid var(--black);border-right:2px solid var(--black);transform:translate(-2px,-50%) rotate(45deg)}
+.step .n{font-family:var(--sans);font-weight:400;font-size:30px;color:var(--orange);line-height:1}
+.step h3{font-family:var(--sans);font-weight:700;font-size:16.5px;margin:9px 0 6px}
+.step p{font-size:13.5px;line-height:1.4;color:var(--black)}
+.subagent-strip{margin-top:24px;padding:14px 18px;background:var(--orange-50);border-left:4px solid var(--orange);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.subagent-strip .lbl{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--black);white-space:nowrap}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:12.5px;background:var(--white);border:1px solid var(--orange-200);padding:4px 9px;color:var(--ink)}
+.shared-banner{background:var(--orange-100);border-left:5px solid var(--orange);padding:16px 22px;display:flex;align-items:baseline;justify-content:space-between;gap:24px}
+.shared-banner h3{font-family:var(--sans);font-weight:700;font-size:17px;color:var(--black);white-space:nowrap}
+.shared-banner p{font-size:14.5px;line-height:1.4;color:var(--black);max-width:none}
+.role-card{background:var(--grey-50);border-top:4px solid var(--orange);padding:18px 16px;display:flex;flex-direction:column;gap:8px}
+.role-card .tag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--orange)}
+.role-card .nm{font-size:17px;font-weight:700;line-height:1.2;color:var(--black)}
+.role-card .mod{font-family:var(--mono);font-size:11.5px;color:#444}
+.role-card ul{margin:2px 0 0 16px;font-size:13.5px;line-height:1.4;color:var(--black)}
+.role-card li{margin-bottom:4px}
+.demo-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.shot-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:22px}
+.shot-card{background:var(--grey-50);border-top:4px solid var(--orange);border-right:1px solid var(--grey-200);border-bottom:1px solid var(--grey-200);border-left:1px solid var(--grey-200);display:flex;flex-direction:column}
+.shot-frame{background:#121426;padding:6px;border-bottom:1px solid var(--grey-200)}
+.shot-frame img{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;background:#121426}
+.video-layout{display:grid;grid-template-columns:760px 1fr;gap:24px;align-items:stretch;margin-top:22px}
+.video-frame{background:#121426;padding:6px;border-top:4px solid var(--orange);border-right:1px solid var(--grey-200);border-bottom:1px solid var(--grey-200);border-left:1px solid var(--grey-200);display:flex;align-items:center}
+.video-frame video{display:block;width:100%;aspect-ratio:16/9;background:#000}
+.shot-cap{padding:12px 16px 14px}
+.shot-cap h3{font-family:var(--sans);font-weight:700;font-size:16px;color:var(--black);margin-bottom:4px}
+.shot-cap p{font-size:13.5px;line-height:1.38;color:var(--ink);max-width:none}
+.qa-banner{margin-top:22px;padding:15px 22px;background:rgba(255,255,255,.78);border-left:5px solid var(--orange);max-width:860px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.qa-banner .qa-title{font-family:var(--serif);font-size:26px;color:var(--orange);line-height:1.1}
+.qa-banner .qa-sub{font-family:var(--sans);font-size:16px;color:var(--black);line-height:1.35}
+table.brand{width:100%;border-collapse:collapse;font-size:14.5px;color:var(--black)}
+table.brand th{color:var(--orange);text-align:left;padding:10px 14px;font-weight:700;border-bottom:2px solid var(--orange)}
+table.brand td{padding:10px 14px;border-bottom:1px solid var(--bg-grey);vertical-align:top;line-height:1.35}
+table.brand tbody tr:last-child td{border-bottom:0}
+table.brand tr.total td{font-weight:700;background:var(--orange-50)}
+table.brand .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rag{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:6px;background:var(--grey-400)}
+.rag--green{background:var(--status-green)}
+.rag--amber{background:var(--status-amber)}
+.rag--red{background:var(--status-red)}
+.pico{width:88px;height:88px;display:block}
+.pico svg{width:100%;height:100%;display:block}
+.pico svg path{fill:url(#pwcPicoGrad)}
+.pico--ink svg path{fill:var(--black)}
+.divider-num{position:absolute;right:64px;top:20px;font-family:var(--sans);font-weight:400;font-size:440px;line-height:1;color:var(--orange);font-variant-numeric:tabular-nums;pointer-events:none}
+.bottom-left{position:absolute;left:88px;right:88px;bottom:92px}
+.bottom-left .headline{max-width:16ch}
+.agenda-list{position:absolute;left:520px;right:88px;top:88px;list-style:none;counter-reset:agenda;font-family:var(--sans);font-size:23px;line-height:1.3;color:var(--black)}
+.agenda-list li{counter-increment:agenda;display:flex;gap:18px;padding:12px 0;border-bottom:1px solid var(--grey-100);break-inside:avoid}
+.agenda-list li:last-child{border-bottom:0}
+.agenda-list li::before{content:counter(agenda);color:var(--orange);font-weight:700;min-width:1.4em;text-align:right;font-variant-numeric:tabular-nums}
+.stattiles{position:absolute;right:40px;top:39px;display:grid;grid-template-columns:295px 295px;grid-auto-rows:290px;gap:16px 14px}
+.stattile{padding:22px 20px;display:flex;flex-direction:column;justify-content:space-between;color:var(--black)}
+.stattile:nth-child(1){background:var(--grey-400)}
+.stattile:nth-child(2){background:var(--orange);color:var(--white)}
+.stattile:nth-child(3){background:var(--orange-100)}
+.stattile:nth-child(4){background:var(--grey-200)}
+.stattile .num{font-family:var(--sans);font-weight:400;font-size:64px;line-height:1;font-variant-numeric:tabular-nums}
+.stattile .lbl{font-size:14.5px;line-height:1.38;color:inherit}
+.stattile:nth-child(2) .lbl{font-size:17px;font-weight:700}
+.closing-team{margin-top:26px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1040px}
+.closing-member{border-left:3px solid var(--orange);padding-left:12px}
+.closing-member .nm{font-size:15.5px;font-weight:700;color:var(--black)}
+.closing-member .ro{font-size:13px;color:var(--ink);margin-top:2px}
+#overflow-warn{display:none;position:fixed;top:0;left:0;right:0;z-index:100;background:#c0390a;color:#fff;font-family:var(--sans);font-weight:700;font-size:14px;text-align:center;padding:10px 16px}
+.nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:18px;z-index:50;background:rgba(20,20,22,.72);backdrop-filter:blur(8px);padding:8px 16px;border-radius:999px;transition:opacity .4s var(--ease)}
+body.nav-idle .nav,body.bare .nav{opacity:0;pointer-events:none}
+.nav button{all:unset;cursor:pointer;color:#fff;opacity:.8;font-size:18px;padding:2px 6px}
+.nav button:hover{opacity:1}
+.nav button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.dots{display:flex;gap:7px}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);cursor:pointer;transition:background .2s,transform .2s}
+.dots i.on{background:var(--orange);transform:scale(1.25)}
+.counter{color:#fff;font-size:13px;opacity:.85;font-variant-numeric:tabular-nums;min-width:46px;text-align:center}
+body.measuring .slide,body.measuring .reveal{transform:none!important;transition:none!important}
+body.print *,body.print *::before,body.print *::after,body.still *,body.still *::before,body.still *::after{transition:none!important;animation:none!important}
+body.still .wipe{clip-path:none}
+#notes-panel{display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:32vh;overflow:auto;background:rgba(20,20,22,.92);color:#fff;font-family:var(--sans);font-size:16px;line-height:1.5;padding:14px 24px 64px;white-space:pre-line}
+body.notes-on #notes-panel{display:block}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  body{background:#fff;overflow:visible;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #stage{position:static;transform:none!important;width:1280px;height:auto}
+  #deck{position:static}
+  .slide{position:relative;opacity:1!important;visibility:visible!important;transform:none!important;page-break-after:always;break-after:page;width:1280px;height:720px}
+  .reveal{opacity:1!important;transform:none!important}
+  .nav{display:none!important}
+  #overflow-warn,#notes-panel{display:none!important}
+  .print .bar[data-h]{height:var(--h)!important}
+  .print .bar[data-w]{width:var(--w)!important}
+  .wipe{clip-path:none!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="pwcPicoGrad" x1="14" y1="58" x2="58" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9F00" /><stop offset="0.05" stop-color="#FE9900" />
+      <stop offset="0.47" stop-color="#FD7204" /><stop offset="0.8" stop-color="#FD5907" />
+      <stop offset="1" stop-color="#FD5108" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<div id="stage">
+<main id="deck">
+
+<!-- 1. COVER -->
+<section class="slide slide--hero active" aria-label="Cover">
+  <aside class="notes">
+    About 30 seconds. Introduce Team 1 and SupplyGuard AI for the Code.Hub × PwC Agentic AI Development capstone.
+    Highlight that all four of us built the shared Workflow core together and split Interface, Platform, Knowledge, and Quality across the team.
+    Preview the route: the operational challenge, our working Deep Agents solution on MC-17, the real codebase &amp; team ownership, and live verification results.
+  </aside>
+  <svg class="cover-logo" viewBox="0 0 129 62.86" role="img" aria-label="PwC">
+    <path class="wm" d="M95.4952 26.5138C90.9556 27.2471 88.6369 30.5994 88.6369 36.4986 88.6369 42.3978 91.7285 46.4043 96.466 46.4043 98.6706 46.4043 100.675 45.671 104.886 43.6061L104.886 48.4088C99.8323 50.7275 96.8571 51.4445 92.7831 51.4445 88.3738 51.4445 85.2706 50.2735 82.7377 47.6917 80.1419 45.0937 78.8429 41.6645 78.8429 37.8442 78.8429 29.347 85.1332 23.5991 94.3195 23.5991 100.421 23.5991 104.619 26.3881 104.619 30.4807 104.619 33.116 102.665 34.9319 99.7671 34.9319 98.2795 34.9319 97.0573 34.5431 95.4929 33.6352L95.4929 26.5114 95.4929 26.5114ZM73.095 37.8465C77.1644 32.7156 78.6008 30.6483 78.6008 28.1294 78.6008 25.6105 76.6103 23.6014 73.9494 23.6014 72.3105 23.6014 70.8369 24.3743 70.1152 25.1798L70.1152 35.6303 63.4477 44.514 63.4477 24.2579 57.1086 24.2579 46.5696 41.7297 46.5696 24.2579 42.9263 24.2579 33.3605 26.5906 33.3605 29.035 38.5775 29.5635 38.5775 50.9905 45.3218 50.9905 55.4301 34.3801 55.4301 50.9905 62.8168 50.9905 73.0927 37.8442 73.0927 37.8442ZM13.2208 29.7055C14.7713 29.5169 15.5395 29.4284 16.2728 29.4284 20.6705 29.4284 23.0543 32.3524 23.0543 37.8489 23.0543 44.3417 20.142 47.729 14.7084 47.729 14.2544 47.729 13.9402 47.729 13.2208 47.6941L13.2208 29.7055 13.2208 29.7055ZM13.2208 50.7298C14.9738 50.93 16.6732 50.9929 17.6976 50.9929 26.7349 50.9929 32.4688 45.2101 32.4688 36.6127 32.4688 29.177 28.1713 23.8063 22.3466 23.8063 19.8254 23.8063 18.1352 24.3231 13.2208 27.2494L13.2208 23.6689 10.497 23.6689 0 26.856 0 29.4261 4.34641 29.4261 4.34641 59.4016 0.435339 60.3748 0.435339 62.8564 17.5928 62.8564 17.5928 60.3748C17.5928 60.3748 13.2185 59.4016 13.2185 59.4016L13.2185 50.7298 13.2185 50.7298Z" />
+    <path class="mk" d="M90.6157 16.1727 61.9881 16.1727 66.8653 8.08753 95.4929 8.08753 90.6157 16.1727ZM129 0 100.372 0 95.4952 8.0852 124.123 8.0852 129 0Z" />
+  </svg>
+  <svg class="cover-mark" viewBox="0 0 789 166" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <polygon points="446,0 789,0 741,82 396,82" />
+    <polygon points="49,84 393,84 344,166 0,166" />
+  </svg>
+  <div class="cover-titles2">
+    <div class="kicker reveal" style="--i:0">Code.Hub × PwC · Agentic AI Development · November 2026</div>
+    <h1 class="headline reveal" style="--i:1">SupplyGuard AI:<br />from delay<br />to decision</h1>
+    <p class="cover-sub reveal" style="--i:2">
+      Agentic supply chain disruption &amp; recovery platform built on Deep Agents, Chainlit, PostgreSQL/pgvector, ChromaDB, Neo4j and MCP.
+    </p>
+  </div>
+  <div class="cover-foot reveal" style="--i:3">
+    <div class="cover-foot-meta">
+      <span><span class="accent">Team 1</span> · Capstone Project</span>
+      <span>Shared Workflow Role · Split Functional Ownership</span>
+    </div>
+    <div class="cover-team">
+      <div class="cover-member">
+        <div class="mn">Stefanos Fotopoulos</div>
+        <div class="mr">Knowledge &amp; Workflow</div>
+      </div>
+      <div class="cover-member">
+        <div class="mn">Alexandros-Georgios Zarkalis</div>
+        <div class="mr">Interface &amp; Workflow</div>
+      </div>
+      <div class="cover-member">
+        <div class="mn">Vicky Miliaraki</div>
+        <div class="mr">Quality &amp; Workflow</div>
+      </div>
+      <div class="cover-member">
+        <div class="mn">Evangelos-Ioannis Bomponis</div>
+        <div class="mr">Platform &amp; Workflow</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. AGENDA -->
+<section class="slide" aria-label="Agenda">
+  <aside class="notes">
+    About 20 seconds. Four parts: the business challenge, our working solution on the MC-17 reference incident, the real architecture and Team 1 ownership model, and live verification results plus the demo roadmap.
+  </aside>
+  <ol class="agenda-list reveal" style="--i:1">
+    <li>The operational challenge</li>
+    <li>The solution, MC-17 case &amp; live app</li>
+    <li>Real architecture, guardrails &amp; Team 1 ownership</li>
+    <li>Live verification, benchmarks &amp; Q&amp;A</li>
+  </ol>
+  <div class="bottom-left">
+    <h2 class="headline lg reveal" style="--i:0">Agenda</h2>
+  </div>
+  <div class="chrome"><span class="chrome-mark">PwC</span><span class="page-num"></span></div>
+</section>
+
+<!-- 3. DIVIDER 1 -->
+<section class="slide slide--tint" aria-label="Section divider 1">
+  <aside class="notes">About 5 seconds. Section one: why supplier disruptions break manual processes.</aside>
+  <div class="divider-num reveal" style="--i:0">1</div>
+  <div class="bottom-left">
+    <h2 class="headline lg reveal" style="--i:1">The challenge</h2>
+    <p class="reveal" style="--i:3;margin-top:16px;font-size:18px;max-width:48ch">
+      Disconnected ERP, contract, graph and e-mail silos turn every supplier delay into a manual race against stockout.
+    </p>
+  </div>
+  <div class="chrome"><span class="chrome-mark">PwC</span><span class="page-num"></span></div>
+</section>
+
+<!-- 4. STAT BOXES -->
+<section class="slide" aria-label="The business case">
+  <aside class="notes">
+    About 45 seconds. Frame the real synthetic enterprise dataset loaded into Postgres, Neo4j, pgvector and ChromaDB.
+    Three assembly factories (Stuttgart F1, Katowice F2, Lyon F3) plus central warehouse W-HUB, 60 suppliers, 300 components, 80 products, 1,500 customer orders and 212 governance/supplier documents.
+    When Atlas Components (S001) announces a 12-day delay on MC-17 (PO-2026-9001), recovery must stay under the €75,000 incident cap (or €90,000 with finance-controller authority).
+  </aside>
+  <div class="kicker reveal" style="--i:0">The business case</div>
+  <h2 class="headline reveal" style="--i:0">One late component puts the network at risk</h2>
+  <p class="reveal" style="--i:1;margin-top:20px">
+    Procurement, production, quality and finance live across separate records, so every disruption forces slow, error-prone manual triage.
+  </p>
+  <div class="grid g-4" style="margin-top:34px">
+    <div class="statbox reveal" style="--i:2">
+      <div class="num"><span data-count="3">0</span></div>
+      <div class="lbl">Factories (Stuttgart F1, Katowice F2, Lyon F3) plus central hub <code>W-HUB</code></div>
+    </div>
+    <div class="statbox reveal" style="--i:3">
+      <div class="num"><span data-count="60">0</span></div>
+      <div class="lbl">Suppliers across 300 components, 80 products &amp; 1,500 customer orders</div>
+    </div>
+    <div class="statbox reveal" style="--i:4">
+      <div class="num"><span data-count="12" data-suffix=" days">0</span></div>
+      <div class="lbl">Formal delay on <code>MC-17</code> (<code>PO-2026-9001</code>, Atlas <code>S001</code>)</div>
+    </div>
+    <div class="statbox reveal" style="--i:5">
+      <div class="num"><span data-count="75" data-prefix="€" data-suffix="k">€0k</span></div>
+      <div class="lbl">Default incident spending cap (€90k Finance Controller limit)</div>
+    </div>
+  </div>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: SupplyGuard AI seeded operational dataset (src/support-data/) &amp; frozen contracts (docs/ARCHITECTURE_CONTRACTS.md).</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 5. PICTOGRAMS: why the easy fix fails -->
+<section class="slide" aria-label="Why the easy fix fails">
+  <aside class="notes">
+    About 55 seconds. Walk through the three concrete failure modes planted in our dataset.
+    One: Helios (S002) is cheapest (€7.20) but takes 21 days and only has 1,500/mo real capacity; Borealis (S003) is fast (6 days) but its ISO 9001 certificate expired 2026-09-30 despite a stale ERP flag.
+    Two: Neo4j reveals Delta Micro (S005) and Atlas (S001) both source wafers from Veltro Semiconductor (U01), which has an active Taiwan supply alert.
+    Three: Atlas e-mail says 16d vs formal 12d notice; Cordillera e-mail quotes 10% vs 6% contract expedite fee; and DOC-NOT-HELIOS-PRICE hides a prompt injection inside an HTML comment.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Why it's hard</div>
+  <h2 class="headline reveal" style="--i:0">The easy fix fails on data, graph &amp; policy</h2>
+  <div class="grid g-3" style="margin-top:38px">
+    <div class="picoblock picoblock--bar reveal" style="--i:2">
+      <div class="pico">
+        <svg viewBox="0 0 72 72"><path d="M6.01886 40.5 7.5943 38.25 28.0658 38.25 26.4904 40.5 6.01886 40.5ZM5.79858 36 15.75 19.3775 15.75 11.25 27.5569 11.25 31.4517 4.5 40.5483 4.5 44.4431 11.25 56.25 11.25 56.25 19.997 48.0168 33.75 62.2332 33.75 56.4365 24.0671 57.747 21.8776 66.2014 36 44.0486 36 54 19.3775 54 13.5 44.4431 13.5 40.5483 20.25 37.125 20.25 37.125 55.125 43.374 55.125 48.9983 64.125 60.4693 64.125 58.8939 66.375 11.5307 66.375 13.1061 64.125 23.0017 64.125 28.626 55.125 34.875 55.125 34.875 20.25 31.4517 20.25 27.5569 13.5 18 13.5 18 19.997 9.76684 33.75 23.9832 33.75 18.1865 24.0671 19.497 21.8776 27.9514 36 5.79858 36ZM42.126 57.375 29.874 57.375 25.6547 64.125 46.3453 64.125 42.126 57.375ZM32.7524 18 39.2476 18 42.4951 12.375 39.2476 6.75 32.7524 6.75 29.5049 12.375 32.7524 18ZM45.8443 38.25 44.2689 40.5 64.7404 40.5 66.3158 38.25 45.8443 38.25Z"/></svg>
+      </div>
+      <h3>Cheapest &amp; fastest both fail</h3>
+      <p>Helios (<code>S002</code>, €7.20) takes 21 days with 1,500/mo real capacity, while fast Borealis (<code>S003</code>, 6d) has an expired ISO 9001 certificate (<code>2026-09-30</code>).</p>
+    </div>
+    <div class="picoblock picoblock--bar reveal" style="--i:3">
+      <div class="pico">
+        <svg viewBox="0 0 72 72"><path d="M56.115 10.17C53.1675 10.17 50.7375 12.5776 50.7375 15.5474 50.7375 18.5175 53.1675 20.925 56.115 20.925 59.085 20.925 61.4925 18.5175 61.4925 15.5474 61.4925 12.5776 59.085 10.17 56.115 10.17ZM58.77 17.325C58.6575 17.4825 58.5225 17.6401 58.365 17.7974 57.78 18.3599 56.9925 18.72 56.115 18.72 54.3825 18.72 52.9426 17.3025 52.9426 15.5474 52.9426 14.67 53.3025 13.8825 53.8875 13.2974 54.1575 13.0051 54.5175 12.78 54.8775 12.6225 55.26 12.4426 55.6875 12.3525 56.1375 12.3525 57.0151 12.3525 57.78 12.7126 58.365 13.2974 58.5225 13.455 58.6575 13.6125 58.77 13.77 59.1075 14.2874 59.31 14.895 59.31 15.5474 59.31 16.2 59.1075 16.8074 58.77 17.325ZM63.45 31.2974 70.785 18.6301 63.45 5.94003 48.825 5.94003 42.1199 17.5275 29.97 17.5275 29.3176 16.425 22.6125 28.0574 17.1675 18.6301 22.6125 9.18004 26.1675 15.345 27.45 13.1401 23.2425 5.89499 8.57249 5.89499 1.21495 18.6301 8.5725 31.3425 21.9825 31.3425 28.0574 41.8499 21.33 53.4375 28.6875 66.105 43.4025 66.105 50.7375 53.4375 49.5 51.2775 48.2175 53.4375 46.4849 56.4299 43.4025 61.74 43.4025 57.4199 38.8801 57.4199 38.8801 50.6924 36.675 50.6924 36.675 57.4199 34.1775 57.4199 34.1775 47.7449 31.9949 47.7449 31.9949 57.4199 29.3176 57.4199 29.3176 62.7749 23.895 53.4375 29.97 42.9524 42.1425 42.9524 46.305 50.1525 47.5876 47.9924 44.0325 41.8499 50.1301 31.2974 63.45 31.2974ZM9.83249 8.07756 20.7225 8.07756 15.2774 17.5275 4.36501 17.5275 9.83249 8.07756ZM20.7225 29.16 9.83249 29.16 9.83249 29.1375 4.36501 19.71 15.2774 19.71 20.7225 29.1375 20.7225 29.16ZM31.5 59.6025 41.1975 59.6025 41.1975 63.9224 31.5 63.9224 31.5 59.6025ZM51.3225 29.115 53.3925 25.5151 53.415 25.4925 58.8376 25.4925 60.9075 29.115 51.3225 29.115ZM42.1199 40.77 29.97 40.77 23.895 30.24 26.9324 24.9749 29.97 19.71 42.1199 19.71 46.305 26.9324 47.565 24.7725 44.0325 18.6301 50.085 8.12247 62.2126 8.12247 68.2651 18.6301 62.82 28.0125 60.0975 23.31 52.2 23.31 42.1199 40.77Z"/></svg>
+      </div>
+      <h3>Hidden Tier-2 concentration</h3>
+      <p>Neo4j traversal shows Atlas (<code>S001</code>) and Delta (<code>S005</code>) both source wafers from <b>Veltro Semiconductor (<code>U01</code>)</b>, under an active Taiwan supply alert.</p>
+    </div>
+    <div class="picoblock picoblock--bar reveal" style="--i:4">
+      <div class="pico">
+        <svg viewBox="0 0 72 72"><path d="M39.2481 9.00082 69.126 60.75 2.87402 60.75 36 3.375 37.2989 5.62472 6.77197 58.5 34.6111 58.5 37.2079 54 56.1357 54 36 19.125 15.8643 54 33.398 54 32.0997 56.25 11.9663 56.25 36 14.625 60.0337 56.25 38.5074 56.25 37.2077 58.5 65.228 58.5 37.949 11.2508 39.2481 9.00082ZM37.9688 47.5312 34.0312 47.5312 34.0312 51.4688 37.9688 51.4688 37.9688 47.5312ZM36.801 45 37.6875 34.4581 37.6875 27 34.3125 27 34.3125 34.4581 35.2013 45 36.801 45Z"/></svg>
+      </div>
+      <h3>Conflicting &amp; hostile evidence</h3>
+      <p>Superseded contracts (<code>v2</code> vs <code>v3</code>), conflicting e-mails (16d vs 12d; 10% vs 6% expedite), and an HTML-comment prompt injection in <code>DOC-NOT-HELIOS-PRICE</code>.</p>
+    </div>
+  </div>
+  <div class="chrome"><span class="chrome-mark">PwC</span><span class="page-num"></span></div>
+</section>
+
+<!-- 6. DIVIDER 2 -->
+<section class="slide slide--tint" aria-label="Section divider 2">
+  <aside class="notes">About 5 seconds. Section two: how our implemented Deep Agents workflow solves the disruption.</aside>
+  <div class="divider-num reveal" style="--i:0">2</div>
+  <div class="bottom-left">
+    <h2 class="headline lg reveal" style="--i:1">The solution</h2>
+    <p class="reveal" style="--i:3;margin-top:16px;font-size:18px;max-width:48ch">
+      One root Deep Agent, six specialist subagents, deterministic calculators and payload-bound human approval.
+    </p>
+  </div>
+  <div class="chrome"><span class="chrome-mark">PwC</span><span class="page-num"></span></div>
+</section>
+
+<!-- 7. PROCESS FLOW -->
+<section class="slide" aria-label="How it works">
+  <aside class="notes">
+    About 55 seconds. Walk through the exact five-stage pipeline implemented in src/agent/deep_agent.py and src/agent/subagents.py.
+    1. Triage extracts DisruptionFact; if ambiguous (e.g. just "Atlas" -> Atlas Components S001 vs Atlas Logistik S006), it pauses and asks rather than guessing.
+    2. Impact, Contract and Graph subagents query live Postgres ERP tables, RBAC-scoped hybrid retrieval, Neo4j Tier-2 links and the external risk service.
+    3. Optimizer prices 5 recovery options strictly via Python calculators (zero LLM math).
+    4. Challenger validates policy caps and neutralizes prompt injections; Chainlit renders an immutable SHA-256 Approval Card with Approve, Reject and Modify Plan.
+    5. Approved orders execute exactly once via the Simulated Procurement MCP backed by PostgreSQL audit_log locking, returning a receipt and downloadable report.
+  </aside>
+  <div class="kicker reveal" style="--i:0">How it works · <code>src/agent/deep_agent.py</code></div>
+  <h2 class="headline reveal" style="--i:0">From first message to audited execution</h2>
+  <div class="flow" style="margin-top:34px">
+    <div class="step reveal" style="--i:2">
+      <div class="n">01</div>
+      <h3>Triage &amp; clarify</h3>
+      <p>Parses <code>DisruptionFact</code> and pauses on ambiguity ("Atlas" → <code>S001</code> / <code>S006</code>).</p>
+    </div>
+    <div class="step reveal" style="--i:3">
+      <div class="n">02</div>
+      <h3>Investigate</h3>
+      <p>Queries Postgres stock/BOM, RBAC-scoped hybrid RAG, Neo4j Tier-2 graph &amp; live risk alerts.</p>
+    </div>
+    <div class="step reveal" style="--i:4">
+      <div class="n">03</div>
+      <h3>Price options</h3>
+      <p>Costs 5 recovery plans via Python calculator tools — zero LLM arithmetic.</p>
+    </div>
+    <div class="step reveal" style="--i:5">
+      <div class="n">04</div>
+      <h3>Challenge &amp; approve</h3>
+      <p>Enforces caps &amp; injection defense, then renders a SHA-256 payload-bound Chainlit card.</p>
+    </div>
+    <div class="step reveal" style="--i:6">
+      <div class="n">05</div>
+      <h3>Execute &amp; report</h3>
+      <p>Runs PO once via Procurement MCP (<code>SELECT FOR UPDATE</code>), returning receipt &amp; report.</p>
+    </div>
+  </div>
+  <div class="subagent-strip reveal" style="--i:7">
+    <span class="lbl">6 Specialist Subagents</span>
+    <div class="pill-row">
+      <span class="pill">triage_subagent</span>
+      <span class="pill">impact_subagent</span>
+      <span class="pill">contract_subagent</span>
+      <span class="pill">graph_subagent</span>
+      <span class="pill">optimizer_subagent</span>
+      <span class="pill">challenger_subagent</span>
+    </div>
+  </div>
+  <div class="chrome"><span class="chrome-mark">PwC</span><span class="page-num"></span></div>
+</section>
+
+<!-- 8. FOUR STAT TILES -->
+<section class="slide" aria-label="MC-17 reference case in four numbers">
+  <aside class="notes">
+    About 50 seconds. Show the exact deterministic numbers computed by impact_subagent and calculate_recovery_costs for the MC-17 golden case (EV-0001).
+    5,200 physical units minus 1,400 reserved for Tier-1 orders minus 600 quarantined (LOT-KAT-0932, solder defect) = 3,200 usable units.
+    6 affected products and 77 open customer orders within 60 days represent €412,500 of revenue exposure, reported strictly separately from recovery cost.
+    At 450 units/day demand, Lyon (3.3 days cover) and Katowice (4.0 days) run out first, leaving 5,350 uncovered units.
+    Plan 1 costs exactly €30,378 (€29,400 Cordillera PO + €882 expedite at 6% contract rate + €96 W-HUB transfer), well under the €75,000 cap.
+  </aside>
+  <div class="stattiles">
+    <div class="stattile reveal" style="--i:1">
+      <div class="num"><span data-count="3200">0</span></div>
+      <div class="lbl">usable of 5,200 MC-17 units (1,400 reserved; 600 quarantined in <code>LOT-KAT-0932</code>)</div>
+    </div>
+    <div class="stattile reveal" style="--i:2">
+      <div class="num"><span data-count="77">0</span></div>
+      <div class="lbl">open customer orders at risk across 6 products (€412.5k revenue exposure)</div>
+    </div>
+    <div class="stattile reveal" style="--i:3">
+      <div class="num"><span data-count="5350">0</span></div>
+      <div class="lbl">uncovered units over 12 days (450/day); Lyon (3.3d) &amp; Katowice (4.0d) stock out first</div>
+    </div>
+    <div class="stattile reveal" style="--i:4">
+      <div class="num"><span data-count="30378" data-prefix="€">€0</span></div>
+      <div class="lbl">exact Plan 1 recovery cost (€29,400 PO + €882 expedite + €96 transfer), under €75k cap</div>
+    </div>
+  </div>
+  <div class="bottom-left" style="right:auto;width:470px">
+    <div class="kicker reveal" style="--i:0">Golden scenario · EV-0001</div>
+    <h2 class="headline reveal" style="--i:0">The MC-17 case in four exact numbers</h2>
+  </div>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: Deterministic outputs from src/agent/calculators.py &amp; src/agent/schemas.py against seeded MC-17 data.</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 9. STRATEGY MATRIX TABLE -->
+<section class="slide" aria-label="Recovery strategies compared">
+  <aside class="notes">
+    About 55 seconds. Every strategy generated by compute_recovery_options() separates Recovery Cost from Revenue at Risk and cites its exact evidence.
+    Plan 1 combines W-HUB transfer (800u, €96), expediting PO-2026-9002 (1,500u at 6% contract rate = €882, not the e-mail's 10%), a new Cordillera S004 PO (3,000u @ €9.80, independent upstream U02), and Tier-3 rescheduling for the 850 residual units.
+    Plan 2 adds Delta (S005) for the 850 units, rejected due to shared Tier-2 upstream Veltro (U01).
+    Helios (S002) is too slow (21d) and capacity-capped (1,500/mo); Borealis (S003) is blocked by expired ISO 9001; internal transfer alone leaves 4,550 units uncovered.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Strategy comparison · <code>optimizer_subagent</code></div>
+  <h2 class="headline reveal" style="--i:0">Five options costed separately from risk</h2>
+  <p class="reveal" style="--i:1;margin-top:12px;font-size:16.5px">
+    Recovery cost and revenue at risk are computed by deterministic Python tools, reported in separate columns, and penalties are never double-counted.
+  </p>
+  <table class="brand reveal" style="--i:2;margin-top:18px">
+    <thead>
+      <tr>
+        <th style="width:24%">Strategy</th>
+        <th class="num" style="width:13%">Recovery cost</th>
+        <th class="num" style="width:14%">Revenue at risk</th>
+        <th style="width:14%">Decision</th>
+        <th>Evidence-backed rationale</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="total">
+        <td>Plan 1: Transfer + Expedite + Cordillera (<code>S004</code>)</td>
+        <td class="num">€30,378</td>
+        <td class="num">€0</td>
+        <td><span class="rag rag--green"></span>Recommended</td>
+        <td>800u hub (€96) + 1,500u expedite 6% (€882) + 3,000u <code>S004</code> (9d, independent <code>U02</code>) + 850u Tier-3 shift.</td>
+      </tr>
+      <tr>
+        <td>Plan 2: Add Delta (<code>S005</code>, 850u)</td>
+        <td class="num">€39,218</td>
+        <td class="num">€145,000</td>
+        <td><span class="rag rag--red"></span>Rejected</td>
+        <td>Tier-2 concentration: shares Veltro (<code>U01</code>) with Atlas (<code>NEO4J-TIER2-U01</code>).</td>
+      </tr>
+      <tr>
+        <td>Option 3: Helios (<code>S002</code>) spot</td>
+        <td class="num">€10,800</td>
+        <td class="num">€412,500</td>
+        <td><span class="rag rag--red"></span>Rejected</td>
+        <td>21d lead time &amp; 1,500/mo real capacity (<code>DOC-EM-HELIOS-01</code>); injection ignored.</td>
+      </tr>
+      <tr>
+        <td>Option 4: Borealis (<code>S003</code>)</td>
+        <td class="num">€31,850</td>
+        <td class="num">€412,500</td>
+        <td><span class="rag rag--red"></span>Blocked</td>
+        <td>ISO 9001 expired <code>2026-09-30</code> (<code>DOC-QUA-S003-v1</code>, <code>DOC-PRO-04</code>).</td>
+      </tr>
+      <tr>
+        <td>Option 5: Hub transfer only</td>
+        <td class="num">€96</td>
+        <td class="num">€285,000</td>
+        <td><span class="rag rag--red"></span>Rejected</td>
+        <td>800u delays stockout by ~2.6d, leaving 4,550 units uncovered (<code>DOC-PRO-02</code>).</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: compute_recovery_options() in src/agent/schemas.py &amp; calculate_recovery_costs() in src/agent/calculators.py.</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 10. APP SCREENSHOTS 1: LOGIN & SUBAGENT TELEMETRY -->
+<section class="slide" aria-label="Live application login and telemetry">
+  <aside class="notes">
+    About 45 seconds. Show the real running SupplyGuard AI Chainlit interface captured at http://localhost:8000.
+    Left: our custom Control Tower login screen backed by salted scrypt authentication in PostgreSQL app_users, enforcing RBAC scopes and the €75,000 spending cap before any chat begins.
+    Right: once Maria Keller (procurement_manager) submits the MC-17 disruption, the expanded Multi-Agent Investigation dropdown streams all 6 specialist subagents live, confirms cap compliance and reports 1 neutralized prompt-injection alert above the Operational Impact Dashboard.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Live application · Chainlit <code>2.12.0</code> (<code>http://localhost:8000</code>)</div>
+  <h2 class="headline reveal" style="--i:0">Inside SupplyGuard AI: RBAC login &amp; live telemetry</h2>
+  <div class="shot-grid">
+    <figure class="shot-card reveal" style="--i:1">
+      <div class="shot-frame">
+        <img src="docs/images/app-01-login.png" alt="SupplyGuard AI Control Tower login screen with role-based access" />
+      </div>
+      <figcaption class="shot-cap">
+        <h3>Control Tower authentication</h3>
+        <p>Salted <code>scrypt</code> login (<code>app_users</code>) scopes document retrieval, factory visibility and approval authority per operator.</p>
+      </figcaption>
+    </figure>
+    <figure class="shot-card reveal" style="--i:2">
+      <div class="shot-frame">
+        <img src="docs/images/app-02-subagents.png" alt="Expanded Multi-Agent Investigation showing 6 specialist subagents and Operational Impact Dashboard" />
+      </div>
+      <figcaption class="shot-cap">
+        <h3>Six specialist subagents in real time</h3>
+        <p>Collapsed <code>cl.Step</code> trace shows all 6 subagents, cap status, 1 prompt-injection alert neutralized &amp; RBAC operator banner.</p>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: Live screenshots captured from SupplyGuard AI running in Docker Compose (src/app.py).</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 11. APP SCREENSHOTS 2: STRATEGY MATRIX & APPROVAL CARD -->
+<section class="slide" aria-label="Live application matrix and approval card">
+  <aside class="notes">
+    About 45 seconds. Show the decision and approval experience directly in the live UI.
+    Left: the Recovery Strategy Comparison Matrix prints the explicit accounting rule and separates Recovery Cost (€) from Remaining Revenue at Risk (€) across STRAT-1 through STRAT-5.
+    Right: the Payload-Bound Human Approval Card displays the total committed cost (€30,378.00 = 40.5% of the €75,000 cap), €412,500 revenue protected, all 4 provenance citations with effective dates and scopes, and the Approve, Reject, and Modify Plan buttons.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Live application · Deterministic matrix &amp; HITL gate</div>
+  <h2 class="headline reveal" style="--i:0">From trade-off matrix to payload-bound sign-off</h2>
+  <div class="shot-grid">
+    <figure class="shot-card reveal" style="--i:1">
+      <div class="shot-frame">
+        <img src="docs/images/app-03-strategy.png" alt="Recovery Strategy Comparison Matrix separating Recovery Cost and Remaining Revenue at Risk" />
+      </div>
+      <figcaption class="shot-cap">
+        <h3>Deterministic strategy comparison</h3>
+        <p>Separates <code>Recovery Cost (€)</code> from <code>Revenue at Risk (€)</code> across Cordillera, Delta, Helios and Borealis with zero LLM math.</p>
+      </figcaption>
+    </figure>
+    <figure class="shot-card reveal" style="--i:2">
+      <div class="shot-frame">
+        <img src="docs/images/app-04-approval.png" alt="Payload-Bound Human Approval Card with provenance citations and Approve, Reject, Modify Plan buttons" />
+      </div>
+      <figcaption class="shot-cap">
+        <h3>SHA-256 payload-bound approval card</h3>
+        <p>Shows 40.5% cap utilization (€30,378 / €75k), cited provenance documents, and <code>Approve</code> / <code>Reject</code> / <code>Modify Plan</code> actions.</p>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: Live screenshots captured from SupplyGuard AI MC-17 run (CASE-MC17-001, Maria Keller).</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 12. DIVIDER 3 -->
+<section class="slide slide--tint" aria-label="Section divider 3">
+  <aside class="notes">About 5 seconds. Section three: the real architecture, Team 1's role split, and the guardrails enforced in code.</aside>
+  <div class="divider-num reveal" style="--i:0">3</div>
+  <div class="bottom-left">
+    <h2 class="headline lg reveal" style="--i:1">Architecture &amp; team</h2>
+    <p class="reveal" style="--i:3;margin-top:16px;font-size:18px;max-width:50ch">
+      Six pinned Docker services, strict code-level guardrails, and a four-person team sharing Workflow with four clear owners.
+    </p>
+  </div>
+  <div class="chrome"><span class="chrome-mark">PwC</span><span class="page-num"></span></div>
+</section>
+
+<!-- 11. REAL ARCHITECTURE TABLE -->
+<section class="slide" aria-label="Real architecture">
+  <aside class="notes">
+    About 55 seconds. Walk down the real stack from docker-compose.yml and requirements.txt.
+    Every Docker image and Python dependency is pinned to an exact version.
+    Highlight the 6 Docker Compose services: postgres (pgvector:pg16), neo4j (5.26.0), chromadb (0.5.23), external-risk (port 8080), seed (one-shot idempotent ingestion), and app (Chainlit 2.12 + Deep Agents 0.7.41 on port 8000 with 15s graceful shutdown).
+  </aside>
+  <div class="kicker reveal" style="--i:0">Real architecture · <code>docker-compose.yml</code> &amp; <code>requirements.txt</code></div>
+  <h2 class="headline reveal" style="--i:0">Six services, pinned versions, clear boundaries</h2>
+  <table class="brand reveal" style="--i:2;margin-top:20px">
+    <thead>
+      <tr><th style="width:16%">Layer</th><th style="width:31%">Implemented stack</th><th>Concrete responsibility in code</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Interface</b></td>
+        <td>Chainlit <code>2.12.0</code> + FastAPI</td>
+        <td>Salted <code>scrypt</code> login (<code>app_users</code>), role-scoped chat history, live <code>cl.Step</code> subagents, SHA-256 approval cards &amp; report downloads.</td>
+      </tr>
+      <tr>
+        <td><b>Orchestration</b></td>
+        <td><code>deepagents 0.7.41</code><br />LangGraph <code>1.2.24</code></td>
+        <td><code>create_deep_agent</code>, 6 specialist subagents, <code>PostgresSaver</code> checkpoints, HITL <code>interrupt_on</code> &amp; crash recovery.</td>
+      </tr>
+      <tr>
+        <td><b>Calculators</b></td>
+        <td>LangChain Core <code>1.8.4</code><br />Pydantic <code>2.14.4</code></td>
+        <td>Deterministic tools (<code>calculate_recovery_costs</code>, <code>calculate_revenue_at_risk</code>, <code>verify_budget_limits</code>, <code>scan_prompt_injections</code>).</td>
+      </tr>
+      <tr>
+        <td><b>Storage &amp; RAG</b></td>
+        <td>PostgreSQL 16 + <code>pgvector</code><br />ChromaDB <code>0.5.23</code></td>
+        <td>ERP tables, <code>audit_log</code>, <code>thread_states</code>, 212 docs, 300 cases + 40 memories, hybrid RRF (pgvector + BM25 + graph).</td>
+      </tr>
+      <tr>
+        <td><b>Graph</b></td>
+        <td>Neo4j <code>5.26.0</code></td>
+        <td>60 suppliers, 8 upstreams, 300 components, 80 products, 3 factories, 25 customers (2,531 relationships) via parameterized Cypher.</td>
+      </tr>
+      <tr>
+        <td><b>Integration</b></td>
+        <td>MCP <code>1.30.0</code> · External Risk<br />LangSmith <code>0.16.1</code></td>
+        <td>Idempotent Simulated Procurement MCP (<code>PO-SUP-2026-*</code>), HTTP risk feed on port <code>8080</code>, traces &amp; 105-case eval.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: docker-compose.yml (6 services: postgres, neo4j, chromadb, external-risk, seed, app) &amp; docs/PINNED_VERSIONS.md.</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 12. TEAM 1 OWNERSHIP -->
+<section class="slide" aria-label="Team 1 ownership">
+  <aside class="notes">
+    About 50 seconds. Explain how Team 1 organized delivery without silos.
+    All four members co-owned the Workflow role — designing contracts, Deep Agents orchestration, specialist subagents, deterministic calculators, and approval checkpoints together — and then split the four remaining domains one per person: Interface (Alexandros-Georgios Zarkalis), Platform (Evangelos-Ioannis Bomponis), Knowledge (Stefanos Fotopoulos), and Quality (Vicky Miliaraki).
+  </aside>
+  <div class="kicker reveal" style="--i:0">Team 1 delivery model</div>
+  <h2 class="headline reveal" style="--i:0">Shared Workflow core, four dedicated owners</h2>
+  <div class="shared-banner reveal" style="--i:1;margin-top:18px">
+    <h3>Shared Workflow Role · All 4 Members</h3>
+    <p>Co-built <code>src/agent/deep_agent.py</code>, 6 specialist subagents, deterministic calculators, SHA-256 payload-bound HITL approval gate &amp; Postgres checkpoint recovery.</p>
+  </div>
+  <div class="grid g-4" style="gap:16px;margin-top:18px">
+    <div class="role-card reveal" style="--i:2">
+      <div class="tag">Interface</div>
+      <div class="nm">Alexandros-Georgios Zarkalis</div>
+      <div class="mod">src/app.py · schemas.py</div>
+      <ul>
+        <li>Chainlit UI, streaming &amp; <code>cl.Step</code> subagent telemetry</li>
+        <li>Impact dashboard &amp; strategy comparison matrix</li>
+        <li>Approval card (Approve / Reject / Modify) &amp; session resume</li>
+      </ul>
+    </div>
+    <div class="role-card reveal" style="--i:3">
+      <div class="tag">Platform</div>
+      <div class="nm">Evangelos-Ioannis Bomponis</div>
+      <div class="mod">compose · src/db/ · src/mcp/</div>
+      <ul>
+        <li>6-service Docker stack &amp; pinned versions</li>
+        <li><code>scrypt</code> auth (<code>app_users</code>) &amp; role-scoped history</li>
+        <li><code>audit_log</code> row-lock idempotency &amp; Procurement MCP</li>
+      </ul>
+    </div>
+    <div class="role-card reveal" style="--i:4">
+      <div class="tag">Knowledge</div>
+      <div class="nm">Stefanos Fotopoulos</div>
+      <div class="mod">src/knowledge/ · seed.py</div>
+      <ul>
+        <li>Idempotent ingestion (ERP, 212 docs, 340 memories)</li>
+        <li>Hybrid RRF retrieval (pgvector + BM25 + Neo4j)</li>
+        <li>Multi-tier Cypher graph tools &amp; source precedence</li>
+      </ul>
+    </div>
+    <div class="role-card reveal" style="--i:5">
+      <div class="tag">Quality</div>
+      <div class="nm">Vicky Miliaraki</div>
+      <div class="mod">eval/ · tests/ · docs/</div>
+      <ul>
+        <li>LangSmith tracing &amp; 105-case eval suite (7 evaluators)</li>
+        <li>24-query retrieval benchmark &amp; 17-attack red team</li>
+        <li>Restart harness, pre-demo check &amp; demo script</li>
+      </ul>
+    </div>
+  </div>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: CONTRIBUTING.md, docs/PINNED_VERSIONS.md &amp; GitHub pull requests #94–#107 across Team 1.</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 13. GUARDRAILS -->
+<section class="slide" aria-label="Guardrails in code">
+  <aside class="notes">
+    About 55 seconds. Show that trust is enforced by Python and PostgreSQL invariants, not prompt wishes.
+    1. Payload binding: ApprovalPayload.compute_payload_hash() hashes supplier, qty, price, fees and cap. Any modification via Modify Plan invalidates the prior hash and increments revision. Execution uses PostgreSQL SELECT ... FOR UPDATE on audit_log plus deterministic PO-SUP-2026-&lt;hash&gt; IDs.
+    2. RBAC &amp; provenance: Salted scrypt login verifies users against app_users; role-scoped chat history and DOCUMENT_SCOPES block finance-confidential DOC-FIN-01-v1 from procurement managers and read-only guests. Source precedence demotes superseded contracts.
+    3. Adversarial &amp; restart resilience: scan_prompt_injections neutralizes DOC-NOT-HELIOS-PRICE and sanitize_evidence_text strips hidden HTML comments. Real container restarts (~3s) and crash kill points resume cleanly with zero duplicate POs.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Guardrails in code</div>
+  <h2 class="headline reveal" style="--i:0">Enforced by code &amp; Postgres, not prompts</h2>
+  <div style="display:flex;flex-direction:column;gap:22px;margin-top:30px">
+    <div class="picorow reveal" style="--i:2">
+      <div class="pico">
+        <svg viewBox="0 0 72 72"><path d="M61.965 65.1149 34.5151 65.1149 40.41 54.9226 53.4825 54.9226 57.42 61.7399 60.0075 61.7399 54.7651 52.6726 39.105 52.6726 30.6225 67.3649 63.27 67.3649 61.965 65.1149ZM18.2026 26.7976 28.215 9.47241 28.215 9.44989 19.8675 4.63513 8.73001 23.9175 17.0776 28.7551 25.29 33.5025 8.93243 61.83 10.8901 62.955 27.2249 34.6275 32.535 37.6875 33.66 35.7075 18.2026 26.7976ZM16.2675 25.6726 11.79 23.1075 20.6775 7.71735 25.155 10.2827 25.155 10.3052 16.2675 25.6726ZM31.1401 11.1374 30.0151 13.0952 45.45 22.0051 35.46 39.3525 35.46 39.375 43.8074 44.19 54.945 24.8851 31.1401 11.1374ZM42.9975 41.1075 38.52 38.52 47.4075 23.1301 51.885 25.7173 42.9975 41.1075Z"/></svg>
+      </div>
+      <div>
+        <h3>SHA-256 payload binding &amp; atomic idempotency</h3>
+        <p><code>compute_payload_hash()</code> binds supplier, quantity, unit price, fees and cap (≤ €75k); any edit invalidates approval. <code>execute_idempotent()</code> locks <code>audit_log</code> with <code>SELECT ... FOR UPDATE</code> and generates collision-free <code>PO-SUP-2026-&lt;hash&gt;</code> IDs.</p>
+      </div>
+    </div>
+    <div class="picorow reveal" style="--i:3">
+      <div class="pico">
+        <svg viewBox="0 0 72 72"><path d="M34.3081 13.1785 27.8158 18.6384 25.4215 15.6851 26.2938 14.9753 26.2936 14.975 26.2947 14.9746 27.166 14.2656 27.411 14.5676 28.1203 15.4417 30.4983 13.4419 32.8622 11.454 33.5852 12.3164 33.5856 12.3162 33.5853 12.3165 34.3081 13.1785ZM11.5119 14.9754 11.5119 17.2278 20.0298 17.2278 20.0298 14.9754 11.5119 14.9754ZM33.5851 24.2479 33.585 24.2477 32.8622 23.3857 30.4989 25.373 28.1203 27.3733 27.4113 26.4988 27.166 26.1963 25.4215 27.6158 27.8158 30.5701 34.3081 25.1102 33.5851 24.2479ZM11.5119 26.9197 11.5119 29.1721 20.0298 29.1721 20.0298 26.9197 11.5119 26.9197ZM33.5854 36.179 33.5856 36.1788 33.5854 36.1789 32.8622 35.3163 30.4987 37.3044 28.1203 39.305 27.411 38.4301 27.166 38.1279 26.2941 38.8374 26.2936 38.8376 26.2937 38.8377 25.4215 39.5474 27.8158 42.5017 34.3081 37.0408 33.5854 36.179ZM11.5119 38.8631 11.5119 41.1155 20.0298 41.1155 20.0298 38.8631 11.5119 38.8631ZM41.3702 27.3274C41.3702 21.8254 45.837 17.35 51.3282 17.35 56.8195 17.35 61.2862 21.8254 61.2862 27.3274 61.2862 32.8293 56.8195 37.3048 51.3282 37.3048 45.837 37.3048 41.3702 32.8293 41.3702 27.3274ZM43.6183 27.3274C43.6183 31.5868 47.0771 35.0524 51.3282 35.0524 55.5793 35.0524 59.0382 31.5868 59.0382 27.3274 59.0382 23.068 55.5793 19.6024 51.3282 19.6024 47.0771 19.6024 43.6183 23.068 43.6183 27.3274ZM4 6 4 53.0559 31.3021 53.0559 32.739 50.8035 6.24801 50.8035 6.24801 8.2524 65.752 8.2524 65.752 49.9687 59.7075 39.48 42.9489 39.48 34.5696 54.0218 41.471 66 44.2651 66 44.2651 48.5961 42.0171 48.5961 42.0171 62.4421 37.165 54.0218 44.2466 41.7324 58.4099 41.7324 65.5012 54.0404 60.8969 62.5753 60.8969 48.5961 58.6489 48.5961 58.6489 66 61.6044 66 67.9805 54.1821 68 54.1461 68 6 4 6Z"/></svg>
+      </div>
+      <div>
+        <h3>Authenticated RBAC, provenance &amp; source precedence</h3>
+        <p>Salted <code>scrypt</code> login (<code>src/db/auth.py</code>) filters chat history and retrieval scopes before ranking; <code>DOC-FIN-01-v1</code> never reaches procurement or read-only roles. Contract &gt; qualification &gt; notice &gt; e-mail &gt; chat; superseded versions are demoted.</p>
+      </div>
+    </div>
+    <div class="picorow reveal" style="--i:4">
+      <div class="pico">
+        <svg viewBox="0 0 72 72"><path d="M39.2481 9.00082 69.126 60.75 2.87402 60.75 36 3.375 37.2989 5.62472 6.77197 58.5 34.6111 58.5 37.2079 54 56.1357 54 36 19.125 15.8643 54 33.398 54 32.0997 56.25 11.9663 56.25 36 14.625 60.0337 56.25 38.5074 56.25 37.2077 58.5 65.228 58.5 37.949 11.2508 39.2481 9.00082ZM37.9688 47.5312 34.0312 47.5312 34.0312 51.4688 37.9688 51.4688 37.9688 47.5312ZM36.801 45 37.6875 34.4581 37.6875 27 34.3125 27 34.3125 34.4581 35.2013 45 36.801 45Z"/></svg>
+      </div>
+      <div>
+        <h3>Prompt-injection defense &amp; crash-safe resume</h3>
+        <p><code>scan_prompt_injections</code> neutralizes <code>DOC-NOT-HELIOS-PRICE</code> and <code>sanitize_evidence_text</code> strips HTML comments. Container restarts (~3.0s) and <code>SUPPLYGUARD_CRASH_AT</code> kill points resume from Postgres with zero duplicate POs.</p>
+      </div>
+    </div>
+  </div>
+  <div class="chrome"><span class="chrome-mark">PwC</span><span class="page-num"></span></div>
+</section>
+
+<!-- 14. LIVE VERIFICATION & RETRIEVAL BENCHMARK -->
+<section class="slide" aria-label="Live verification and benchmarks">
+  <aside class="notes">
+    About 1 minute. Present our real live results executed inside the 6-service Docker Compose stack.
+    105/105 evaluation cases passed: 99/99 non-restart cases across 7 deterministic evaluators (golden 1/1, impact 64/64, ambiguity 10/10, injection 10/10, policy 10/10, follow-up 4/4) plus 6/6 restart &amp; crash-kill cases.
+    17/17 red-team attacks neutralized (EV-0072..0081 plus RT-01..07); static scan flagged only DOC-NOT-HELIOS-PRICE.
+    174 automated pytest tests across 20 test modules.
+    Walk through the live 24-query retrieval benchmark: pgvector achieves Recall@5 = 1.000 and MRR = 1.000 across all 6 query kinds; Hybrid (pgvector + BM25 + Neo4j) matches Recall@3 = 0.986 with lower p95 latency (882.6 ms vs 1909.3 ms); ChromaDB is fastest (33.1 ms p50) but drops to 0.50 on version queries.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Live verification · Executed inside Docker Compose</div>
+  <h2 class="headline reveal" style="--i:0">Verified end-to-end across evals, red team &amp; RAG</h2>
+  <div class="grid g-4" style="gap:16px;margin-top:20px">
+    <div class="statbox statbox--compact reveal" style="--i:1">
+      <div class="num"><span data-count="105">0</span>/105</div>
+      <div class="lbl">Eval cases passed (99/99 <code>run_eval</code> + 6/6 restart/crash cases, 7 evaluators)</div>
+    </div>
+    <div class="statbox statbox--compact reveal" style="--i:2">
+      <div class="num"><span data-count="17">0</span>/17</div>
+      <div class="lbl">Red-team attacks neutralized (<code>EV-0072..0081</code> + <code>RT-01..07</code>; 0 leaks)</div>
+    </div>
+    <div class="statbox statbox--compact reveal" style="--i:3">
+      <div class="num"><span data-count="1.000" data-decimals="3">0.000</span></div>
+      <div class="lbl"><code>pgvector</code> Recall@5 &amp; MRR across all 6 query kinds (24 queries)</div>
+    </div>
+    <div class="statbox statbox--compact reveal" style="--i:4">
+      <div class="num"><span data-count="174">0</span></div>
+      <div class="lbl">Automated <code>pytest</code> tests across 20 modules (stack, auth, MCP, graph, UI)</div>
+    </div>
+  </div>
+  <table class="brand reveal" style="--i:5;margin-top:20px">
+    <thead>
+      <tr>
+        <th style="width:28%">Live retriever (24 queries)</th>
+        <th class="num">Recall@1</th>
+        <th class="num">Recall@3</th>
+        <th class="num">Recall@5</th>
+        <th class="num">MRR</th>
+        <th class="num">Version R@5</th>
+        <th class="num">p50 / p95 ms</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="total">
+        <td>pgvector (<code>policy_chunks</code>)</td>
+        <td class="num">0.764</td>
+        <td class="num">0.986</td>
+        <td class="num">1.000</td>
+        <td class="num">1.000</td>
+        <td class="num">1.00</td>
+        <td class="num">730.8 / 1,909.3</td>
+      </tr>
+      <tr>
+        <td>Hybrid (pgvector + BM25 + Neo4j)</td>
+        <td class="num">0.722</td>
+        <td class="num">0.986</td>
+        <td class="num">0.986</td>
+        <td class="num">0.979</td>
+        <td class="num">1.00</td>
+        <td class="num">716.5 / 882.6</td>
+      </tr>
+      <tr>
+        <td>ChromaDB (<code>supplyguard_docs</code>)</td>
+        <td class="num">0.639</td>
+        <td class="num">0.771</td>
+        <td class="num">0.792</td>
+        <td class="num">0.896</td>
+        <td class="num">0.50</td>
+        <td class="num">33.1 / 45.8</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: Live runs inside supplyguard_app (docs/EVALUATION.md, docs/RED_TEAM_REPORT.md, docs/RETRIEVAL_BENCHMARK.md, docs/RESTART_TEST_SCENARIO.md).</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 17. LIVE DEMO VIDEO -->
+<section class="slide" aria-label="Live application 30-second demo">
+  <aside class="notes">
+    About 35 seconds. Play the 30-second screen recording of SupplyGuard AI running end-to-end: triage clarification on Atlas, 6-subagent investigation, deterministic matrix and SHA-256 payload-bound approval execution.
+  </aside>
+  <div class="kicker reveal" style="--i:0">Live application · 30-second demo</div>
+  <h2 class="headline reveal" style="--i:0">30s walkthrough: <code>MC-17</code></h2>
+  <div class="video-layout">
+    <div class="video-frame reveal" style="--i:1">
+      <video controls preload="metadata" playsinline>
+        <source src="docs/supplyguard_demo_30s.mp4" type="video/mp4" />
+      </video>
+    </div>
+    <div class="col" style="gap:14px;justify-content:center">
+      <div class="picoblock picoblock--bar reveal" style="--i:2">
+        <h3>1 · Triage &amp; telemetry</h3>
+        <p>Prompts operator to disambiguate <code>Atlas</code>, then streams all 6 subagents live.</p>
+      </div>
+      <div class="picoblock picoblock--panel reveal" style="--i:3">
+        <h3>2 · Deterministic matrix</h3>
+        <p>Separates <code>Recovery Cost (€)</code> from <code>Revenue at Risk (€)</code> under the €75k cap.</p>
+      </div>
+      <div class="picoblock picoblock--tint reveal" style="--i:4">
+        <h3>3 · SHA-256 HITL approval</h3>
+        <p>Presents provenance citations and executes the approved PO idempotently once.</p>
+      </div>
+    </div>
+  </div>
+  <div class="chrome">
+    <span class="chrome-mark">PwC</span>
+    <span class="source">Source: Recorded walkthrough of SupplyGuard AI running in Docker Compose (docs/supplyguard_demo_30s.mp4).</span>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+<!-- 18. CLOSING & Q&A -->
+<section class="slide slide--hero" aria-label="Thank you and questions">
+  <aside class="notes">
+    About 30 seconds, then open the floor for questions and discussion.
+    Reinforce our core design rule: AI handles the multi-system investigation and deterministic costing; people own the final approval.
+    Thank Code.Hub and PwC mentors and warmly invite questions for Team 1 on architecture, guardrails, retrieval benchmarks, or the live application.
+  </aside>
+  <div class="col center-y">
+    <div class="kicker reveal" style="--i:0">Team 1 · SupplyGuard AI · Code.Hub × PwC</div>
+    <h2 class="headline lg reveal" style="--i:1">AI recommends.<br />People approve.</h2>
+    <p class="lead reveal" style="--i:2;margin-top:12px">
+      Every number computed deterministically. Every claim traced to a source. Every action audited once.
+    </p>
+    <div class="qa-banner reveal" style="--i:3">
+      <span class="qa-title">Thank you — Questions?</span>
+      <span class="qa-sub">We welcome your questions on our Deep Agents workflow, guardrails, benchmarks &amp; live app.</span>
+    </div>
+    <div class="closing-team reveal" style="--i:4">
+      <div class="closing-member">
+        <div class="nm">Stefanos Fotopoulos</div>
+        <div class="ro">Knowledge · Workflow</div>
+      </div>
+      <div class="closing-member">
+        <div class="nm">Alexandros-Georgios Zarkalis</div>
+        <div class="ro">Interface · Workflow</div>
+      </div>
+      <div class="closing-member">
+        <div class="nm">Vicky Miliaraki</div>
+        <div class="ro">Quality · Workflow</div>
+      </div>
+      <div class="closing-member">
+        <div class="nm">Evangelos-Ioannis Bomponis</div>
+        <div class="ro">Platform · Workflow</div>
+      </div>
+    </div>
+  </div>
+  <div class="chrome" style="align-items:flex-end">
+    <span class="chrome-mark">PwC</span>
+    <p style="font-size:11px;color:var(--black);max-width:62%;text-align:left;line-height:1.4;margin:0 48px 0 auto">
+      Code.Hub × PwC Agentic AI Development Bootcamp Capstone · November 2026 · github.com/vaggelismpomponis/supplyguard_ai
+    </p>
+    <span class="page-num"></span>
+  </div>
+</section>
+
+</main>
+</div>
+
+<nav class="nav" aria-label="Slide navigation">
+  <button id="prev" title="Previous (←)" aria-label="Previous slide">‹</button>
+  <div class="dots" id="dots" aria-hidden="true"></div>
+  <button id="next" title="Next (→)" aria-label="Next slide">›</button>
+  <span class="counter" id="counter" aria-live="polite"></span>
+</nav>
+
+<script>
+(function () {
+  const stage = document.getElementById("stage");
+  const deck = document.getElementById("deck");
+  const slides = Array.from(deck.querySelectorAll(".slide"));
+  const dotsBox = document.getElementById("dots");
+  const counter = document.getElementById("counter");
+  if (!slides.length) return;
+  const LOCALE = document.documentElement.lang || "en";
+  const STILL = /[?&]still\b/.test(location.search) ||
+    (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  if (STILL) document.body.classList.add("still");
+  if (/[?&]bare\b/.test(location.search)) document.body.classList.add("bare");
+  let idx = Math.max(0, slides.findIndex((s) => s.classList.contains("active")));
+  function hashSlide() {
+    const n = parseInt(location.hash.slice(1), 10);
+    return n >= 1 && n <= slides.length ? n - 1 : -1;
+  }
+  if (hashSlide() >= 0) idx = hashSlide();
+  let scale = 1;
+  function fit() {
+    scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    stage.style.setProperty("--scale", scale);
+  }
+  window.addEventListener("resize", fit);
+  fit();
+
+  slides.forEach((s, i) => {
+    const d = document.createElement("i");
+    d.addEventListener("click", () => show(i));
+    dotsBox.appendChild(d);
+    const pn = s.querySelector(".page-num");
+    if (pn) pn.textContent = String(i + 1).padStart(2, "0");
+  });
+
+  function fmt(el, value) {
+    const dec = parseInt(el.dataset.decimals || "0", 10);
+    return (el.dataset.prefix || "") +
+      Number(value).toLocaleString(LOCALE, { minimumFractionDigits: dec, maximumFractionDigits: dec }) +
+      (el.dataset.suffix || "");
+  }
+  function countUp(el) {
+    const target = parseFloat(el.dataset.count);
+    const dur = parseInt(el.dataset.dur || "1300", 10);
+    const run = (el._run = (el._run || 0) + 1);
+    let start = null;
+    function frame(t) {
+      if (el._run !== run) return;
+      if (start === null) start = t;
+      const p = Math.min((t - start) / dur, 1);
+      el.textContent = fmt(el, target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    el.textContent = fmt(el, 0);
+    requestAnimationFrame(frame);
+  }
+  function barTarget(b) {
+    return "w" in b.dataset ? ["width", (b.dataset.w || 0) + "%"] : ["height", (b.dataset.h || 0) + "%"];
+  }
+  function dashTarget(p) {
+    const len = p.getTotalLength ? p.getTotalLength() : 100;
+    return [len, len * (1 - parseFloat(p.dataset.dash))];
+  }
+  function play(slide) {
+    slide.querySelectorAll("[data-count]").forEach((el) => {
+      if (!STILL) return countUp(el);
+      el._run = (el._run || 0) + 1;
+      el.textContent = fmt(el, el.dataset.count);
+    });
+    const bars = slide.querySelectorAll(".bar");
+    const dashes = slide.querySelectorAll("[data-dash]");
+    const barTransitions = [];
+    bars.forEach((b, i) => {
+      barTransitions[i] = b.style.transition;
+      b.style.transition = "none";
+      b.style[barTarget(b)[0]] = "0";
+    });
+    dashes.forEach((p) => {
+      const [len] = dashTarget(p);
+      p.style.transition = "none";
+      p.style.strokeDasharray = len;
+      p.style.strokeDashoffset = len;
+    });
+    void slide.offsetWidth;
+    bars.forEach((b, i) => {
+      const [prop, value] = barTarget(b);
+      b.style.transition = barTransitions[i];
+      b.style[prop] = value;
+    });
+    dashes.forEach((p) => {
+      p.style.transition = "stroke-dashoffset 1.2s cubic-bezier(.16,1,.3,1)";
+      p.style.strokeDashoffset = dashTarget(p)[1];
+    });
+  }
+  function show(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => {
+      s.classList.toggle("active", i === idx);
+      if (i !== idx) s.querySelectorAll("video").forEach((v) => v.pause());
+    });
+    Array.from(dotsBox.children).forEach((d, i) => d.classList.toggle("on", i === idx));
+    counter.textContent = idx + 1 + " / " + slides.length;
+    play(slides[idx]);
+    if (hashSlide() !== idx) {
+      try { history.replaceState(null, "", "#" + (idx + 1)); } catch (err) {}
+    }
+    updateNotes();
+  }
+
+  function notesOf(s) {
+    const a = s && s.querySelector(".notes");
+    return a ? a.textContent.trim().replace(/\n\s+/g, "\n") : "";
+  }
+  function labelOf(s) {
+    if (!s) return "End of deck";
+    const h = s.querySelector(".headline, h1, h2");
+    return (h && h.textContent.trim().replace(/\s+/g, " ")) || s.getAttribute("aria-label") || "";
+  }
+  let presenter = null;
+  let started = null;
+  const panel = document.createElement("div");
+  panel.id = "notes-panel";
+  panel.setAttribute("aria-live", "polite");
+  document.body.appendChild(panel);
+  function updateNotes() {
+    const text = notesOf(slides[idx]) || "No notes for this slide.";
+    panel.textContent = text;
+    if (!presenter || presenter.closed) return;
+    const d = presenter.document;
+    d.getElementById("pn").textContent = "Slide " + (idx + 1) + " of " + slides.length + " — " + labelOf(slides[idx]);
+    d.getElementById("pt").textContent = text;
+    d.getElementById("px").textContent = "Next: " + labelOf(slides[idx + 1]);
+  }
+  function openPresenter() {
+    try {
+      presenter = window.open("", "pwc-presenter", "width=720,height=560");
+      if (presenter) buildPresenter(presenter.document);
+    } catch (err) { presenter = null; }
+    if (!presenter) document.body.classList.add("notes-on");
+  }
+  function buildPresenter(d) {
+    d.title = "Presenter view — " + document.title;
+    d.body.innerHTML =
+      '<div id="pc" style="font:700 28px Arial;color:#fd5108"></div>' +
+      '<div id="pn" style="font:700 18px Arial;margin:12px 0"></div>' +
+      '<div id="pt" style="font:20px/1.5 Arial;white-space:pre-line"></div>' +
+      '<div id="px" style="font:16px Arial;margin-top:24px;color:#555"></div>' +
+      '<p style="font:13px Arial;color:#777;margin-top:24px">← → move the deck from here too</p>';
+    d.body.style.cssText = "margin:24px;background:#fff;color:#000";
+    d.onkeydown = (e) => onKey(e);
+    started = started || Date.now();
+    const tick = () => {
+      if (presenter.closed) return;
+      const s = Math.floor((Date.now() - started) / 1000);
+      d.getElementById("pc").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+      setTimeout(tick, 500);
+    };
+    tick();
+    updateNotes();
+  }
+
+  document.getElementById("next").addEventListener("click", () => show(idx + 1));
+  document.getElementById("prev").addEventListener("click", () => show(idx - 1));
+  function onKey(e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest && e.target.closest("button,video") && [" ", "Enter"].includes(e.key)) return;
+    if (["ArrowRight", "PageDown", " "].includes(e.key)) { show(idx + 1); e.preventDefault(); }
+    else if (["ArrowLeft", "PageUp"].includes(e.key)) { show(idx - 1); e.preventDefault(); }
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(slides.length - 1);
+    else if (e.key === "s" || e.key === "S") openPresenter();
+    else if (e.key === "n" || e.key === "N") document.body.classList.toggle("notes-on");
+  }
+  document.addEventListener("keydown", onKey);
+  window.addEventListener("hashchange", () => {
+    if (hashSlide() >= 0 && hashSlide() !== idx) show(hashSlide());
+  });
+  deck.addEventListener("click", (e) => {
+    if (!e.target.closest("a,button,video")) show(idx + 1);
+  });
+  let x0 = null;
+  stage.addEventListener("touchstart", (e) => (x0 = e.touches[0].clientX), { passive: true });
+  stage.addEventListener("touchend", (e) => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) show(idx + (dx < 0 ? 1 : -1));
+    x0 = null;
+  }, { passive: true });
+
+  let idleTimer;
+  function wake() {
+    document.body.classList.remove("nav-idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => document.body.classList.add("nav-idle"), 2500);
+  }
+  ["mousemove", "touchstart", "focusin"].forEach((ev) => window.addEventListener(ev, wake, { passive: true }));
+  wake();
+
+  window.addEventListener("beforeprint", () => {
+    document.body.classList.add("print");
+    slides.forEach((s) => {
+      s.querySelectorAll("[data-count]").forEach((el) => {
+        el._run = (el._run || 0) + 1;
+        el.textContent = fmt(el, el.dataset.count);
+      });
+      s.querySelectorAll(".bar").forEach((b) => {
+        const [prop, value] = barTarget(b);
+        b.style[prop] = value;
+      });
+      s.querySelectorAll("[data-dash]").forEach((p) => {
+        const [len, offset] = dashTarget(p);
+        p.style.transition = "none";
+        p.style.strokeDasharray = len;
+        p.style.strokeDashoffset = offset;
+      });
+    });
+  });
+  window.addEventListener("afterprint", () => {
+    document.body.classList.remove("print");
+    show(idx);
+  });
+
+  /* Overflow guard: flags clipped content or content crowding the footer */
+  const SAFE_GAP = 8;
+  const CLEAR = "rgba(0, 0, 0, 0)";
+  let lastReport = "";
+  function isContent(el) {
+    if (el.matches("img,svg,video,canvas,table")) return true;
+    for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) return true;
+    const cs = getComputedStyle(el);
+    return cs.backgroundColor !== CLEAR || cs.backgroundImage !== "none" ||
+      ["Top", "Right", "Bottom", "Left"].some((side) => parseFloat(cs["border" + side + "Width"]) > 0);
+  }
+  function checkOverflow() {
+    if (document.body.classList.contains("print")) return;
+    document.body.classList.add("measuring");
+    const bad = [];
+    slides.forEach((s, i) => {
+      const issues = [];
+      const dy = s.scrollHeight - s.clientHeight;
+      const dx = s.scrollWidth - s.clientWidth;
+      if (dy > 1) issues.push("too tall by " + dy + "px");
+      if (dx > 1) issues.push("too wide by " + dx + "px");
+      const box = s.getBoundingClientRect();
+      const chrome = s.querySelector(".chrome");
+      const floor = chrome ? (chrome.getBoundingClientRect().top - box.top) / scale - SAFE_GAP : 720;
+      let top = 0, side = 0, foot = 0;
+      s.querySelectorAll("*").forEach((el) => {
+        if (el.closest(".chrome")) return;
+        if (el.parentElement && el.parentElement.closest("svg")) return;
+        if (!isContent(el)) return;
+        const r = el.getBoundingClientRect();
+        if (!r.width && !r.height) return;
+        top = Math.max(top, -(r.top - box.top) / scale);
+        side = Math.max(side, -(r.left - box.left) / scale, (r.right - box.left) / scale - 1280);
+        foot = Math.max(foot, (r.bottom - box.top) / scale - floor);
+      });
+      if (top > 1) issues.push("cut off " + Math.round(top) + "px at the top");
+      if (side > 1) issues.push("cut off " + Math.round(side) + "px at the side");
+      if (foot > 1 && dy <= 1)
+        issues.push(chrome ? "runs " + Math.round(foot) + "px into the footer" : "cut off at the bottom");
+      if (issues.length) {
+        const label = s.getAttribute("aria-label") || "slide " + (i + 1);
+        bad.push("#" + (i + 1) + " (" + label + "): " + issues.join("; "));
+      }
+    });
+    document.body.classList.remove("measuring");
+    document.documentElement.dataset.overflow = JSON.stringify(bad);
+    document.documentElement.dataset.deckChecked = String(slides.length);
+    let banner = document.getElementById("overflow-warn");
+    const report = bad.join("\n");
+    if (report !== lastReport && bad.length)
+      console.error("PwC deck overflow — content is clipped or crowding the footer on:\n" + report + "\nFix: split the slide or cut copy. Do NOT shrink type.");
+    lastReport = report;
+    if (bad.length) {
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "overflow-warn";
+        document.body.appendChild(banner);
+      }
+      banner.textContent = "⚠ Content clipped or crowding the footer on " + bad.length + " slide(s) — see console. Split them; don't shrink type.";
+      banner.style.display = "block";
+    } else if (banner) {
+      banner.style.display = "none";
+    }
+  }
+  window.addEventListener("resize", checkOverflow);
+  window.addEventListener("load", checkOverflow);
+  setTimeout(checkOverflow, 300);
+
+  show(idx);
+  checkOverflow();
+})();
+</script>
+</body>
+</html>

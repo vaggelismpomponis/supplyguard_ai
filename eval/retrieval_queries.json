@@ -1,0 +1,29 @@
+{
+  "description": "Ground-truth queries for the retrieval benchmark (#87). Relevance is per document (source_id). Every relevant id was checked against the document text in src/support-data/documents/. 'kind' groups queries for the per-kind breakdown in docs/RETRIEVAL_BENCHMARK.md.",
+  "queries": [
+    {"id": "RQ-01", "kind": "golden", "query": "How long is the Atlas Components delay for MC-17 and when is the new delivery date?", "relevant": ["DOC-NOT-ATLAS-MC17"]},
+    {"id": "RQ-02", "kind": "conflict", "query": "Atlas account manager says the MC-17 delay could be 16 days", "relevant": ["DOC-EM-ATLAS-01", "DOC-NOT-ATLAS-MC17"]},
+    {"id": "RQ-03", "kind": "conflict", "query": "What is Helios Supply's real monthly capacity for MC-17?", "relevant": ["DOC-EM-HELIOS-01", "DOC-CON-S002-v1"]},
+    {"id": "RQ-04", "kind": "conflict", "query": "Cordillera expedite fee for PO-2026-9002, contract versus e-mail", "relevant": ["DOC-EM-CORDILLERA-01", "DOC-CON-S004-v1", "DOC-PRO-08-v1"]},
+    {"id": "RQ-05", "kind": "golden", "query": "Is the Borealis Parts ISO 9001 certificate still valid?", "relevant": ["DOC-QUA-S003-v1", "DOC-EM-BOREALIS-01"]},
+    {"id": "RQ-06", "kind": "golden", "query": "Can we place new orders with a supplier whose certification has expired?", "relevant": ["DOC-PRO-04-v1", "DOC-QUA-S003-v1"]},
+    {"id": "RQ-07", "kind": "version", "query": "Current standard lead time in the Atlas Components supply contract", "relevant": ["DOC-CON-S001-v3"]},
+    {"id": "RQ-08", "kind": "version", "query": "Superseded Atlas contract with a 10 day lead time", "relevant": ["DOC-CON-S001-v2", "DOC-CON-S001-v3"]},
+    {"id": "RQ-09", "kind": "policy", "query": "Does a second source that shares an upstream manufacturer count as diversification?", "relevant": ["DOC-PRO-05-v1"]},
+    {"id": "RQ-10", "kind": "policy", "query": "Who must approve a recovery plan costing between 25,000 and 75,000 euros?", "relevant": ["DOC-PRO-03-v1"]},
+    {"id": "RQ-11", "kind": "policy", "query": "Can the incident spending cap be raised to EUR 90,000?", "relevant": ["DOC-EM-INTERNAL-01", "DOC-PRO-03-v1"]},
+    {"id": "RQ-12", "kind": "policy", "query": "Can quarantined lots be transferred between factories, and what does a transfer cost?", "relevant": ["DOC-PRO-06-v1"]},
+    {"id": "RQ-13", "kind": "policy", "query": "Which customer orders are protected first when components are scarce?", "relevant": ["DOC-PRO-07-v1"]},
+    {"id": "RQ-14", "kind": "policy", "query": "Should revenue at risk be reported together with recovery cost, and how are late penalties counted?", "relevant": ["DOC-PRO-12-v1"]},
+    {"id": "RQ-15", "kind": "policy", "query": "What to do with instructions embedded in a supplier document", "relevant": ["DOC-PRO-11-v1"]},
+    {"id": "RQ-16", "kind": "policy", "query": "Which source wins when a contract and a supplier e-mail disagree?", "relevant": ["DOC-PRO-02-v1"]},
+    {"id": "RQ-17", "kind": "policy", "query": "Who may see margins and negotiated penalty rates?", "relevant": ["DOC-PRO-10-v1", "DOC-FIN-01-v1"]},
+    {"id": "RQ-18", "kind": "security", "query": "Helios Supply MC-17 price update notice", "relevant": ["DOC-NOT-HELIOS-PRICE"]},
+    {"id": "RQ-19", "kind": "golden", "query": "Cordillera Industrial committed monthly capacity and lead time for MC-17", "relevant": ["DOC-CON-S004-v1", "DOC-EM-CORDILLERA-01"]},
+    {"id": "RQ-20", "kind": "golden", "query": "Delta Micro Systems availability for MC-17", "relevant": ["DOC-EM-DELTA-01", "DOC-CON-S005-v1"]},
+    {"id": "RQ-21", "kind": "history", "query": "Past incident at Hydra Industrial on MC-137 and the strategy used", "relevant": ["DOC-INC-HC-005"]},
+    {"id": "RQ-22", "kind": "history", "query": "Quanta Systems notices about MC-5 quality hold and upstream raw material", "relevant": ["DOC-NOT-012", "DOC-NOT-013"]},
+    {"id": "RQ-23", "kind": "policy", "query": "Incident report template sections", "relevant": ["DOC-PRO-09-v1"]},
+    {"id": "RQ-24", "kind": "policy", "query": "Expedite only open purchase orders where expedite is allowed", "relevant": ["DOC-PRO-08-v1"]}
+  ]
+}

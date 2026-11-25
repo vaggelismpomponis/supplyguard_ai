@@ -1,0 +1,4 @@
+factoryId:ID(Factory),name,sourceId,effectiveDate
+F1,Stuttgart Plant,SRC-ERP-PRODUCT-MASTER,2026-10-19
+F2,Katowice Plant,SRC-ERP-PRODUCT-MASTER,2026-10-19
+F3,Lyon Plant,SRC-ERP-PRODUCT-MASTER,2026-10-19

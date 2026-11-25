@@ -79,11 +79,12 @@ def test_docker_compose_service_definitions():
 
     assert "postgres" in services, "postgres service must be defined"
     assert "neo4j" in services, "neo4j service must be defined"
+    assert "chromadb" in services, "chromadb service must be defined"
     assert "app" in services, "app service must be defined"
 
     app_service = services["app"]
     assert "build" in app_service
-    assert app_service.get("container_name") == "helpdesk_app"
+    assert app_service.get("container_name") == "supplyguard_app"
 
     # Dependency check
     depends_on = app_service.get("depends_on", {})
@@ -91,13 +92,15 @@ def test_docker_compose_service_definitions():
     assert depends_on["postgres"]["condition"] == "service_healthy"
     assert "neo4j" in depends_on
     assert depends_on["neo4j"]["condition"] == "service_healthy"
+    assert "chromadb" in depends_on
+    assert depends_on["chromadb"]["condition"] == "service_healthy"
 
     # Network linking check
     networks = data.get("networks", {})
-    assert "helpdesk_network" in networks
-    assert "helpdesk_network" in services["postgres"].get("networks", [])
-    assert "helpdesk_network" in services["neo4j"].get("networks", [])
-    assert "helpdesk_network" in app_service.get("networks", [])
+    assert "supplyguard_network" in networks
+    assert "helpdesk_network" not in networks
+    for name in ("postgres", "neo4j", "chromadb", "app"):
+        assert "supplyguard_network" in services[name].get("networks", []), name
 
 
 def test_chainlit_starter_app_contracts():
@@ -120,7 +123,7 @@ def test_docker_compose_seed_service_defined():
     assert "seed" in services, "seed service must be defined in compose"
 
     seed_service = services["seed"]
-    assert seed_service.get("container_name") == "helpdesk_seed"
+    assert seed_service.get("container_name") == "supplyguard_seed"
     assert "scripts/seed.py" in " ".join(seed_service.get("command", []))
     assert seed_service.get("restart") == "no"
 
@@ -203,6 +206,7 @@ def test_app_restart_configuration():
     volumes = data.get("volumes", {})
     assert "postgres_data" in volumes, "postgres_data volume must be persistent"
     assert "neo4j_data" in volumes, "neo4j_data volume must be persistent"
+    assert "chroma_data" in volumes, "chroma_data volume must be persistent"
 
 
 def test_database_ports_bound_to_loopback():

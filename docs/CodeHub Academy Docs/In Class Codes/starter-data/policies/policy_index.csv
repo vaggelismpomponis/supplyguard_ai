@@ -1,0 +1,21 @@
+file,doc_id,title,version,effective_date,status,category
+POL-001.md,POL-001,VPN Access and Troubleshooting,1.0,2025-02-01,current,Connectivity
+POL-002_v1-0.md,POL-002,Password Reset Policy,1.0,2024-03-01,superseded,Identity
+POL-002_v2-0.md,POL-002,Password Reset Policy,2.0,2026-06-01,current,Identity
+POL-003.md,POL-003,MFA Enrolment and Recovery,1.2,2025-09-15,current,Identity
+POL-004.md,POL-004,Account Lockout Handling,1.1,2025-04-10,current,Identity
+POL-005.md,POL-005,Email Access and Mailbox Issues,1.0,2025-03-01,current,Collaboration
+POL-006.md,POL-006,Shared Mailbox Setup,1.0,2025-05-20,current,Collaboration
+POL-007.md,POL-007,File Share Permissions,1.3,2025-07-01,current,Collaboration
+POL-008.md,POL-008,Software Installation Requests,2.0,2026-01-15,current,Endpoint
+POL-009.md,POL-009,Lost or Stolen Device,1.1,2025-06-01,current,Security
+POL-010.md,POL-010,Suspected Phishing and Compromised Credentials,1.4,2026-02-01,current,Security
+POL-011.md,POL-011,Printer and Print Queue Troubleshooting,1.0,2025-03-20,current,Endpoint
+POL-012.md,POL-012,Wi-Fi and Office Network,1.2,2025-08-01,current,Connectivity
+POL-013.md,POL-013,Remote Work and Home Connectivity,1.0,2025-01-10,current,Connectivity
+POL-014.md,POL-014,Incident and Outage Linking,1.1,2025-10-01,current,Process
+POL-015.md,POL-015,Ticket Priority and SLA,2.1,2026-03-01,current,Process
+POL-016.md,POL-016,Escalation to an Engineer,1.0,2025-11-01,current,Process
+POL-017.md,POL-017,Finance Systems Access,1.0,2025-09-01,current,Applications
+POL-018.md,POL-018,Backup and File Restore,1.0,2025-04-01,current,Infrastructure
+POL-019.md,POL-019,Video Meetings and Collaboration Tools,1.0,2025-12-01,current,Collaboration

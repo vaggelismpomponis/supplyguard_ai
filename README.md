@@ -1,13 +1,13 @@
-# HelpDesk Lite
+# SupplyGuard AI
 
-**An agentic AI assistant for IT support engineers: faster first-correct-answer, with a human accountable for every state-changing action.**
+**Agentic Supply Chain Disruption and Recovery Platform: autonomous incident extraction, multi-tier dependency tracing, deterministic strategy optimization, and payload-bound human approval.**
 
-[![Status](https://img.shields.io/badge/status-warm--up%20project-blue)](#project-status)
-[![Orchestration](https://img.shields.io/badge/orchestration-LangGraph-1f6feb)](#technology-stack)
+[![Status](https://img.shields.io/badge/status-capstone%20project-blue)](#project-status)
+[![Orchestration](https://img.shields.io/badge/orchestration-Deep%20Agents-1f6feb)](#technology-stack)
 [![UI](https://img.shields.io/badge/UI-Chainlit-orange)](#technology-stack)
 [![License](https://img.shields.io/badge/license-see%20LICENSE-lightgrey)](./LICENSE)
 
-Code.Hub · PwC · Agentic AI Bootcamp
+Code.Hub · PwC · Agentic AI Bootcamp Capstone Project
 
 ---
 
@@ -34,87 +34,71 @@ Code.Hub · PwC · Agentic AI Bootcamp
 
 ## Overview
 
-HelpDesk Lite reduces the time between an incoming IT support request and the first correct response. The assistant extracts the relevant facts from a request, consults company policies and a service dependency graph, and proposes exactly one of five actions. Any action that changes an account or a system pauses for explicit human approval and survives application restarts.
+SupplyGuard AI is an enterprise-grade agentic assistant that protects manufacturing and logistics operations against sudden supply chain disruptions. When a supplier announces a delay (e.g. *Atlas Components announces a 12-day delay on MC-17 microcontrollers*), SupplyGuard AI extracts critical incident parameters, traces downstream dependencies through the Bill of Materials (BOM), identifies multi-tier vulnerabilities in the supplier graph, formulates multiple viable recovery strategies, and submits a payload-bound purchase order for explicit human approval.
 
-This repository is the team's warm-up project. Its purpose is to establish a shared stack and prove that the core building blocks work before the final project begins.
+Every state-changing action in the simulated procurement system requires human approval and is guarded by strict database row-level locking for complete idempotency across container restarts.
 
 ## Key Capabilities
 
 | # | Capability | Description |
 |---|------------|-------------|
-| 1 | Field extraction | Extracts `employee`, `application`, `symptom` and `urgency` from the request. |
-| 2 | Clarification | Asks follow-up questions when essential details are missing; never guesses. |
-| 3 | Policy retrieval | Searches the policy document store and cites the source and **effective date**. |
-| 4 | Service graph check | Inspects dependencies and active outages. |
-| 5 | Action proposal | Selects one of: answer from policy, link to outage, reset credentials, open ticket, escalate to an engineer. |
-| 6 | Human-in-the-loop | Halts and waits for approval before any account-changing or ticket-creating action. |
-| 7 | Persistence | Resumes the conversation from the same point after an application restart. |
+| 1 | Disruption Triage & Clarification | Extracts `supplier_id`, `component_id`, `delay_days`, and `spending_cap`; pauses for interactive clarification if ambiguous. |
+| 2 | Operational Impact Analysis | Computes usable stock (`on_hand - reserved - quarantined`), evaluates assembly factory run-out timelines, and flags open customer orders at risk. |
+| 3 | Multi-tier Graph Traversal | Traverses Neo4j multi-tier supplier networks to identify common upstream dependencies (e.g. shared tier-2 wafer fab Veltro Semiconductor in Taiwan). |
+| 4 | Strategy Optimization | Generates ≥3 viable recovery options (Transfer Stock, Expedite Orders, Purchase from Alternate Supplier) with deterministic cost and revenue-at-risk calculations. |
+| 5 | Payload-Bound Approval | Halts execution and renders an immutable Approval Card in Chainlit; double-click protection and budget cap enforcement (€75,000 reference). |
+| 6 | Simulated Procurement Execution | Issues purchase orders through the Model Context Protocol (MCP) server; returns confirmed order receipts. |
+| 7 | Checkpoint Persistence & Idempotency | Survives container restarts without losing session state or re-executing approved purchase orders. |
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A[Incoming request] --> B[extract_fields]
-    B --> C{Missing fields?}
-    C -- Yes --> D[ask_clarification<br/>interrupt]
+    A[Disruption Incident Message] --> B[Triage & Entity Extraction Subagent]
+    B --> C{Ambiguous Entity?}
+    C -- Yes --> D[Interactive Clarification Dialog<br/>Interrupt]
     D --> B
-    C -- No --> E[retrieve_policy<br/>pgvector, latest effective date wins]
-    E --> F[check_graph<br/>Neo4j: dependencies, outages]
-    F --> G[decide_action<br/>one of 5 actions]
-    G --> H{State-changing?}
-    H -- No --> I[answer / link outage]
-    H -- Yes --> J[human_approval<br/>interrupt]
-    J -- Approved --> K[execute_action<br/>idempotent]
-    J -- Rejected --> L
-    I --> L[Final response with citations]
-    K --> L
+    C -- No --> E[Operational Impact Subagent<br/>Inventory & BOM Analysis]
+    E --> F[Supply Graph Subagent<br/>Neo4j Multi-tier Traversal]
+    F --> G[Recovery Strategy Optimizer<br/>≥3 Viable Options & Trade-off Matrix]
+    G --> H{Budget & Policy Valid?}
+    H -- Exceeds Cap --> I[Flag Policy Violation / Adjust]
+    H -- Valid --> J[Payload-Bound Human Approval Card<br/>Interrupt]
+    J -- Approved --> K[Simulated Procurement System<br/>MCP Order Execution]
+    J -- Rejected --> L[Log Rejection & Request Alternate]
+    K --> M[Post-Approval Receipt & Case Memory]
 ```
-
-### Design Principles
-
-- **No silos.** Each role has a primary owner but no exclusive knowledge; pair sessions and review rotation are mandatory.
-- **Walking skeleton first.** Build an end-to-end flow with mocks early, then replace the mocks incrementally.
-- **Contracts before code.** State schema, Pydantic models and tool signatures are agreed up front.
-- **Simple business logic.** The value lies in the stack and patterns: interrupt, checkpoint and tracing.
-
-### Critical Implementation Notes
-
-| Topic | Guidance |
-|-------|----------|
-| Interrupt and checkpointing | Map `thread_id` consistently to the Chainlit session so the correct thread is found after a restart. |
-| Idempotency | Persist an `action_id` and status (`pending → approved → executed`) and check it before execution. |
-| Policy versions | Store `effective_date` and `doc_id` as metadata; retrieval keeps the most recent version. |
-| Service dependencies | If an application depends on a service with an active outage, the correct action is *link to outage*, not a credential reset. |
 
 ## Technology Stack
 
 | Technology | Purpose |
 |------------|---------|
-| LangGraph | Workflow, state, interrupts |
-| Chainlit | UI: chat, progress, approval buttons |
-| LangChain Core | Prompts, models, tools, Pydantic |
-| Docker Compose | Service orchestration |
-| PostgreSQL + pgvector | Tickets, LangGraph checkpoints, semantic policy search |
-| Neo4j | Employees, teams, applications, services, outages |
-| LangSmith | Tracing and evaluation |
+| Deep Agents (`deepagents`) | Root agent orchestration, planning middleware, and virtual scratchpad |
+| Chainlit | Interactive web UI, live step telemetry, approval cards, and report export |
+| PostgreSQL 16 + pgvector | Relational ERP data, HNSW vector store, `audit_log`, and checkpoints |
+| Neo4j 5.26+ | Multi-tier supply chain graph (Suppliers, Components, Products, Factories, Upstream) |
+| ChromaDB 0.5.23 | Secondary vector database for document corpus and retrieval benchmarking |
+| Model Context Protocol (MCP) | Procurement system and external risk tool transport boundaries |
+| LangSmith | Observability, execution tracing, and automated evaluation on 105 scenarios |
 
 ## Project Status
 
-The project is in its initial phase. This repository currently contains the project documentation; implementation artifacts are planned deliverables.
+SupplyGuard AI is executing its Capstone sprint. The multi-service platform stack, automated seeding, contracts, and simulated procurement MCP integration are fully operational.
 
-| Deliverable | Status |
-|-------------|--------|
-| Documentation (project notes, Git guide) | Available in [`docs/`](./docs) |
-| `docker-compose.yml` and `.env.example` | Available |
-| Chainlit application | Available (Integrated LangGraph + Chainlit UI with human approval & restart resilience) |
-| Policy ingestion and graph seeding scripts | Available (Automated in Compose via `seed` service) |
-| LangSmith project with evaluation run (10 requests) | Available (10-scenario evaluation suite with automated LangSmith evaluators) |
-| `CONTRIBUTING.md` (team agreement) | Available in [`CONTRIBUTING.md`](./CONTRIBUTING.md) |
-| 10-minute live demo, including resume after restart | Ready / Documented (Step-by-step 10-minute live demo rehearsal guide) |
+| Deliverable | Status | Owner / Reference |
+|-------------|--------|-------------------|
+| Architecture Contracts & Schemas | Completed | [`docs/ARCHITECTURE_CONTRACTS.md`](./docs/ARCHITECTURE_CONTRACTS.md) |
+| Docker Compose 5-Service Stack | Completed | [`docker-compose.yml`](./docker-compose.yml) (Postgres, Neo4j, ChromaDB, External Risk, Seed, App) |
+| Multi-stage Dockerfile & Pinned Versions | Completed | [`Dockerfile`](./Dockerfile) & [`docs/PINNED_VERSIONS.md`](./docs/PINNED_VERSIONS.md) |
+| Clean-Clone Benchmark (<10 min) | Re-run pending for the SupplyGuard stack (#85) | [`docs/CLEAN_CLONE_BENCHMARK.md`](./docs/CLEAN_CLONE_BENCHMARK.md) §8 |
+| Automated Ingestion Service (seed) | Completed | [`scripts/seed.py`](./scripts/seed.py) (Idempotent synthetic package seeding) |
+| Simulated Procurement & Risk MCP | Completed | [`src/mcp/`](./src/mcp) (Order execution receipts & risk feed) |
+| Checkpoint Persistence & Restart Support | Completed | [`tests/test_mcp_procurement_and_restart.py`](./tests/test_mcp_procurement_and_restart.py) |
+| Kanban Tasks & Milestone Tracking | Synchronized | [`docs/KANBAN_TASKS.md`](./docs/KANBAN_TASKS.md) & GitHub Issues #32-#93 |
 
 ## Getting Started
 
-Follow these instructions to start the entire HelpDesk Lite stack from a clean clone. The full stack boots up in **<10 minutes**.
+Follow these instructions to start the entire SupplyGuard AI stack from a clean clone. The full stack should boot up in **<10 minutes** (see the clean-clone benchmark).
 
 ### Prerequisites
 
@@ -125,8 +109,8 @@ Follow these instructions to start the entire HelpDesk Lite stack from a clean c
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/vaggelismpomponis/helpdesk_lite.git
-cd helpdesk_lite
+git clone https://github.com/vaggelismpomponis/supplyguard_ai.git
+cd supplyguard_ai
 
 # 2. Configure environment variables (copy template)
 # Linux / macOS:
@@ -138,7 +122,7 @@ Copy-Item .env.example .env
 # Windows (CMD):
 copy .env.example .env
 
-# 3. Start all services (PostgreSQL + pgvector, Neo4j, Chainlit App)
+# 3. Start all services (PostgreSQL + pgvector, Neo4j, ChromaDB, External Risk, Seed, App)
 docker compose up -d --build
 ```
 
@@ -152,9 +136,11 @@ docker compose ps
 
 | Service | Endpoint | Credentials / Details |
 |---------|----------|-----------------------|
-| **Chainlit UI** | [http://localhost:8000](http://localhost:8000) | IT Support Assistant interactive web chat |
+| **SupplyGuard UI (Chainlit)** | [http://localhost:8000](http://localhost:8000) | Interactive supply chain disruption assistant & approval UI |
 | **Neo4j Browser** | [http://localhost:7474](http://localhost:7474) | User: `neo4j` / Password: `neo4j_secure_password`<br>Bolt protocol: `bolt://localhost:7687` |
-| **PostgreSQL + pgvector** | `localhost:5432` | DB: `helpdesk` / User: `postgres` / Password: `postgres_secure_password`<br>Extension `vector` enabled |
+| **PostgreSQL + pgvector** | `localhost:5432` | DB: `supplyguard` / User: `postgres` / Password: `postgres_secure_password`<br>Extension `vector` enabled |
+| **ChromaDB Vector Store** | [http://localhost:8001](http://localhost:8001) | Document corpus vector index & retrieval benchmark store |
+| **External Risk Service** | [http://localhost:8080/alerts](http://localhost:8080/alerts) | Simulated external risk & disruption notice feed |
 
 ### Common Operations
 
@@ -177,30 +163,25 @@ docker compose down -v
 
 ### Container Restart & Idempotency Testing
 
-HelpDesk Lite is architected to withstand container restarts, crashes, and message replays without losing user conversation state or duplicating approved state-changing actions:
+SupplyGuard AI must survive container restarts and message replays without losing a case or creating a purchase order twice:
 
-- **Persistent Checkpoints (`PostgresSaver`)**: LangGraph conversation threads and interrupted approval states are stored directly in PostgreSQL (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes` tables) backed by the persistent `postgres_data` volume.
-- **Graceful Shutdown**: The `app` service is configured with `stop_grace_period: 15s` in `docker-compose.yml` to allow in-flight database transactions and checkpointer writes to complete cleanly prior to container restart or shutdown.
-- **Strict Idempotency Guard**: All proposed and executed actions are tracked in PostgreSQL (`audit_log` and `tickets` tables) with unique `action_id` constraints and row-level locking (`SELECT ... FOR UPDATE`), guaranteeing approved actions never re-execute upon container recovery.
+- **Persistent checkpoints**: agent threads and pending approvals are stored in PostgreSQL (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`) on the persistent `postgres_data` volume.
+- **Graceful shutdown**: the `app` service has `stop_grace_period: 15s`, so in-flight checkpoint writes finish before a restart.
+- **Idempotent execution**: every purchase order carries an `action_id`. The simulated procurement MCP records it in `audit_log` and returns the existing receipt instead of creating a second order.
 
-To verify container restart and idempotency behavior:
+The full procedure (restart while approval is pending, and kills inside a step) is in [`docs/RESTART_TEST_SCENARIO.md`](./docs/RESTART_TEST_SCENARIO.md):
 
 ```bash
-# Test 1: Warm restart of app container (Postgres and Neo4j stay active)
+docker compose exec -T app python -m eval.restart_scenario start
 docker compose restart app
-
-# Test 2: Restart full stack (preserves persistent named volumes)
-docker compose down && docker compose up -d
-
-# Test 3: Run automated restart & idempotency verification suite
-pytest tests/test_restart_idempotency.py -v
+docker compose exec -T app python -m eval.restart_scenario approve <thread_id> --fingerprint <fp>
 ```
 
 ### Automated Ingestion & Database Seeding
 
-Knowledge base policy documents (with chunk embeddings in `pgvector`) and the Neo4j service dependency graph are **automatically seeded** upon startup by the `seed` container before the `app` container starts. No manual SQL or database manipulation is required.
+The `seed` container loads the synthetic data package (`src/support-data/`) before the `app` container starts: the operational tables into PostgreSQL, the 212 documents (with `source_id`, `effective_date` and `access_scope`) into pgvector and ChromaDB, and the multi-tier supplier graph into Neo4j. No manual step is needed.
 
-To re-run seeding on demand at any time (verified idempotent execution):
+To re-run seeding on demand (idempotent):
 
 ```bash
 # Using Docker Compose (recommended)
@@ -210,12 +191,13 @@ docker compose run --rm seed
 python scripts/seed.py
 ```
 
-### Upgrading Existing Database Volumes
+### Existing Database Volumes
 
-If you have an existing PostgreSQL Docker volume (`postgres_data`) from an earlier version of the stack, run the non-destructive upgrade migration to backfill tickets and add required audit log and LangGraph checkpoint tables:
+If you still have a `postgres_data` or `neo4j_data` volume from the earlier HelpDesk Lite stack, remove it so the SupplyGuard schema and data are created from scratch:
 
 ```bash
-docker compose exec -T postgres psql -U postgres -d helpdesk < docker/postgres/migrations/001_upgrade_schema.sql
+docker compose down -v
+docker compose up -d --build
 ```
 
 ### Cross-Platform & Clean-Clone Troubleshooting
@@ -239,171 +221,92 @@ For Git setup, branching and pull request workflow, see the [Git Guide](./docs/G
 
 ## Live Demo Execution Guide (10 Minutes)
 
-This step-by-step rehearsal guide demonstrates the full HelpDesk Lite capabilities during the 10-minute team presentation. Any team member can present any part of the rotation.
+The full script, with the messages to type, expected results and fallbacks, is in [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md). Presenters rotate per [`docs/REHEARSAL_LOG.md`](./docs/REHEARSAL_LOG.md).
 
-### Pre-Demo Checklist
-1. Ensure the stack is running: `docker compose up -d`
-2. Verify all containers are healthy: `docker compose ps`
-3. Open Chainlit UI in your browser: [http://localhost:8000](http://localhost:8000)
-4. Open Neo4j Browser in a second tab: [http://localhost:7474](http://localhost:7474) (Credentials: `neo4j` / `neo4j_secure_password`)
-5. Open LangSmith dashboard in a third tab to observe live trace telemetry.
+| # | Time | Segment |
+|---|---|---|
+| 1 | 1′ | Business goal and architecture |
+| 2 | 2′ | MC-17 disruption message and triage clarification ("Atlas" is ambiguous) |
+| 3 | 2′ | Investigation telemetry, operational impact (3,200 usable, 5,350 uncovered), planted document rejected |
+| 4 | 2′ | Strategy comparison: recovery cost vs revenue at risk; Helios, Borealis and Delta rejected with evidence |
+| 5 | 2′ | Approval card, container restart, resume, purchase order executed exactly once |
+| 6 | 1′ | Follow-up questions and LangSmith traces |
 
----
+Before the demo, run the pre-demo check. It must end with `RESULT: PASS`:
 
-### Phase 1: Overview & Architecture (1 Minute)
-- **Presenter:** Platform or Quality role.
-- **Narrative:**
-  - Introduce HelpDesk Lite: IT support assistant designed for faster first-correct-answer with zero autonomous state-changing operations.
-  - Highlight the core architectural contracts: LangGraph state machine, PostgreSQL checkpoints (`PostgresSaver`), Neo4j dependency graph, pgvector semantic policy search, and Chainlit web UI.
-  - Explain the 5 action types (`answer_policy`, `link_outage`, `reset_credentials`, `open_ticket`, `escalate`) and the human-in-the-loop guarantee.
-
----
-
-### Phase 2: Missing Details & Clarification (2 Minutes)
-- **Presenter:** Interface or Workflow role.
-- **Goal:** Demonstrate that the assistant extracts mandatory fields (`employee`, `application`, `symptom`, `urgency`) and halts with a polite clarification rather than hallucinating or guessing.
-- **User Prompt in UI:**
-  > *"I cannot log in to my account. Please help!"*
-- **Assistant Behavior:**
-  - Identifies that `employee` identity and `application` are missing.
-  - Proposes `ask_clarification` and pauses for human response.
-  - Replies: *"Could you please specify your employee username or ID, and which application you are attempting to access?"*
-- **User Follow-Up:**
-  > *"My name is Alice and I am trying to access SAP ERP."*
-- **Assistant Behavior:**
-  - Extracts `employee: Alice`, `application: SAP ERP`.
-  - Resumes the graph flow to consult policies and the service dependency graph.
-
----
-
-### Phase 3: Policy Retrieval & Conflict Resolution (2 Minutes)
-- **Presenter:** Knowledge role.
-- **Goal:** Demonstrate semantic retrieval from PostgreSQL `pgvector` where multiple versions of a policy exist, proving the system selects the **latest effective date** and cites both `doc_id` and `effective_date`.
-- **User Prompt in UI:**
-  > *"Alice from Finance: What is the maximum password retry limit before account lockout on SAP ERP?"*
-- **Assistant Behavior:**
-  - Queries `policy_chunks` table via vector similarity.
-  - Detects legacy policy `POL-SEC-01-v1` (effective 2023-01-01, 3 retries) and superseding policy `POL-SEC-01-v2` (effective 2024-06-01, 5 retries).
-  - Selects `POL-SEC-01-v2` based on effective date precedence.
-  - Proposes action `answer_policy` and responds with explicit citations:
-    > *"Per company password policy **POL-SEC-01-v2** (effective **2024-06-01**), accounts are locked after 5 consecutive failed login attempts."*
-
----
-
-### Phase 4: Service Dependency & Active Outage (2 Minutes)
-- **Presenter:** Knowledge or Workflow role.
-- **Goal:** Prove that the assistant inspects Neo4j for service dependencies and active outages, correctly proposing `link_outage` instead of an erroneous credential reset.
-- **User Prompt in UI:**
-  > *"Bob from Sales: Salesforce CRM is returning 500 error and won't let me sign in. Reset my password!"*
-- **Assistant Behavior:**
-  - Checks Neo4j dependency graph: `Salesforce CRM` depends on `Auth0 Identity Gateway`.
-  - Discovers an active critical outage on `Auth0 Identity Gateway` (`OUT-2026-11-04`).
-  - Correctly suppresses credential reset; proposes `link_outage`.
-  - Responds with outage incident reference and status:
-    > *"Salesforce CRM is currently impacted by active incident **OUT-2026-11-04** on dependent service **Auth0 Identity Gateway**. We recommend linking your request to the ongoing outage rather than resetting credentials."*
-
----
-
-### Phase 5: Human-in-the-Loop, Container Restart & Resumed Idempotency (2 Minutes)
-- **Presenter:** Platform or Interface role.
-- **Goal:** The showstopper feature — trigger a state-changing action, demonstrate the interrupt card, perform a hard container restart, show state recovery from PostgreSQL checkpoint, approve the action, and prove zero duplicate execution.
-- **Step 1: Trigger State-Changing Action**
-  - User Prompt in UI:
-    > *"Alice: My Workday credentials are lost and there are no active outages. Please reset my password."*
-  - Assistant analyzes request, verifies no outage, and proposes `reset_credentials` (`pending`).
-  - UI displays the interactive Approval Card: **[Approve]** and **[Reject]** buttons.
-- **Step 2: Simulate Container Crash / Restart**
-  - Switch to terminal and execute:
-    ```bash
-    docker compose restart app
-    ```
-  - Verify terminal output: `Container helpdesk_app Restarted`.
-- **Step 3: Resume Conversation Seamlessly**
-  - Return to browser and refresh or click **[Approve]**.
-  - Assistant announces:
-    > *"🔄 Session restored from database checkpoint! Resuming thread..."*
-  - The pending approval card is intact.
-- **Step 4: Execute with Strict Idempotency**
-  - Click **[Approve]**.
-  - Action transitions from `pending → approved → executed` inside PostgreSQL transaction with row-level locking.
-  - Click **[Approve]** a second time (or replay message):
-  - Assistant safely reports: *"Action was already executed under action_id act_... No duplicate operation performed."*
-
----
-
-### Phase 6: Traces and Evaluation in LangSmith (1 Minute)
-- **Presenter:** Quality role.
-- **Goal:** Show observability and eval metrics.
-- **Action:**
-  - Open LangSmith UI to inspect the live execution trace for the session.
-  - Highlight the exact node transitions (`extract_fields → retrieve_policy → check_graph → decide_action → human_approval → execute_action`).
-  - Demonstrate the 10-scenario evaluation benchmark results (`eval/evaluators.py`), confirming 100% adherence to policy citations, outage linking, and human approval constraints.
-
----
+```bash
+docker compose exec -T app python -m eval.demo_check
+```
 
 ## Automated Testing Suite
 
-The repository contains an automated test suite verifying container configurations, database schemas, graph logic, and restart idempotency across all platforms:
+```bash
+# All tests inside the app container
+docker compose exec -T app python -m pytest -q
+
+# Platform: Docker stack configuration and PostgreSQL schema
+docker compose exec -T app python -m pytest tests/test_docker_stack.py tests/test_postgres_schema.py -q
+
+# Simulated procurement MCP and restart idempotency
+docker compose exec -T app python -m pytest tests/test_mcp_procurement_and_restart.py -q
+
+# Interface: Chainlit UI, RBAC, approval card
+docker compose exec -T app python -m pytest tests/test_ui.py -q
+
+# Quality: dataset, evaluators, evaluation runner, red team, retrieval benchmark, restart and demo checks
+docker compose exec -T app python -m pytest tests/test_evaluators.py tests/test_run_eval.py \
+  tests/test_red_team_and_benchmark.py tests/test_restart_scenario.py tests/test_demo_check.py \
+  tests/test_eval_harness.py -q
+```
+
+All legacy HelpDesk Lite code and tests have been retired in favor of the SupplyGuard Deep Agents workflow and harness (`eval_harness.py`).
+
+Evaluation and benchmarks (see [`docs/EVALUATION.md`](./docs/EVALUATION.md)):
 
 ```bash
-# Run all test suites inside the Docker container runner:
-docker compose run --rm app pytest tests/ -v
-
-# Run individual test suites:
-# 1. Platform & Docker stack configuration tests
-docker compose run --rm app pytest tests/test_docker_stack.py -v
-
-# 2. PostgreSQL schema, pgvector, and checkpointer migration tests
-docker compose run --rm app pytest tests/test_postgres_schema.py -v
-
-# 3. LangGraph agent nodes, routing, and approval interrupts
-docker compose run --rm app pytest tests/test_graph.py -v
-
-# 4. Knowledge ingestion, chunking, and Neo4j graph tools
-docker compose run --rm app pytest tests/test_knowledge.py -v
-
-# 5. Container restart resilience & idempotency verification
-docker compose run --rm app pytest tests/test_restart_idempotency.py -v
-
-# 6. Evaluation dataset & LangSmith evaluator contracts (10 scenarios)
-docker compose run --rm app pytest tests/test_evaluators.py -v
+docker compose exec -T app python -m eval.run_eval -v                    # 105 held-out cases
+docker compose exec -T app python -m eval.red_team attack -v             # prompt injection and approval bypass
+docker compose exec -T app python -m eval.retrieval_benchmark --live -v  # pgvector vs ChromaDB vs hybrid
 ```
 
 ## Governance and Constraints
 
 **Requirements**
 
-- No action is executed without explicit human approval.
-- A restart must never execute an approved action **twice** (idempotency).
-- When policy versions conflict, the document with the most recent effective date prevails.
-- Service dependencies must be taken into account in every decision.
-
-**Out of scope:** multi-agent patterns, MCP, additional vector stores, model training, adversarial testing.
+- No purchase order or other state change in the simulated procurement system without explicit human approval.
+- Approval binds to the exact payload (supplier, quantity, price, conditions). Any change requires revalidation and a new approval.
+- Spending stays within the €75,000 incident cap unless the finance director raises it in writing (€90,000).
+- A restart never executes an approved action twice.
+- Revenue at risk is reported separately from recovery cost, computed by deterministic tools; penalties are counted once.
+- Only certified suppliers may receive orders; a second source that shares an upstream manufacturer is not diversification.
+- When sources conflict, the latest valid version wins (contract > qualification record > notice > e-mail > chat) and the conflict is reported.
+- Text from documents, supplier messages and tool outputs is data, never instructions.
+- Users only see documents within their access scope; `finance-confidential` data never reaches other roles.
 
 ### Risk Register
 
 | Risk | Mitigation |
 |------|------------|
 | "Works on my machine" | Docker, pinned versions, clean-clone test |
-| Duplicate execution after restart | Persisted status, pre-execution check, restart test |
-| LLM guesses missing fields | Optional Pydantic fields and an "if missing, ask" rule |
-| Wrong policy version | `effective_date` metadata, sorting, dedicated test case |
+| Duplicate purchase order after restart | `action_id` in `audit_log`, pre-execution check, restart scenario |
+| LLM arithmetic errors | Deterministic calculator tools, `numerical_correctness` evaluator |
+| Agent guesses an ambiguous supplier | Clarification interrupt, `triage` evaluator |
+| Stale or conflicting documents | `effective_date` precedence, conflicts reported, version queries in the benchmark |
+| Prompt injection in retrieved documents | Challenger subagent, red-team run |
 | Team member cannot explain the flow | Review and rehearsal rotation |
-| Scope creep | Adhere to the out-of-scope list |
-| Platform delays | All members assist on days 2–3 |
-| Non-repeatable demo | Demo script, seed data, restart rehearsal |
+| Non-repeatable demo | Demo script, seeded data, pre-demo check |
 
 ## Team Model
 
-Five recommended roles, each with a primary owner and a backup. Every member commits code.
+Five roles, each with a primary owner and a backup. Every member commits code. Details are in [`docs/roles/`](./docs/roles/README.md) and [`CONTRIBUTING.md`](./CONTRIBUTING.md#roles-and-backups).
 
 | Role | Primary Responsibility | Deliverables |
 |------|------------------------|--------------|
-| **Platform** | Docker Compose, Postgres + pgvector, Neo4j, `.env.example`, README | Stack that starts with one command in <10 min |
-| **Interface** | Chainlit UI: chat, progress steps, Approve/Reject buttons, resume | Working UI |
-| **Workflow** | LangGraph nodes, edges, state, interrupt, PostgresSaver, idempotency | Graph with approval and resume |
-| **Knowledge** | Policy ingestion (chunking, embeddings, effective-date metadata), Neo4j seeding, retrieval and graph tools | Scripts and tools |
-| **Quality** | LangSmith tracing, 10-request dataset, evaluators, `CONTRIBUTING.md`, test scenarios, demo | Evaluation run and demo script |
+| **Platform** | Docker Compose stack, seed service, MCP services, restart support, README | Stack that starts with one command in <10 min |
+| **Interface** | Chainlit UI, RBAC, telemetry, strategy matrix, approval card, report export | Working UI |
+| **Workflow** | Deep Agents orchestration, subagents, calculators, approval interrupt, checkpoints | Agent with approval and resume |
+| **Knowledge** | Data ingestion, pgvector and ChromaDB indexes, Neo4j graph, retrieval and graph tools | Scripts and tools |
+| **Quality** | LangSmith tracing, 105-case evaluation, retrieval benchmark, red team, demo and rehearsals | Evaluation report, benchmark, red-team findings, demo script |
 
 ### Working Agreements
 
@@ -413,48 +316,54 @@ Five recommended roles, each with a primary owner and a backup. Every member com
 
 ## Delivery Plan
 
-Two-week timeline.
+Two-week timeline (Day 1 = 2026-11-24).
 
 | Timing | Milestone |
 |--------|-----------|
-| Week 1, session 1 | Kick-off, roles, repository, team agreement |
-| End of week 1 | Full stack runs on all laptops (clean-clone test using only the README) |
-| Mid week 2 | End-to-end flow with approval and resume |
-| End of week 2 | Evaluation run and final demo |
+| Days 1–2 | Kick-off, contracts, repository, team agreement |
+| Day 5 | Full stack runs on all laptops (clean-clone test using only the README); walking skeleton with mock tools |
+| Days 4–8 | Specialist subagents, calculators, retrieval, approval and restart |
+| Days 8–10 | Evaluation run, retrieval benchmark, red team, rehearsals and final demo |
 
 ## Evaluation
 
-**Criteria**
+Suggested grading from the capstone brief:
 
-- Correct citation of documents and effective dates.
-- Every action is traceable in LangSmith.
-- All 10 evaluation requests complete with the expected actions.
-- Every member can explain the entire flow during the demo.
+| Area | Weight |
+|------|--------|
+| Business reasoning and numerical correctness | 25% |
+| Agent orchestration, memory, and recovery | 25% |
+| Retrieval, knowledge graph, and evidence quality | 20% |
+| Guardrails, authorization, and adversarial resilience | 15% |
+| Engineering quality, evaluation, and reproducibility | 10% |
+| Final demonstration and communication | 5% |
 
-**Proposed 10-request test set**
+**Held-out evaluation set** (`src/support-data/evaluation/eval_cases.jsonl`, 105 cases):
 
-| Count | Scenario |
+| Count | Category |
 |-------|----------|
-| 2 | Simple questions answered from policy |
-| 1–2 | Old and new versions of the same policy |
-| 2 | Active outage on a dependent service |
-| 2 | Credential reset (with approval) |
-| 1 | Ticket creation |
-| 1 | Escalation |
-| 1 | Incomplete details (clarification) |
+| 1 | MC-17 reference incident (golden) |
+| 64 | Extraction and operational impact |
+| 10 | Ambiguity (must ask, not guess) |
+| 10 | Prompt injection |
+| 10 | Policy and authorization |
+| 4 | Follow-up questions |
+| 6 | Restart and recovery |
 
-**Demo outline (10 minutes):** goal and architecture (1′) · missing details and clarification (2′) · policy with citation and effective date (2′) · outage and service dependency (2′) · approved action, **restart** and resume without duplicate execution (2′) · LangSmith traces and evaluation (1′).
+Results are recorded in [`docs/EVALUATION.md`](./docs/EVALUATION.md#results), [`docs/RETRIEVAL_BENCHMARK.md`](./docs/RETRIEVAL_BENCHMARK.md) and [`docs/RED_TEAM_REPORT.md`](./docs/RED_TEAM_REPORT.md).
 
 ## Definition of Done
 
-- [x] `docker compose up` starts all services in <10 minutes from a clean clone.
-- [x] Ingestion and seeding scripts run without manual steps.
-- [x] No state-changing action without approval.
-- [x] Resume after restart works, with no duplicate execution.
-- [x] Citations include source and effective date.
-- [x] Traces in LangSmith and an evaluation run over 10 requests.
-- [x] `CONTRIBUTING.md` completed and every member has commits.
-- [x] Everyone can explain the entire flow.
+The project Definition of Done is tracked in [`docs/PROJECT_CHECKLIST.md`](./docs/PROJECT_CHECKLIST.md#6-definition-of-done), with evidence for each item in the [DoD verification table](./docs/CONTRIBUTING_LOG.md#definition-of-done-verification-93). In short:
+
+- [ ] `docker compose up` starts all services in <10 minutes from a clean clone, and the seed runs without manual steps.
+- [ ] Orchestration runs on Deep Agents with planning and specialist subagents.
+- [ ] No purchase order without explicit, payload-bound approval within the €75,000 cap.
+- [ ] Resume after restart works, with zero duplicate execution.
+- [ ] Revenue at risk and recovery cost are reported separately; supplier rejections are documented.
+- [ ] The planted prompt-injection document is reported and neutralized.
+- [ ] Results for the 105 evaluation cases, the retrieval benchmark and the red team, with traces in LangSmith.
+- [ ] Every member has commits and reviews and can explain the entire flow.
 
 ## Contributing
 
@@ -465,16 +374,25 @@ Work follows a `main` / `develop` model with short-lived feature branches and re
 - Open pull requests into `develop`; at least one reviewer approves, and the reviewer performs the merge.
 - Never commit secrets or credentials.
 
-Full instructions, including web UI walkthroughs, are in the [Git Guide](./docs/GIT_GUIDE.md). The team agreement will be recorded in `CONTRIBUTING.md`.
+The team agreement is in [`CONTRIBUTING.md`](./CONTRIBUTING.md); Git instructions, including web UI walkthroughs, are in the [Git Guide](./docs/GIT_GUIDE.md).
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Project Notes](./docs/PROJECT_NOTES.md) | Project summary, five-person team plan, and merging pull requests on Codeberg (Greek) |
+| [Architecture Contracts](./docs/ARCHITECTURE_CONTRACTS.md) | Domain schemas, tool signatures, decision matrix, UI contracts |
+| [Project Checklist](./docs/PROJECT_CHECKLIST.md) | Project-wide progress, Definition of Done, audits (Greek) |
+| [Roles](./docs/roles/README.md) | Step-by-step plan per role (Greek) |
+| [Evaluation](./docs/EVALUATION.md) | Tracing, dataset, evaluators, evaluation run |
+| [Retrieval Benchmark](./docs/RETRIEVAL_BENCHMARK.md) | pgvector vs ChromaDB vs hybrid |
+| [Red-Team Report](./docs/RED_TEAM_REPORT.md) | Prompt injection, approval bypass, data exfiltration |
+| [Restart Test Scenario](./docs/RESTART_TEST_SCENARIO.md) | Zero duplicate execution across restarts |
+| [Demo Script](./docs/DEMO_SCRIPT.md) | 10-minute live demo |
+| [Neo4j Graph Model](./docs/KNOWLEDGE_GRAPH.md) | Supplier, component, product, factory and customer graph |
+| [Clean-Clone Benchmark](./docs/CLEAN_CLONE_BENCHMARK.md) | Startup time across laptops |
 | [Git Guide](./docs/GIT_GUIDE.md) | Git workflow, branching strategy, pull requests and conflict resolution (Greek) |
 
-Repository: <https://codeberg.org/ebomponis001/HelpDesk_Lite>
+Repository: <https://github.com/vaggelismpomponis/supplyguard_ai>
 
 ## License
 

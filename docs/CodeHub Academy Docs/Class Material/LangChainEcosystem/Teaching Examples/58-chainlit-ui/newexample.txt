@@ -1,0 +1,162 @@
+# app.py
+# Πολύ απλό demo: LangChain + Chainlit
+# Δείχνει: streaming απαντήσεις, μνήμη συνομιλίας (multi-turn), starters,
+# ρυθμίσεις chat (Chat Settings), "βήματα σκέψης" (Steps) και ένα action button.
+#
+# Εκτέλεση:
+#   pip install -r requirements.txt
+#   cp .env.example .env   (και βάλε το OPENAI_API_KEY σου)
+#   chainlit run app.py -w
+
+import os
+from dotenv import load_dotenv
+
+import chainlit as cl
+from chainlit.input_widget import Select, Slider
+
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
+
+load_dotenv()
+
+# ---------------------------------------------------------------------------
+# 1) Μνήμη συνομιλίας: κάθε session (κάθε browser tab / χρήστης) έχει το δικό
+#    του ιστορικό μηνυμάτων, ώστε το μοντέλο να "θυμάται" τι ειπώθηκε πριν.
+# ---------------------------------------------------------------------------
+message_store: dict[str, ChatMessageHistory] = {}
+
+
+def get_history(session_id: str) -> ChatMessageHistory:
+    if session_id not in message_store:
+        message_store[session_id] = ChatMessageHistory()
+    return message_store[session_id]
+
+
+PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", "Είσαι ένας φιλικός βοηθός. Απαντάς πάντα στα Ελληνικά, με σαφήνεια."),
+        MessagesPlaceholder("history"),
+        ("human", "{question}"),
+    ]
+)
+
+
+def build_chain(model: str, temperature: float):
+    llm = ChatOpenAI(model=model, temperature=temperature, streaming=True)
+    base_chain = PROMPT | llm | StrOutputParser()
+    return RunnableWithMessageHistory(
+        base_chain,
+        get_history,
+        input_messages_key="question",
+        history_messages_key="history",
+    )
+
+
+# ---------------------------------------------------------------------------
+# 2) Starters: προτεινόμενες ερωτήσεις που εμφανίζονται στην αρχική οθόνη.
+# ---------------------------------------------------------------------------
+@cl.set_starters
+async def starters():
+    return [
+        cl.Starter(label="Πες μου ένα αστείο", message="Πες μου ένα σύντομο αστείο."),
+        cl.Starter(
+            label="Τι είναι το LangChain;",
+            message="Εξήγησέ μου σε 3 προτάσεις τι είναι το LangChain.",
+        ),
+        cl.Starter(
+            label="Θυμήσου το όνομά μου",
+            message="Με λένε Οδυσσέα. Θυμήσου το.",
+        ),
+    ]
+
+
+# ---------------------------------------------------------------------------
+# 3) Chat Settings: επιτρέπει να αλλάξεις μοντέλο / temperature ζωντανά μέσα
+#    από το UI του Chainlit (εικονίδιο ρυθμίσεων πάνω δεξιά στο chat).
+# ---------------------------------------------------------------------------
+@cl.on_chat_start
+async def on_chat_start():
+    settings = await cl.ChatSettings(
+        [
+            Select(
+                id="model",
+                label="Μοντέλο OpenAI",
+                values=["gpt-4o-mini", "gpt-4o"],
+                initial_index=0,
+            ),
+            Slider(
+                id="temperature",
+                label="Δημιουργικότητα (temperature)",
+                initial=0.7,
+                min=0,
+                max=1,
+                step=0.1,
+            ),
+        ]
+    ).send()
+
+    cl.user_session.set("settings", settings)
+    cl.user_session.set("chain", build_chain(settings["model"], settings["temperature"]))
+    # μοναδικό session_id ώστε η μνήμη να είναι ξεχωριστή ανά χρήστη/tab
+    cl.user_session.set("session_id", cl.context.session.id)
+
+    await cl.Message(
+        content=(
+            "Γεια σου! 👋 Είμαι ένα demo bot με **LangChain + Chainlit**.\n\n"
+            "- Θυμάμαι την κουβέντα μας (μνήμη)\n"
+            "- Απαντάω με streaming (λέξη-λέξη)\n"
+            "- Μπορείς να αλλάξεις μοντέλο/temperature από το ⚙️ πάνω δεξιά\n"
+            "- Έχω και ένα κουμπί για να καθαρίζω το ιστορικό (κάτω από αυτό το μήνυμα)"
+        ),
+        actions=[
+            cl.Action(
+                name="clear_history",
+                payload={},
+                label="🧹 Καθαρισμός ιστορικού",
+            )
+        ],
+    ).send()
+
+
+@cl.on_settings_update
+async def on_settings_update(settings):
+    cl.user_session.set("settings", settings)
+    cl.user_session.set("chain", build_chain(settings["model"], settings["temperature"]))
+    await cl.Message(content=f"Ενημερώθηκαν οι ρυθμίσεις: {settings}").send()
+
+
+@cl.action_callback("clear_history")
+async def on_clear_history(action: cl.Action):
+    session_id = cl.user_session.get("session_id")
+    message_store.pop(session_id, None)
+    await cl.Message(content="✅ Το ιστορικό της συνομιλίας καθαρίστηκε.").send()
+
+
+# ---------------------------------------------------------------------------
+# 4) Κύριο μήνυμα: εδώ φαίνεται το streaming + ένα "Step" (βήμα σκέψης) που
+#    δείχνει πώς το Chainlit μπορεί να απεικονίσει ενδιάμεσα βήματα μιας
+#    αλυσίδας (π.χ. tool calls, RAG retrieval κλπ).
+# ---------------------------------------------------------------------------
+@cl.on_message
+async def on_message(message: cl.Message):
+    chain = cl.user_session.get("chain")
+    session_id = cl.user_session.get("session_id")
+
+    # Ένα "Step" -> εμφανίζεται στο UI σαν ένα expandable κουτάκι πριν την
+    # τελική απάντηση, χρήσιμο για να δείξεις ενδιάμεση επεξεργασία.
+    async with cl.Step(name="Επεξεργασία ερώτησης") as step:
+        step.input = message.content
+        step.output = "Στέλνω την ερώτηση στο μοντέλο μαζί με το ιστορικό της συνομιλίας..."
+
+    final_answer = cl.Message(content="")
+
+    async for chunk in chain.astream(
+        {"question": message.content},
+        config={"configurable": {"session_id": session_id}},
+    ):
+        await final_answer.stream_token(chunk)
+
+    await final_answer.send()

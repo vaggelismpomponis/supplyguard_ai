@@ -1,0 +1,3 @@
+outage_id,title,service_id,status,severity,started_at,symptoms,affected_offices,latest_update
+OUT-001,Identity Provider degraded: SSO and MFA logins failing intermittently,S01,open,major,2026-11-12T13:40:00Z,"Login failures, SSO errors, MFA prompts not arriving, VPN authentication failures. Password resets do not resolve it.",Both offices,"Vendor engaged, next update 2026-11-13 16:00 UTC"
+OUT-002,Athens print servers unavailable,S07,open,minor,2026-11-13T07:15:00Z,Print jobs stuck in queue or Print Manager unreachable.,Athens,"Spare server being provisioned, ETA 2026-11-13 18:00 UTC"

@@ -1,5 +1,5 @@
 # ==============================================================================
-# HelpDesk Lite - Multi-stage Application Dockerfile (Chainlit + LangGraph)
+# SupplyGuard AI - Multi-stage Application Dockerfile (Chainlit + Deep Agents)
 # Pinned Base Image Policy: python:3.11-slim (docs/PINNED_VERSIONS.md)
 # ==============================================================================
 
@@ -49,12 +49,20 @@ COPY --from=builder /opt/venv /opt/venv
 RUN groupadd -g 1001 appuser && \
     useradd -u 1001 -g appuser -s /bin/bash -m appuser
 
-# Pre-create writable config directories for Chainlit runtime
-RUN mkdir -p /app/.chainlit && chown -R appuser:appuser /app
+# Pre-create writable config and report directories for Chainlit runtime
+RUN mkdir -p /app/.chainlit /app/data/reports && chown -R appuser:appuser /app
 
-# Copy application source code and scripts
+# Copy application source code, scripts, config, and welcome UI
 COPY src/ /app/src/
 COPY scripts/ /app/scripts/
+COPY chainlit.md /app/chainlit.md
+COPY .chainlit/config.toml /app/.chainlit/config.toml
+# Custom logo, favicon and assistant avatar served by Chainlit from /app/public
+COPY public/ /app/public/
+# Evaluation, docs, red-team, restart and pre-demo scripts run inside the container (docs/EVALUATION.md)
+COPY docs/ /app/docs/
+COPY eval/ /app/eval/
+COPY tests/ /app/tests/
 
 RUN chown -R appuser:appuser /app
 

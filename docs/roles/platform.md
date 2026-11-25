@@ -1,51 +1,57 @@
-# Role: Platform
+# Role: Platform – SupplyGuard AI
 
-**Ευθύνη:** Docker Compose, Postgres + pgvector, Neo4j, `.env.example`, README.
-**Παραδοτέο:** stack που ξεκινά με μία εντολή σε <10′ από καθαρό clone.
-**Scopes commit:** `docker`, `db`, `docs`, `deps`. **Branches:** `feature/docker-compose`, `feature/env-example`, κλπ.
+**Ευθύνη:** Docker Compose πολυ-υπηρεσιακού stack (PostgreSQL + pgvector, Neo4j, ChromaDB, Mock External Services), MCP boundaries, `.env.example`, automated seed service, README, καθαρό clone σε <10′.  
+**Παραδοτέο:** Πλήρες stack που εκκινεί και φορτώνει τα δεδομένα με μία εντολή (`docker compose up -d`).  
+**Scopes commit:** `docker`, `db`, `mcp`, `docs`, `deps`.  
+**Branches:** `feature/docker-compose-expansion`, `feature/chromadb-service`, `feature/mcp-environment`, κλπ.
 
 ## Αρχή
-Το Platform μπλοκάρει όλους. Προτεραιότητα: πρώτα ένα απλό stack που τρέχει (Ημ. 2), μετά βελτιώσεις. Αν καθυστερεί, όλοι βοηθούν τις Ημ. 2–3.
+Το Platform αποτελεί τη βάση για όλους τους ρόλους. Στο SupplyGuard AI επεκτείνουμε το stack πέρα από το βασικό PostgreSQL/Neo4j για να υποστηρίξουμε vector benchmarking με **ChromaDB**, **MCP interfaces** για το simulated procurement system, και automated ingestion service (`seed`) του μεγάλου συνθετικού πακέτου `support-data/`.
 
 ## Βήματα
 
-### Φάση 1 – Kick-off (Ημ. 1)
-1. Συμμετοχή στη συμφωνία contracts (State, models, 5 actions, tool signatures – [`ARCHITECTURE_CONTRACTS.md`](../ARCHITECTURE_CONTRACTS.md)).
-2. Προτείνει δομή repo (`src/` [ή `app/`], `scripts/`, `data/`, `docker/`) και την καταγράφει στο [`CONTRIBUTING_LOG.md`](../CONTRIBUTING_LOG.md).
-3. Ορίζει την πολιτική pinned versions για images και Python dependencies ([`PINNED_VERSIONS.md`](../PINNED_VERSIONS.md)).
+### Φάση 1 – Kick-off & Επέκταση Stack (Εβδ. 1, Ημ. 1–2)
+1. Συμμετοχή στα contracts (`docs/ARCHITECTURE_CONTRACTS.md`): Pydantic schemas, database boundaries, tool signatures, MCP protocols. ✋ με όλους.
+2. Ενημέρωση και αυστηρό pinning στο `requirements.txt` (`deepagents`, `chromadb`, `neo4j`, `psycopg`, `chainlit`, `mcp`). Καταγραφή στο `docs/PINNED_VERSIONS.md`.
+3. Επέκταση του `docker-compose.yml` με 5 βασικά services:
+   - `postgres` (PostgreSQL 16 + pgvector για operational records, checkpoints, audit logs, primary vectors).
+   - `neo4j` (Neo4j 5.26+ για multi-tier supply chain dependency graph).
+   - `chromadb` (ChromaDB service για retrieval experiments & benchmarking).
+   - `external-risk` (Mock/external risk feed service container).
+   - `app` (Chainlit UI + Deep Agents harness).
+4. Ενημέρωση `.env.example` με όλες τις νέες μεταβλητές (ChromaDB endpoints, Neo4j credentials, MCP settings, LangSmith).
 
-### Φάση 2 – Stack (Ημ. 2–4)
-4. `docker-compose.yml` με Postgres + pgvector (extension `vector` ενεργό) και Neo4j. Volumes και healthchecks.
-5. `.env.example` με όλες τις μεταβλητές (DB, Neo4j, LLM key, LangSmith). `.env` στο `.gitignore`.
-6. Postgres init: βάση για tickets, checkpoints (PostgresSaver) και pgvector. Συμφωνία schema με Workflow και Knowledge. ✋
-7. Dockerfile και service για το app (Chainlit). ✋ με Interface.
-8. Εντολή εκκίνησης (`docker compose up`) και README Getting Started.
+### Φάση 2 – Automated Ingestion & Persisted Storage (Ημ. 2–4)
+5. Διαμόρφωση Docker persistent named volumes (`postgres_data`, `neo4j_data`, `chroma_data`) με `stop_grace_period: 15s` για ασφαλές graceful shutdown κατά τα restarts.
+6. Δημιουργία Compose service `seed` που εκτελεί αυτόματα και idempotent το ingestion script του συνθετικού πακέτου `support-data/` πριν την εκκίνηση του `app` (`condition: service_completed_successfully`). ✋ με Knowledge.
+7. Multi-stage build για το `Dockerfile` του application container με υποστήριξη Deep Agents και caching dependencies. ✋ με Interface και Workflow.
 
-### Φάση 3 – Milestone (Ημ. 5)
-9. Clean-clone test: μόνο με το README σε πολλά laptops (Windows και άλλα). Καταγραφή προβλημάτων.
-10. Διόρθωση προβλημάτων και μέτρηση χρόνου εκκίνησης (<10′).
+### Φάση 3 – Milestone Clean-Clone Test (Ημ. 4–5)
+8. Εκτέλεση clean-clone test από το μηδέν μόνο με τις οδηγίες του README σε Windows, macOS και Linux.
+9. Μέτρηση χρόνου εκκίνησης (<10 λεπτά συνολικά μαζί με το seeding). Καταγραφή στο `docs/CLEAN_CLONE_BENCHMARK.md`. ✋ με Quality.
 
-### Φάση 4 – Ολοκλήρωση (Ημ. 6–10)
-11. Υποστήριξη των άλλων (volumes, restart του app container για το restart test). ✋ με Workflow και Quality.
-12. Seed/ingestion ως μέρος του compose ή ως μία εντολή, χωρίς χειροκίνητα βήματα. ✋ με Knowledge.
-13. Final polish README (setup, troubleshooting, demo run).
-14. Τελικό clean-clone test πριν το demo.
+### Φάση 4 – MCP Boundaries & Container Restart Resilience (Ημ. 6–8)
+10. Υποστήριξη MCP transport (Simulated Procurement System MCP server & External Risk Feed) εντός του Compose δικτύου (`supplyguard_network`). ✋ με Workflow.
+11. Έλεγχος ανθεκτικότητας σε container restarts (`docker compose restart app`): επιβεβαίωση ότι τα PostgreSQL checkpoints και audit logs παραμένουν ανέπαφα και δεν χάνεται κατάσταση. ✋ με Workflow και Quality.
+
+### Φάση 5 – Final Polish & Demo Preparation (Ημ. 9–10)
+12. Final polish του `README.md` (Quickstart, αρχιτεκτονικό διάγραμμα, troubleshooting ports/JVM, οδηγοί demo).
+13. Τελικό clean-clone smoke test πριν την τελική παρουσίαση.
+14. Συμμετοχή στις πρόβες του demo και επεξήγηση του infrastructure layer.
 
 ## Role checklist
 
-- [x] Δομή repo και pinned versions συμφωνημένα και καταγεγραμμένα ([CONTRIBUTING_LOG.md](../CONTRIBUTING_LOG.md), [PINNED_VERSIONS.md](../PINNED_VERSIONS.md), [ARCHITECTURE_CONTRACTS.md](../ARCHITECTURE_CONTRACTS.md))
-- [x] `docker-compose.yml`: Postgres + pgvector, Neo4j, healthchecks, volumes
-- [x] `.env.example` πλήρες, `.env` εκτός version control
-- [x] Postgres init: extension pgvector, schema για tickets και checkpoints
-- [x] Dockerfile και app service
-- [x] README: Getting Started δοκιμασμένο
-- [x] Clean-clone test σε ≥3 laptops (Ημ. 5) ([CLEAN_CLONE_BENCHMARK.md](../CLEAN_CLONE_BENCHMARK.md))
-- [x] Χρόνος εκκίνησης <10′ μετρημένος (~2–3 λεπτά)
-- [x] Seeding/ingestion τρέχουν χωρίς χειροκίνητα βήματα (Compose `seed` service & `scripts/seed.py`)
-- [x] Restart του app/stack δοκιμασμένο με Workflow
+- [x] Συμφωνία αρχιτεκτονικών συμβολαίων και pinning νέων dependencies (`deepagents`, `chromadb`, `mcp`)
+- [x] `docker-compose.yml` με 5 services (`postgres`, `neo4j`, `chromadb`, `external-risk`, `app`)
+- [x] `.env.example` πλήρες με διαχωρισμό παραμέτρων
+- [x] Persistent volumes και graceful shutdown (`stop_grace_period: 15s`)
+- [x] Automated Compose `seed` service για πλήρη φόρτωση του `support-data/` χωρίς χειροκίνητα βήματα
+- [x] Clean-clone benchmark σε <10′ σε πολλαπλά λειτουργικά συστήματα
+- [x] MCP service transport συνδεδεμένο και λειτουργικό
+- [x] Persistence ελεγμένη μετά από hard container restart
 - [x] Τελικό clean-clone test πριν το demo
-- [x] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
-- [x] Μπορώ να εξηγήσω ολόκληρη τη ροή
+- [ ] Έχω commits και τουλάχιστον ένα review σε PR άλλου ρόλου
+- [x] Μπορώ να εξηγήσω ολόκληρη την αρχιτεκτονική υποδομής στο demo
 
 ## Backup
 Ορίζεται στο `CONTRIBUTING_LOG.md`. Προτείνεται: Workflow.

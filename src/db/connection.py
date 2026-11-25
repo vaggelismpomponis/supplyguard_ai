@@ -1,4 +1,4 @@
-"""PostgreSQL connection management and connection pooling for HelpDesk Lite.
+"""PostgreSQL connection management and connection pooling for SupplyGuard AI.
 
 Platform Role | Scope: db, docker
 """
@@ -22,7 +22,7 @@ def get_db_url() -> str:
         port = os.getenv("POSTGRES_PORT", "5432")
         user = os.getenv("POSTGRES_USER", "postgres")
         pw = os.getenv("POSTGRES_PASSWORD", "postgres_secure_password")
-        db = os.getenv("POSTGRES_DB", "helpdesk")
+        db = os.getenv("POSTGRES_DB", "supplyguard")
         url = f"postgresql://{user}:{pw}@{host}:{port}/{db}"
     return url
 
@@ -44,6 +44,8 @@ def get_connection_pool(min_size: int = 1, max_size: int = 10) -> ConnectionPool
                     min_size=min_size,
                     max_size=max_size,
                     timeout=2.0,
+                    max_idle=120.0,
+                    check=ConnectionPool.check_connection,
                     kwargs={"connect_timeout": 2},
                     open=True,
                 )
@@ -67,7 +69,16 @@ def get_pooled_connection() -> Generator[psycopg.Connection, None, None]:
 
 
 def is_postgres_available() -> bool:
-    """Check if PostgreSQL is reachable."""
+    """Check if PostgreSQL is reachable with fast socket pre-check."""
+    import socket
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = int(os.getenv("POSTGRES_PORT", "5432"))
+    try:
+        with socket.create_connection((host, port), timeout=0.15):
+            pass
+    except OSError:
+        return False
+
     try:
         with psycopg.connect(get_db_url(), connect_timeout=1) as conn:
             with conn.cursor() as cur:

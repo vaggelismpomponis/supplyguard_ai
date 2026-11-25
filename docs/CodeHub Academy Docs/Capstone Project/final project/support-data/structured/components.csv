@@ -1,0 +1,301 @@
+component_id,description,uom,standard_cost_eur
+MC-1,Relay type E83,ea,3.06
+MC-2,Valve body type G78,ea,57.8
+MC-3,Gearbox housing type B20,ea,8.86
+MC-4,Valve body type F80,ea,15.98
+MC-5,Sensor module type D30,ea,53.98
+MC-6,Seal ring type E55,ea,8.39
+MC-7,Valve body type D90,ea,0.96
+MC-8,Battery pack type G55,ea,48.8
+MC-9,Gearbox housing type A32,ea,19.15
+MC-10,Cable harness type C13,ea,53.28
+MC-11,Motor controller type F18,ea,22.33
+MC-12,Relay type C86,ea,36.76
+MC-13,Cable harness type B51,ea,29.28
+MC-14,Bearing type G43,ea,37.17
+MC-15,Fastener kit type F70,ea,54.61
+MC-16,Fastener kit type D55,ea,41.14
+MC-17,Motor controller board 48V,ea,8.5
+MC-18,Fan unit type F20,ea,4.51
+MC-19,Bearing type H49,ea,16.21
+MC-20,Capacitor bank type C51,ea,26.18
+MC-21,Heat sink type F94,ea,51.49
+MC-22,Valve body type F32,ea,12.11
+MC-23,Fan unit type D98,ea,55.22
+MC-24,Display unit type G85,ea,23.15
+MC-25,Cable harness type H82,ea,39.55
+MC-26,Cable harness type G44,ea,20.01
+MC-27,Fastener kit type F44,ea,50.53
+MC-28,Fan unit type E28,ea,32.89
+MC-29,Connector type D52,ea,58.35
+MC-30,Fastener kit type E47,ea,34.63
+MC-31,Valve body type G12,ea,33.16
+MC-32,Heat sink type G53,ea,6.06
+MC-33,Battery pack type D64,ea,21.39
+MC-34,Heat sink type A61,ea,43.58
+MC-35,Motor controller type E81,ea,42.22
+MC-36,Cable harness type F84,ea,38.8
+MC-37,PCB assembly type H71,ea,20.59
+MC-38,Sensor module type D91,ea,7.6
+MC-39,Connector type F12,ea,46.87
+MC-40,Fan unit type E89,ea,37.96
+MC-41,Bearing type D78,ea,46.23
+MC-42,Fastener kit type C52,ea,58.35
+MC-43,Fan unit type D87,ea,40.52
+MC-44,Seal ring type B82,ea,25.26
+MC-45,Cable harness type B13,ea,16.54
+MC-46,PCB assembly type A33,ea,33.19
+MC-47,Capacitor bank type H94,ea,39.92
+MC-48,Heat sink type F50,ea,36.55
+MC-49,Connector type H51,ea,50.4
+MC-50,Sensor module type H27,ea,1.7
+MC-51,Display unit type E69,ea,12.24
+MC-52,Connector type G48,ea,13.41
+MC-53,Sensor module type G18,ea,43.66
+MC-54,Seal ring type H88,ea,5.81
+MC-55,Heat sink type H50,ea,39.77
+MC-56,Display unit type C19,ea,59.34
+MC-57,Gearbox housing type E77,ea,31.42
+MC-58,Valve body type B87,ea,58.78
+MC-59,Motor controller type H40,ea,12.9
+MC-60,Cable harness type D44,ea,46.64
+MC-61,Battery pack type C81,ea,40.84
+MC-62,Heat sink type F93,ea,23.76
+MC-63,Relay type C87,ea,33.26
+MC-64,Cable harness type C26,ea,47.92
+MC-65,Sensor module type A45,ea,47.45
+MC-66,Gearbox housing type C44,ea,57.8
+MC-67,Display unit type C68,ea,10.43
+MC-68,Sensor module type C97,ea,9.57
+MC-69,Battery pack type A48,ea,13.57
+MC-70,Display unit type B69,ea,40.95
+MC-71,PCB assembly type C51,ea,9.08
+MC-72,Sensor module type H10,ea,3.87
+MC-73,Display unit type E52,ea,45.5
+MC-74,Gearbox housing type D21,ea,25.6
+MC-75,PCB assembly type D31,ea,14.77
+MC-76,Battery pack type D57,ea,9.85
+MC-77,PCB assembly type G68,ea,51.43
+MC-78,Relay type E90,ea,44.41
+MC-79,Battery pack type B37,ea,44.45
+MC-80,Fastener kit type B55,ea,43.0
+MC-81,Gearbox housing type B32,ea,12.53
+MC-82,PCB assembly type D64,ea,2.22
+MC-83,Cable harness type E46,ea,44.45
+MC-84,Valve body type A71,ea,31.45
+MC-85,Connector type F72,ea,59.09
+MC-86,Fastener kit type C81,ea,13.67
+MC-87,Display unit type H58,ea,36.67
+MC-88,Sensor module type F42,ea,58.05
+MC-89,Bearing type H69,ea,21.02
+MC-90,Fastener kit type E47,ea,2.62
+MC-91,Sensor module type B77,ea,55.38
+MC-92,Fastener kit type G92,ea,48.09
+MC-93,Fan unit type H79,ea,1.71
+MC-94,Heat sink type C13,ea,6.67
+MC-95,Bearing type C78,ea,51.68
+MC-96,Motor controller type A19,ea,45.25
+MC-97,Fastener kit type F29,ea,18.7
+MC-98,Battery pack type D51,ea,43.13
+MC-99,Fan unit type D61,ea,14.61
+MC-100,Heat sink type G15,ea,29.54
+MC-101,Gearbox housing type H34,ea,46.22
+MC-102,Battery pack type G71,ea,31.98
+MC-103,Battery pack type D59,ea,43.92
+MC-104,Fan unit type C47,ea,14.77
+MC-105,Heat sink type E65,ea,51.87
+MC-106,Motor controller type F87,ea,52.22
+MC-107,Gearbox housing type B82,ea,22.36
+MC-108,Relay type B80,ea,10.54
+MC-109,Valve body type B23,ea,48.39
+MC-110,PCB assembly type G10,ea,14.96
+MC-111,Sensor module type E31,ea,31.67
+MC-112,Display unit type B42,ea,10.39
+MC-113,Sensor module type D90,ea,48.26
+MC-114,Fastener kit type H80,ea,40.15
+MC-115,Display unit type H75,ea,37.98
+MC-116,Sensor module type D93,ea,39.21
+MC-117,Battery pack type A47,ea,5.83
+MC-118,Bearing type E36,ea,0.84
+MC-119,Sensor module type H43,ea,4.65
+MC-120,Gearbox housing type D73,ea,49.28
+MC-121,Display unit type D78,ea,23.82
+MC-122,Bearing type D14,ea,1.3
+MC-123,Valve body type B66,ea,40.62
+MC-124,Gearbox housing type C40,ea,10.21
+MC-125,Relay type F61,ea,17.02
+MC-126,Gearbox housing type H21,ea,1.53
+MC-127,Bearing type C82,ea,51.82
+MC-128,Capacitor bank type H98,ea,9.28
+MC-129,Heat sink type C73,ea,33.19
+MC-130,Cable harness type A58,ea,5.74
+MC-131,Battery pack type G95,ea,34.18
+MC-132,Display unit type B97,ea,35.64
+MC-133,Connector type D24,ea,22.88
+MC-134,Capacitor bank type E86,ea,40.66
+MC-135,Gearbox housing type E78,ea,1.02
+MC-136,Motor controller type F32,ea,42.98
+MC-137,Fastener kit type D95,ea,28.5
+MC-138,Gearbox housing type H24,ea,4.42
+MC-139,Motor controller type E28,ea,24.7
+MC-140,Connector type A66,ea,36.67
+MC-141,Cable harness type G91,ea,37.67
+MC-142,Fan unit type B22,ea,13.95
+MC-143,Heat sink type H18,ea,50.81
+MC-144,Connector type H66,ea,43.78
+MC-145,Seal ring type E67,ea,44.48
+MC-146,PCB assembly type H47,ea,51.66
+MC-147,Gearbox housing type B88,ea,33.06
+MC-148,Relay type D99,ea,17.95
+MC-149,Valve body type D98,ea,40.02
+MC-150,Gearbox housing type B39,ea,23.36
+MC-151,Heat sink type G36,ea,37.14
+MC-152,Seal ring type G98,ea,16.11
+MC-153,Fan unit type D32,ea,30.72
+MC-154,Sensor module type D48,ea,10.52
+MC-155,PCB assembly type C66,ea,59.21
+MC-156,Battery pack type A88,ea,18.7
+MC-157,Sensor module type F81,ea,18.16
+MC-158,PCB assembly type D98,ea,37.91
+MC-159,Seal ring type F54,ea,45.17
+MC-160,Capacitor bank type A63,ea,31.73
+MC-161,Valve body type F41,ea,33.73
+MC-162,Valve body type F13,ea,6.78
+MC-163,Relay type C72,ea,37.22
+MC-164,Battery pack type C65,ea,30.98
+MC-165,Display unit type A79,ea,5.44
+MC-166,Fastener kit type B37,ea,24.09
+MC-167,Fan unit type F91,ea,31.15
+MC-168,Fastener kit type G40,ea,19.54
+MC-169,Motor controller type B18,ea,45.8
+MC-170,Cable harness type H90,ea,25.07
+MC-171,Fastener kit type D80,ea,51.65
+MC-172,Heat sink type C25,ea,5.56
+MC-173,Capacitor bank type C66,ea,28.19
+MC-174,Fastener kit type G26,ea,5.83
+MC-175,Fan unit type G18,ea,26.73
+MC-176,Sensor module type H70,ea,21.35
+MC-177,Fastener kit type A62,ea,11.21
+MC-178,Bearing type E79,ea,31.63
+MC-179,PCB assembly type B54,ea,57.09
+MC-180,Motor controller type C87,ea,36.54
+MC-181,Seal ring type E65,ea,47.24
+MC-182,Capacitor bank type F19,ea,24.87
+MC-183,Bearing type E50,ea,25.84
+MC-184,Seal ring type D87,ea,31.62
+MC-185,PCB assembly type E14,ea,33.51
+MC-186,Connector type H47,ea,25.04
+MC-187,Connector type D85,ea,26.73
+MC-188,Display unit type E43,ea,18.95
+MC-189,Capacitor bank type A35,ea,36.21
+MC-190,Heat sink type F91,ea,7.72
+MC-191,Heat sink type G92,ea,25.69
+MC-192,Fan unit type G96,ea,6.75
+MC-193,Display unit type G97,ea,27.39
+MC-194,Heat sink type G55,ea,1.26
+MC-195,Display unit type G54,ea,47.62
+MC-196,Battery pack type A56,ea,25.04
+MC-197,Sensor module type A47,ea,32.61
+MC-198,Sensor module type B52,ea,26.13
+MC-199,Valve body type E42,ea,0.53
+MC-200,Relay type A19,ea,14.04
+MC-201,Sensor module type F89,ea,32.57
+MC-202,Fastener kit type A47,ea,7.97
+MC-203,PCB assembly type D24,ea,41.81
+MC-204,Bearing type B19,ea,59.93
+MC-205,Valve body type A27,ea,26.67
+MC-206,Motor controller type E62,ea,55.37
+MC-207,Fan unit type D16,ea,25.11
+MC-208,Cable harness type E91,ea,55.87
+MC-209,Gearbox housing type G16,ea,4.48
+MC-210,PCB assembly type H66,ea,38.28
+MC-211,Cable harness type A46,ea,46.78
+MC-212,Fastener kit type C65,ea,11.82
+MC-213,Fan unit type C36,ea,19.55
+MC-214,Seal ring type A23,ea,11.92
+MC-215,Valve body type B56,ea,23.7
+MC-216,Bearing type A56,ea,34.79
+MC-217,Bearing type E80,ea,13.44
+MC-218,Heat sink type E21,ea,18.5
+MC-219,Fastener kit type B98,ea,13.82
+MC-220,Display unit type C31,ea,9.32
+MC-221,Connector type B59,ea,15.38
+MC-222,Battery pack type F34,ea,11.58
+MC-223,Gearbox housing type F70,ea,4.25
+MC-224,Cable harness type E78,ea,3.33
+MC-225,Display unit type D45,ea,28.64
+MC-226,Sensor module type E29,ea,16.39
+MC-227,Valve body type B36,ea,18.69
+MC-228,Connector type G19,ea,28.93
+MC-229,Seal ring type E26,ea,58.3
+MC-230,Sensor module type B47,ea,45.48
+MC-231,Bearing type D93,ea,12.47
+MC-232,Motor controller type A50,ea,12.44
+MC-233,Heat sink type B42,ea,30.14
+MC-234,PCB assembly type F79,ea,44.86
+MC-235,Capacitor bank type A55,ea,50.58
+MC-236,Battery pack type H98,ea,25.97
+MC-237,Heat sink type F35,ea,32.68
+MC-238,Connector type F61,ea,32.42
+MC-239,Bearing type A65,ea,28.16
+MC-240,Sensor module type A70,ea,9.08
+MC-241,Battery pack type G25,ea,42.94
+MC-242,Display unit type B43,ea,7.42
+MC-243,PCB assembly type D92,ea,12.77
+MC-244,Relay type H97,ea,0.93
+MC-245,Sensor module type H54,ea,10.69
+MC-246,Cable harness type D99,ea,36.29
+MC-247,Gearbox housing type E65,ea,17.45
+MC-248,PCB assembly type G35,ea,5.73
+MC-249,Valve body type F37,ea,36.63
+MC-250,Battery pack type E50,ea,58.71
+MC-251,Capacitor bank type F80,ea,5.7
+MC-252,Relay type E33,ea,5.12
+MC-253,Gearbox housing type D38,ea,55.86
+MC-254,PCB assembly type H68,ea,2.96
+MC-255,Connector type E98,ea,5.87
+MC-256,Sensor module type E69,ea,20.43
+MC-257,Bearing type G77,ea,30.86
+MC-258,Heat sink type G21,ea,7.53
+MC-259,Connector type B17,ea,31.49
+MC-260,Cable harness type D51,ea,48.67
+MC-261,Heat sink type D43,ea,37.0
+MC-262,Connector type A96,ea,17.28
+MC-263,Gearbox housing type E71,ea,17.0
+MC-264,Bearing type C44,ea,48.32
+MC-265,Valve body type A32,ea,23.69
+MC-266,Bearing type F61,ea,45.41
+MC-267,Motor controller type A18,ea,3.66
+MC-268,Motor controller type A90,ea,19.08
+MC-269,Cable harness type A12,ea,29.58
+MC-270,Motor controller type B66,ea,46.16
+MC-271,Relay type C73,ea,12.37
+MC-272,Capacitor bank type A57,ea,27.4
+MC-273,Relay type A49,ea,31.71
+MC-274,Battery pack type H98,ea,31.93
+MC-275,Fastener kit type G61,ea,51.27
+MC-276,Fastener kit type E61,ea,14.6
+MC-277,Bearing type B10,ea,11.47
+MC-278,Capacitor bank type D14,ea,3.37
+MC-279,Seal ring type A90,ea,12.69
+MC-280,Motor controller type E31,ea,23.65
+MC-281,Fan unit type B65,ea,29.76
+MC-282,Heat sink type F32,ea,48.93
+MC-283,Capacitor bank type A20,ea,53.41
+MC-284,Cable harness type G66,ea,2.92
+MC-285,Bearing type C87,ea,51.79
+MC-286,Fan unit type H12,ea,51.98
+MC-287,Battery pack type C84,ea,42.76
+MC-288,Gearbox housing type D86,ea,50.95
+MC-289,Bearing type D35,ea,29.68
+MC-290,Cable harness type H97,ea,51.71
+MC-291,PCB assembly type B57,ea,33.66
+MC-292,Fastener kit type C84,ea,51.66
+MC-293,Fastener kit type E72,ea,55.53
+MC-294,Valve body type H53,ea,19.12
+MC-295,Heat sink type A64,ea,23.96
+MC-296,Capacitor bank type F22,ea,23.92
+MC-297,PCB assembly type C50,ea,35.07
+MC-298,Relay type E80,ea,43.6
+MC-299,Cable harness type E25,ea,27.53
+MC-300,Gearbox housing type G43,ea,13.76
