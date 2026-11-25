@@ -38,6 +38,12 @@ SupplyGuard AI is an enterprise-grade agentic assistant that protects manufactur
 
 Every state-changing action in the simulated procurement system requires human approval and is guarded by strict database row-level locking for complete idempotency across container restarts.
 
+### Demo Video (30s Walkthrough)
+
+[![SupplyGuard AI 30-second demo walkthrough](./docs/images/app-02-subagents.png)](./docs/supplyguard_demo_30s.mp4)
+
+**[Watch the 30-second demo video (`docs/supplyguard_demo_30s.mp4`)](./docs/supplyguard_demo_30s.mp4)** — End-to-end `MC-17` walkthrough: operator triage clarification on `Atlas`, live 6-subagent investigation, deterministic recovery cost vs. revenue-at-risk comparison, and SHA-256 payload-bound purchase order approval.
+
 ## Key Capabilities
 
 | # | Capability | Description |
@@ -221,7 +227,7 @@ For Git setup, branching and pull request workflow, see the [Git Guide](./docs/G
 
 ## Live Demo Execution Guide (10 Minutes)
 
-The full script, with the messages to type, expected results and fallbacks, is in [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md). Presenters rotate per [`docs/REHEARSAL_LOG.md`](./docs/REHEARSAL_LOG.md).
+For a quick preview, watch the [30-second demo video](./docs/supplyguard_demo_30s.mp4). The full script, with the messages to type, expected results and fallbacks, is in [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md). Presenters rotate per [`docs/REHEARSAL_LOG.md`](./docs/REHEARSAL_LOG.md).
 
 | # | Time | Segment |
 |---|---|---|
@@ -388,6 +394,7 @@ The team agreement is in [`CONTRIBUTING.md`](./CONTRIBUTING.md); Git instruction
 | [Red-Team Report](./docs/RED_TEAM_REPORT.md) | Prompt injection, approval bypass, data exfiltration |
 | [Restart Test Scenario](./docs/RESTART_TEST_SCENARIO.md) | Zero duplicate execution across restarts |
 | [Demo Script](./docs/DEMO_SCRIPT.md) | 10-minute live demo |
+| [Demo Video (30s)](./docs/supplyguard_demo_30s.mp4) | Recorded end-to-end `MC-17` walkthrough in Docker Compose |
 | [Neo4j Graph Model](./docs/KNOWLEDGE_GRAPH.md) | Supplier, component, product, factory and customer graph |
 | [Clean-Clone Benchmark](./docs/CLEAN_CLONE_BENCHMARK.md) | Startup time across laptops |
 | [Git Guide](./docs/GIT_GUIDE.md) | Git workflow, branching strategy, pull requests and conflict resolution (Greek) |
