@@ -1,0 +1,11 @@
+source_id,description,effective_date,access_scope
+SRC-ERP-SUPPLIER-MASTER,ERP supplier master,2026-10-19,internal
+SRC-ERP-COMPONENT-MASTER,ERP component master,2026-10-19,internal
+SRC-ERP-PRODUCT-MASTER,ERP product master and routing,2026-10-19,internal
+SRC-ERP-BOM,ERP bill of materials,2026-10-19,internal
+SRC-ERP-ORDERS,ERP customer orders,2026-10-19,internal
+SRC-SUPPLIER-QUESTIONNAIRE-2026,Supplier due-diligence questionnaire (upstream manufacturers),2026-10-19,procurement
+SRC-WMS-INVENTORY,Warehouse management inventory,2026-10-19,internal
+SRC-PROCUREMENT-PO,Procurement system purchase orders,2026-10-19,procurement
+SRC-LOGISTICS-TRACKING,Carrier shipment tracking,2026-10-19,procurement
+SRC-MES-SCHEDULE,Production schedule,2026-10-19,internal

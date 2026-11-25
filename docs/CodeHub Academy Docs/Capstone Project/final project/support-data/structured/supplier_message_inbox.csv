@@ -1,0 +1,193 @@
+message_id,received,sender,text
+MSG-0001,2026-09-17,Meridian Industrial,We regret to inform you that delivery of MC-1 will be delayed by 16 days.
+MSG-0002,2026-09-06,Orion Components,Due to a capacity bottleneck we can only supply part of the volume of MC-10; expect a delay of about 6 days.
+MSG-0003,2026-07-01,Quanta Electronics,Our upstream manufacturer cannot deliver raw material for MC-2; expected delay 5 days.
+MSG-0004,2026-09-30,Trident Dynamics,A port/road disruption affects shipments of MC-14; expected delay 15 days.
+MSG-0005,2026-08-13,Zenith Supply,Our upstream manufacturer cannot deliver raw material for MC-11; expected delay 5 days.
+MSG-0006,2026-10-04,Cobalt Supply,Our upstream manufacturer cannot deliver raw material for MC-4; expected delay 20 days.
+MSG-0007,2026-08-04,Orion Metals,Our upstream manufacturer cannot deliver raw material for MC-14; expected delay 18 days.
+MSG-0008,2026-10-10,Hydra Industrial,We regret to inform you that delivery of MC-12 will be delayed by 4 days.
+MSG-0009,2026-07-05,Nimbus Technik,Our upstream manufacturer cannot deliver raw material for MC-1; expected delay 10 days.
+MSG-0010,2026-10-07,Lumen Works,We regret to inform you that delivery of MC-4 will be delayed by 12 days.
+MSG-0011,2026-10-12,Aurum Technik,A quality hold affects the current batch of MC-31. Re-inspection will take 11 days.
+MSG-0012,2026-10-11,Kestrel Systems,Due to a capacity bottleneck we can only supply part of the volume of MC-7; expect a delay of about 8 days.
+MSG-0013,2026-08-06,Solis Works,Due to a capacity bottleneck we can only supply part of the volume of MC-6; expect a delay of about 17 days.
+MSG-0014,2026-08-06,Solis Systems,Our upstream manufacturer cannot deliver raw material for MC-57; expected delay 2 days.
+MSG-0015,2026-07-31,Altair Metals,A port/road disruption affects shipments of MC-18; expected delay 5 days.
+MSG-0016,2026-08-01,Nova Components,A quality hold affects the current batch of MC-22. Re-inspection will take 7 days.
+MSG-0017,2026-06-26,Argo Dynamics,Due to a capacity bottleneck we can only supply part of the volume of MC-33; expect a delay of about 15 days.
+MSG-0018,2026-07-03,Kestrel Supply,A port/road disruption affects shipments of MC-41; expected delay 8 days.
+MSG-0019,2026-10-03,Ferro Dynamics,Our upstream manufacturer cannot deliver raw material for MC-35; expected delay 4 days.
+MSG-0020,2026-10-05,Lumen Systems,Our upstream manufacturer cannot deliver raw material for MC-5; expected delay 5 days.
+MSG-0021,2026-08-09,Hydra Industrial,A quality hold affects the current batch of MC-12. Re-inspection will take 7 days.
+MSG-0022,2026-10-04,Aurum Technik,Due to a capacity bottleneck we can only supply part of the volume of MC-31; expect a delay of about 9 days.
+MSG-0023,2026-07-06,Kestrel Systems,Our upstream manufacturer cannot deliver raw material for MC-7; expected delay 3 days.
+MSG-0024,2026-08-28,Trident Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-1; expect a delay of about 2 days.
+MSG-0025,2026-08-21,Hydra Industrial,We regret to inform you that delivery of MC-12 will be delayed by 9 days.
+MSG-0026,2026-10-04,Quanta Electronics,A port/road disruption affects shipments of MC-2; expected delay 14 days.
+MSG-0027,2026-08-19,Meridian Dynamics,Our upstream manufacturer cannot deliver raw material for MC-5; expected delay 13 days.
+MSG-0028,2026-07-22,Borda Industrial,Our upstream manufacturer cannot deliver raw material for MC-19; expected delay 20 days.
+MSG-0029,2026-06-26,Zenith Dynamics,A quality hold affects the current batch of MC-10. Re-inspection will take 10 days.
+MSG-0030,2026-09-03,Orion Components,We regret to inform you that delivery of MC-10 will be delayed by 13 days.
+MSG-0031,2026-10-10,Cobalt Industrial,We regret to inform you that delivery of MC-18 will be delayed by 2 days.
+MSG-0032,2026-10-03,Quanta Electronics,We regret to inform you that delivery of MC-2 will be delayed by 8 days.
+MSG-0033,2026-07-18,Nova Components,Our upstream manufacturer cannot deliver raw material for MC-22; expected delay 11 days.
+MSG-0034,2026-07-05,Meridian Dynamics,We regret to inform you that delivery of MC-5 will be delayed by 3 days.
+MSG-0035,2026-07-05,Lumen Dynamics,Our upstream manufacturer cannot deliver raw material for MC-23; expected delay 12 days.
+MSG-0036,2026-10-02,Solis Systems,Due to a capacity bottleneck we can only supply part of the volume of MC-57; expect a delay of about 12 days.
+MSG-0037,2026-10-13,Vector Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-3; expect a delay of about 18 days.
+MSG-0038,2026-07-11,Lumen Works,A quality hold affects the current batch of MC-4. Re-inspection will take 7 days.
+MSG-0039,2026-09-15,Orion Components,A port/road disruption affects shipments of MC-10; expected delay 5 days.
+MSG-0040,2026-06-29,Nova Systems,Due to a capacity bottleneck we can only supply part of the volume of MC-11; expect a delay of about 5 days.
+MSG-0041,2026-07-22,Ferro Metals,A port/road disruption affects shipments of MC-19; expected delay 12 days.
+MSG-0042,2026-08-11,Altair Metals,A quality hold affects the current batch of MC-18. Re-inspection will take 10 days.
+MSG-0043,2026-10-04,Praxis Metals,A quality hold affects the current batch of MC-11. Re-inspection will take 18 days.
+MSG-0044,2026-08-15,Praxis Metals,A quality hold affects the current batch of MC-11. Re-inspection will take 7 days.
+MSG-0045,2026-10-08,Zenith Supply,We regret to inform you that delivery of MC-11 will be delayed by 8 days.
+MSG-0046,2026-06-22,Orion Components,A port/road disruption affects shipments of MC-10; expected delay 20 days.
+MSG-0047,2026-09-21,Ferro Dynamics,Our upstream manufacturer cannot deliver raw material for MC-35; expected delay 4 days.
+MSG-0048,2026-07-08,Vertex Metals,A quality hold affects the current batch of MC-15. Re-inspection will take 12 days.
+MSG-0049,2026-10-07,Trident Dynamics,A quality hold affects the current batch of MC-14. Re-inspection will take 5 days.
+MSG-0050,2026-10-01,Lumen Dynamics,We regret to inform you that delivery of MC-23 will be delayed by 19 days.
+MSG-0051,2026-07-27,Silva Industrial,We regret to inform you that delivery of MC-11 will be delayed by 18 days.
+MSG-0052,2026-07-31,Hydra Works,A port/road disruption affects shipments of MC-48; expected delay 12 days.
+MSG-0053,2026-07-16,Hydra Industrial,We regret to inform you that delivery of MC-12 will be delayed by 10 days.
+MSG-0054,2026-09-18,Solis Electronics,A port/road disruption affects shipments of MC-27; expected delay 12 days.
+MSG-0055,2026-10-17,Silva Dynamics,A port/road disruption affects shipments of MC-38; expected delay 9 days.
+MSG-0056,2026-07-07,Borda Supply,A port/road disruption affects shipments of MC-2; expected delay 17 days.
+MSG-0057,2026-08-18,Trident Systems,We regret to inform you that delivery of MC-44 will be delayed by 7 days.
+MSG-0058,2026-10-18,Trident Dynamics,We regret to inform you that delivery of MC-14 will be delayed by 12 days.
+MSG-0059,2026-08-15,Hydra Works,A quality hold affects the current batch of MC-48. Re-inspection will take 10 days.
+MSG-0060,2026-09-14,Silva Dynamics,We regret to inform you that delivery of MC-38 will be delayed by 5 days.
+MSG-0061,2026-09-16,Meridian Industrial,A port/road disruption affects shipments of MC-1; expected delay 16 days.
+MSG-0062,2026-07-03,Nova Systems,Our upstream manufacturer cannot deliver raw material for MC-11; expected delay 8 days.
+MSG-0063,2026-10-03,Aurum Works,A quality hold affects the current batch of MC-56. Re-inspection will take 12 days.
+MSG-0064,2026-07-18,Lumen Systems,A quality hold affects the current batch of MC-5. Re-inspection will take 10 days.
+MSG-0065,2026-09-27,Nimbus Supply,A quality hold affects the current batch of MC-8. Re-inspection will take 16 days.
+MSG-0066,2026-08-21,Solis Electronics,A quality hold affects the current batch of MC-27. Re-inspection will take 6 days.
+MSG-0067,2026-07-18,Argo Electronics,A port/road disruption affects shipments of MC-10; expected delay 8 days.
+MSG-0068,2026-06-21,Lumen Components,We regret to inform you that delivery of MC-3 will be delayed by 14 days.
+MSG-0069,2026-09-03,Quanta Systems,Our upstream manufacturer cannot deliver raw material for MC-5; expected delay 5 days.
+MSG-0070,2026-07-29,Borda Industrial,A quality hold affects the current batch of MC-19. Re-inspection will take 19 days.
+MSG-0071,2026-07-10,Ferro Dynamics,Due to a capacity bottleneck we can only supply part of the volume of MC-35; expect a delay of about 20 days.
+MSG-0072,2026-09-05,Kestrel Supply,A port/road disruption affects shipments of MC-41; expected delay 3 days.
+MSG-0073,2026-07-09,Orion Supply,Due to a capacity bottleneck we can only supply part of the volume of MC-1; expect a delay of about 14 days.
+MSG-0074,2026-08-20,Ferro Metals,A port/road disruption affects shipments of MC-19; expected delay 17 days.
+MSG-0075,2026-09-03,Lumen Components,Due to a capacity bottleneck we can only supply part of the volume of MC-3; expect a delay of about 8 days.
+MSG-0076,2026-09-12,Trident Systems,Our upstream manufacturer cannot deliver raw material for MC-44; expected delay 2 days.
+MSG-0077,2026-09-28,Ionic Components,A port/road disruption affects shipments of MC-20; expected delay 6 days.
+MSG-0078,2026-08-22,Borda Supply,We regret to inform you that delivery of MC-2 will be delayed by 14 days.
+MSG-0079,2026-09-20,Solis Electronics,We regret to inform you that delivery of MC-27 will be delayed by 5 days.
+MSG-0080,2026-07-20,Ferro Components,Our upstream manufacturer cannot deliver raw material for MC-14; expected delay 18 days.
+MSG-0081,2026-09-18,Quanta Systems,A port/road disruption affects shipments of MC-5; expected delay 18 days.
+MSG-0082,2026-06-23,Solis Works,We regret to inform you that delivery of MC-6 will be delayed by 18 days.
+MSG-0083,2026-09-18,Solis Electronics,A quality hold affects the current batch of MC-27. Re-inspection will take 18 days.
+MSG-0084,2026-09-07,Trident Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-1; expect a delay of about 11 days.
+MSG-0085,2026-07-05,Borda Supply,Our upstream manufacturer cannot deliver raw material for MC-2; expected delay 9 days.
+MSG-0086,2026-10-02,Kestrel Supply,Due to a capacity bottleneck we can only supply part of the volume of MC-41; expect a delay of about 11 days.
+MSG-0087,2026-08-16,Kestrel Supply,We regret to inform you that delivery of MC-41 will be delayed by 7 days.
+MSG-0088,2026-06-24,Orion Supply,A port/road disruption affects shipments of MC-1; expected delay 16 days.
+MSG-0089,2026-08-24,Quanta Systems,A quality hold affects the current batch of MC-5. Re-inspection will take 14 days.
+MSG-0090,2026-09-26,Hydra Industrial,A port/road disruption affects shipments of MC-12; expected delay 3 days.
+MSG-0091,2026-09-01,Altair Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-18; expect a delay of about 20 days.
+MSG-0092,2026-07-26,Hydra Industrial,We regret to inform you that delivery of MC-12 will be delayed by 12 days.
+MSG-0093,2026-07-03,Altair Metals,We regret to inform you that delivery of MC-18 will be delayed by 12 days.
+MSG-0094,2026-08-12,Lumen Components,Due to a capacity bottleneck we can only supply part of the volume of MC-3; expect a delay of about 12 days.
+MSG-0095,2026-08-12,Kestrel Components,A quality hold affects the current batch of MC-12. Re-inspection will take 13 days.
+MSG-0096,2026-08-31,Hydra Industrial,Due to a capacity bottleneck we can only supply part of the volume of MC-12; expect a delay of about 9 days.
+MSG-0097,2026-09-28,Argo Dynamics,We regret to inform you that delivery of MC-33 will be delayed by 11 days.
+MSG-0098,2026-07-25,Borda Industrial,A port/road disruption affects shipments of MC-19; expected delay 20 days.
+MSG-0099,2026-07-22,Nimbus Technik,Our upstream manufacturer cannot deliver raw material for MC-1; expected delay 9 days.
+MSG-0100,2026-09-24,Meridian Dynamics,Due to a capacity bottleneck we can only supply part of the volume of MC-5; expect a delay of about 14 days.
+MSG-0101,2026-07-12,Solis Electronics,Our upstream manufacturer cannot deliver raw material for MC-27; expected delay 11 days.
+MSG-0102,2026-07-31,Trident Dynamics,We regret to inform you that delivery of MC-14 will be delayed by 16 days.
+MSG-0103,2026-10-15,Ferro Metals,A port/road disruption affects shipments of MC-19; expected delay 4 days.
+MSG-0104,2026-09-20,Kestrel Supply,A port/road disruption affects shipments of MC-41; expected delay 5 days.
+MSG-0105,2026-09-06,Silva Dynamics,Due to a capacity bottleneck we can only supply part of the volume of MC-38; expect a delay of about 7 days.
+MSG-0106,2026-10-11,Trident Systems,Due to a capacity bottleneck we can only supply part of the volume of MC-44; expect a delay of about 9 days.
+MSG-0107,2026-07-22,Ferro Components,A port/road disruption affects shipments of MC-14; expected delay 2 days.
+MSG-0108,2026-07-18,Silva Industrial,We regret to inform you that delivery of MC-11 will be delayed by 10 days.
+MSG-0109,2026-10-10,Praxis Technik,A quality hold affects the current batch of MC-9. Re-inspection will take 2 days.
+MSG-0110,2026-07-02,Quanta Electronics,Our upstream manufacturer cannot deliver raw material for MC-2; expected delay 11 days.
+MSG-0111,2026-09-18,Trident Metals,A port/road disruption affects shipments of MC-1; expected delay 8 days.
+MSG-0112,2026-08-20,Aurum Technik,We regret to inform you that delivery of MC-31 will be delayed by 5 days.
+MSG-0113,2026-08-28,Solis Electronics,A quality hold affects the current batch of MC-27. Re-inspection will take 10 days.
+MSG-0114,2026-06-22,Lumen Components,Due to a capacity bottleneck we can only supply part of the volume of MC-3; expect a delay of about 8 days.
+MSG-0115,2026-08-07,Aurum Works,Due to a capacity bottleneck we can only supply part of the volume of MC-56; expect a delay of about 11 days.
+MSG-0116,2026-07-25,Praxis Metals,A quality hold affects the current batch of MC-11. Re-inspection will take 2 days.
+MSG-0117,2026-07-24,Solis Electronics,We regret to inform you that delivery of MC-27 will be delayed by 14 days.
+MSG-0118,2026-08-16,Ferro Metals,Our upstream manufacturer cannot deliver raw material for MC-19; expected delay 9 days.
+MSG-0119,2026-07-05,Nova Components,A quality hold affects the current batch of MC-22. Re-inspection will take 3 days.
+MSG-0120,2026-07-07,Orion Metals,Our upstream manufacturer cannot deliver raw material for MC-14; expected delay 16 days.
+MSG-0121,2026-09-11,Nimbus Technik,Our upstream manufacturer cannot deliver raw material for MC-1; expected delay 19 days.
+MSG-0122,2026-07-23,Kestrel Supply,Due to a capacity bottleneck we can only supply part of the volume of MC-41; expect a delay of about 11 days.
+MSG-0123,2026-09-06,Zenith Dynamics,Our upstream manufacturer cannot deliver raw material for MC-10; expected delay 3 days.
+MSG-0124,2026-08-01,Altair Metals,A quality hold affects the current batch of MC-18. Re-inspection will take 17 days.
+MSG-0125,2026-07-19,Nova Systems,A port/road disruption affects shipments of MC-11; expected delay 18 days.
+MSG-0126,2026-10-04,Nova Systems,A quality hold affects the current batch of MC-11. Re-inspection will take 6 days.
+MSG-0127,2026-07-21,Solis Works,Our upstream manufacturer cannot deliver raw material for MC-6; expected delay 17 days.
+MSG-0128,2026-10-10,Lumen Components,Our upstream manufacturer cannot deliver raw material for MC-3; expected delay 18 days.
+MSG-0129,2026-10-09,Nova Components,Due to a capacity bottleneck we can only supply part of the volume of MC-22; expect a delay of about 19 days.
+MSG-0130,2026-07-30,Solis Systems,A port/road disruption affects shipments of MC-57; expected delay 20 days.
+MSG-0131,2026-08-23,Aurum Works,A port/road disruption affects shipments of MC-56; expected delay 11 days.
+MSG-0132,2026-10-14,Trident Dynamics,A quality hold affects the current batch of MC-14. Re-inspection will take 9 days.
+MSG-0133,2026-09-18,Aurum Works,Due to a capacity bottleneck we can only supply part of the volume of MC-56; expect a delay of about 19 days.
+MSG-0134,2026-07-28,Vertex Metals,We regret to inform you that delivery of MC-15 will be delayed by 16 days.
+MSG-0135,2026-07-09,Kestrel Electronics,A quality hold affects the current batch of MC-15. Re-inspection will take 13 days.
+MSG-0136,2026-10-17,Trident Systems,We regret to inform you that delivery of MC-44 will be delayed by 18 days.
+MSG-0137,2026-07-24,Solis Works,Our upstream manufacturer cannot deliver raw material for MC-6; expected delay 19 days.
+MSG-0138,2026-10-08,Trident Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-1; expect a delay of about 18 days.
+MSG-0139,2026-07-07,Lumen Components,A port/road disruption affects shipments of MC-3; expected delay 6 days.
+MSG-0140,2026-09-06,Solis Systems,Our upstream manufacturer cannot deliver raw material for MC-57; expected delay 6 days.
+MSG-0141,2026-07-12,Silva Dynamics,Our upstream manufacturer cannot deliver raw material for MC-38; expected delay 17 days.
+MSG-0142,2026-09-25,Trident Metals,A port/road disruption affects shipments of MC-1; expected delay 19 days.
+MSG-0143,2026-06-26,Trident Dynamics,Our upstream manufacturer cannot deliver raw material for MC-14; expected delay 14 days.
+MSG-0144,2026-07-22,Vector Metals,We regret to inform you that delivery of MC-3 will be delayed by 13 days.
+MSG-0145,2026-08-08,Solis Systems,A port/road disruption affects shipments of MC-57; expected delay 19 days.
+MSG-0146,2026-08-01,Praxis Metals,We regret to inform you that delivery of MC-11 will be delayed by 16 days.
+MSG-0147,2026-07-07,Praxis Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-11; expect a delay of about 4 days.
+MSG-0148,2026-09-04,Cobalt Supply,Due to a capacity bottleneck we can only supply part of the volume of MC-4; expect a delay of about 18 days.
+MSG-0149,2026-08-05,Meridian Industrial,We regret to inform you that delivery of MC-1 will be delayed by 7 days.
+MSG-0150,2026-07-22,Zenith Dynamics,Due to a capacity bottleneck we can only supply part of the volume of MC-10; expect a delay of about 16 days.
+MSG-0151,2026-07-01,Lumen Dynamics,A quality hold affects the current batch of MC-23. Re-inspection will take 8 days.
+MSG-0152,2026-07-14,Nimbus Technik,A port/road disruption affects shipments of MC-1; expected delay 6 days.
+MSG-0153,2026-09-17,Praxis Metals,A quality hold affects the current batch of MC-11. Re-inspection will take 10 days.
+MSG-0154,2026-08-08,Quanta Electronics,We regret to inform you that delivery of MC-2 will be delayed by 8 days.
+MSG-0155,2026-09-28,Lumen Dynamics,We regret to inform you that delivery of MC-23 will be delayed by 8 days.
+MSG-0156,2026-09-10,Zenith Supply,Our upstream manufacturer cannot deliver raw material for MC-11; expected delay 7 days.
+MSG-0157,2026-07-17,Nimbus Technik,Our upstream manufacturer cannot deliver raw material for MC-1; expected delay 19 days.
+MSG-0158,2026-08-21,Orion Components,Due to a capacity bottleneck we can only supply part of the volume of MC-10; expect a delay of about 13 days.
+MSG-0159,2026-08-05,Ionic Components,Our upstream manufacturer cannot deliver raw material for MC-20; expected delay 10 days.
+MSG-0160,2026-08-25,Kestrel Systems,A quality hold affects the current batch of MC-7. Re-inspection will take 6 days.
+MSG-0161,2026-08-12,Cobalt Industrial,Due to a capacity bottleneck we can only supply part of the volume of MC-18; expect a delay of about 3 days.
+MSG-0162,2026-09-28,Kestrel Supply,A quality hold affects the current batch of MC-41. Re-inspection will take 20 days.
+MSG-0163,2026-06-25,Silva Dynamics,A quality hold affects the current batch of MC-38. Re-inspection will take 7 days.
+MSG-0164,2026-10-05,Lumen Systems,A port/road disruption affects shipments of MC-5; expected delay 13 days.
+MSG-0165,2026-07-19,Praxis Technik,We regret to inform you that delivery of MC-9 will be delayed by 4 days.
+MSG-0166,2026-09-27,Orion Supply,We regret to inform you that delivery of MC-1 will be delayed by 3 days.
+MSG-0167,2026-08-24,Argo Dynamics,Due to a capacity bottleneck we can only supply part of the volume of MC-33; expect a delay of about 9 days.
+MSG-0168,2026-09-23,Kestrel Electronics,Due to a capacity bottleneck we can only supply part of the volume of MC-15; expect a delay of about 19 days.
+MSG-0169,2026-08-06,Hydra Components,A port/road disruption affects shipments of MC-14; expected delay 19 days.
+MSG-0170,2026-08-07,Meridian Industrial,We regret to inform you that delivery of MC-1 will be delayed by 14 days.
+MSG-0171,2026-10-16,Solis Systems,A port/road disruption affects shipments of MC-57; expected delay 18 days.
+MSG-0172,2026-10-02,Nova Systems,Our upstream manufacturer cannot deliver raw material for MC-11; expected delay 10 days.
+MSG-0173,2026-08-01,Aurum Technik,Our upstream manufacturer cannot deliver raw material for MC-31; expected delay 16 days.
+MSG-0174,2026-07-02,Kestrel Electronics,Our upstream manufacturer cannot deliver raw material for MC-15; expected delay 16 days.
+MSG-0175,2026-08-29,Nimbus Supply,Our upstream manufacturer cannot deliver raw material for MC-8; expected delay 12 days.
+MSG-0176,2026-08-15,Trident Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-1; expect a delay of about 7 days.
+MSG-0177,2026-07-25,Orion Metals,A quality hold affects the current batch of MC-14. Re-inspection will take 19 days.
+MSG-0178,2026-07-27,Silva Industrial,Due to a capacity bottleneck we can only supply part of the volume of MC-11; expect a delay of about 19 days.
+MSG-0179,2026-06-24,Cobalt Supply,Due to a capacity bottleneck we can only supply part of the volume of MC-4; expect a delay of about 10 days.
+MSG-0180,2026-08-01,Kestrel Electronics,Due to a capacity bottleneck we can only supply part of the volume of MC-15; expect a delay of about 6 days.
+MSG-0181,2026-10-11,Trident Systems,Due to a capacity bottleneck we can only supply part of the volume of MC-44; expect a delay of about 9 days.
+MSG-0182,2026-07-18,Silva Industrial,We regret to inform you that delivery of MC-11 will be delayed by 10 days.
+MSG-0183,2026-06-26,Argo Dynamics,Due to a capacity bottleneck we can only supply part of the volume of MC-33; expect a delay of about 15 days.
+MSG-0184,2026-09-12,Trident Systems,Our upstream manufacturer cannot deliver raw material for MC-44; expected delay 2 days.
+MSG-0185,2026-08-15,Trident Metals,Due to a capacity bottleneck we can only supply part of the volume of MC-1; expect a delay of about 7 days.
+MSG-0186,2026-07-24,Solis Works,Our upstream manufacturer cannot deliver raw material for MC-6; expected delay 19 days.
+MSG-0187,2026-10-12,Aurum Technik,A quality hold affects the current batch of MC-31. Re-inspection will take 11 days.
+MSG-0188,2026-08-12,Kestrel Components,A quality hold affects the current batch of MC-12. Re-inspection will take 13 days.
+MSG-0189,2026-06-21,Lumen Components,We regret to inform you that delivery of MC-3 will be delayed by 14 days.
+MSG-0190,2026-10-15,Ferro Metals,A port/road disruption affects shipments of MC-19; expected delay 4 days.
+MSG-0191,2026-10-16,Solis Systems,A port/road disruption affects shipments of MC-57; expected delay 18 days.
+MSG-0192,2026-09-27,Orion Supply,We regret to inform you that delivery of MC-1 will be delayed by 3 days.
