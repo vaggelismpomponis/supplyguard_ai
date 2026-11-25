@@ -16,5 +16,6 @@ ENV
 *.egg-info
 dist
 build
-.chainlit
+.chainlit/*
+!.chainlit/config.toml
 docs/images

@@ -282,7 +282,8 @@ class TestInterfaceFormattingAndHandlers(unittest.IsolatedAsyncioTestCase):
         await self.ui_app.on_message(cl.Message(content=golden_prompt))
 
         step_names = [s["name"] for s in self.sent_steps]
-        self.assertEqual(len(step_names), 6)
+        self.assertEqual(len(step_names), 7)
+        self.assertTrue(step_names[-1].startswith(self.ui_app.INVESTIGATION_STEP_NAME))
         self.assertIn("1. Triage & Entity Extraction Subagent", step_names)
         self.assertIn("6. Adversarial Challenger & Guardrail Subagent", step_names)
 
@@ -444,9 +445,48 @@ class TestInterfaceFormattingAndHandlers(unittest.IsolatedAsyncioTestCase):
             options=[],
             challenger_res=challenger_res,
         )
-        chal_step = self.sent_steps[-1]["output"]
+        chal_step = next(
+            s["output"]
+            for s in self.sent_steps
+            if s["name"] == self.ui_app.SUBAGENT_STEP_NAMES["challenger_subagent"]
+        )
         self.assertIn("FAIL", chal_step)
         self.assertNotIn("DOC-NOT-HELIOS-PRICE", chal_step)
+        parent = self.sent_steps[-1]
+        self.assertTrue(parent["name"].startswith(self.ui_app.INVESTIGATION_STEP_NAME))
+        self.assertIn("Spending cap violation", parent["output"])
+
+    def test_split_stream_chunks_round_trips_and_keeps_table_rows_whole(self) -> None:
+        text = (
+            "### Impact\n\nRevenue at **risk** is `€12,000`.\n\n"
+            "| Option | Cost |\n|---|---|\n| A | €1 |\n\n```\ncode line\n```\nDone."
+        )
+        chunks = self.ui_app.split_stream_chunks(text)
+        self.assertEqual("".join(chunks), text)
+        self.assertIn("| Option | Cost |\n", chunks)
+        self.assertIn("code line\n", chunks)
+
+    async def test_stream_message_streams_tokens_then_sends_full_content(self) -> None:
+        import chainlit as cl
+
+        streamed: list[str] = []
+
+        class StreamingMessage(cl.Message):
+            async def stream_token(self, token: str, is_sequence: bool = False) -> None:
+                streamed.append(token)
+                self.content += token
+
+        original = cl.Message
+        cl.Message = StreamingMessage
+        try:
+            text = "word " * 500 + "\n| a | b |\n"
+            await self.ui_app.stream_message(text)
+        finally:
+            cl.Message = original
+        self.assertEqual("".join(streamed), text)
+        self.assertEqual(self.sent_messages[-1]["content"], text)
+        max_emits = int(self.ui_app.STREAM_MAX_DURATION_S / self.ui_app.STREAM_TOKEN_DELAY_S)
+        self.assertLessEqual(len(streamed), max_emits)
 
 
 if __name__ == "__main__":

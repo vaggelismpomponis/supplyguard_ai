@@ -185,6 +185,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./chainlit.md:/app/chainlit.md:ro
+      - ./.chainlit/config.toml:/app/.chainlit/config.toml:ro
       - ./src:/app/src:ro
       - ./scripts:/app/scripts:ro
       - ./eval:/app/eval:ro
