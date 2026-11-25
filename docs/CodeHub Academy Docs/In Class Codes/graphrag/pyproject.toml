@@ -1,0 +1,23 @@
+[project]
+name = "graphrag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Odysseas Efremidis", email = "oefremidis@athtech.gr" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "langchain-community>=0.4.2",
+    "langchain-neo4j>=0.11.0",
+    "langchain-openai>=1.8.0",
+    "pydantic>=2.14.3",
+    "python-dotenv>=1.2.4",
+]
+
+[project.scripts]
+graphrag = "graphrag:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

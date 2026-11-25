@@ -1,0 +1,41 @@
+employee_id,name,email,team_id,office,role
+E001,Maria Papadaki,maria.papadaki@nimbus-analytics.example,T01,Athens,Senior Financial Analyst
+E002,Nikos Georgiou,nikos.georgiou@nimbus-analytics.example,T01,Athens,Finance Manager
+E003,Eleni Vasileiou,eleni.vasileiou@nimbus-analytics.example,T01,London,Accountant
+E004,Thomas Clarke,thomas.clarke@nimbus-analytics.example,T01,London,Financial Controller
+E005,Sofia Antoniou,sofia.antoniou@nimbus-analytics.example,T01,Athens,Accounts Payable Specialist
+E006,James Whitfield,james.whitfield@nimbus-analytics.example,T01,London,Financial Analyst
+E007,Dimitris Alexiou,dimitris.alexiou@nimbus-analytics.example,T02,Athens,Senior Consultant
+E008,Olivia Bennett,olivia.bennett@nimbus-analytics.example,T02,London,Principal Consultant
+E009,Katerina Mavridou,katerina.mavridou@nimbus-analytics.example,T02,Athens,Consultant
+E010,Harry Fletcher,harry.fletcher@nimbus-analytics.example,T02,London,Consultant
+E011,Giorgos Nikolaou,giorgos.nikolaou@nimbus-analytics.example,T02,Athens,Associate Consultant
+E012,Emily Hargreaves,emily.hargreaves@nimbus-analytics.example,T02,London,Senior Consultant
+E013,Petros Karras,petros.karras@nimbus-analytics.example,T02,Athens,Consultant
+E014,Amelia Foster,amelia.foster@nimbus-analytics.example,T02,London,Associate Consultant
+E015,Ioanna Stavrou,ioanna.stavrou@nimbus-analytics.example,T03,Athens,Data Scientist
+E016,Oliver Pearce,oliver.pearce@nimbus-analytics.example,T03,London,Data Engineer
+E017,Christos Manolis,christos.manolis@nimbus-analytics.example,T03,Athens,Analytics Lead
+E018,Charlotte Dunn,charlotte.dunn@nimbus-analytics.example,T03,London,Data Analyst
+E019,Vasilis Papas,vasilis.papas@nimbus-analytics.example,T03,Athens,Data Engineer
+E020,Grace Holloway,grace.holloway@nimbus-analytics.example,T03,London,Data Scientist
+E021,Anna Kyriakou,anna.kyriakou@nimbus-analytics.example,T04,Athens,HR Manager
+E022,Daniel Rhodes,daniel.rhodes@nimbus-analytics.example,T04,London,HR Business Partner
+E023,Zoe Pappa,zoe.pappa@nimbus-analytics.example,T04,Athens,Recruiter
+E024,Michalis Lambrou,michalis.lambrou@nimbus-analytics.example,T05,Athens,Sales Director
+E025,Sophie Armstrong,sophie.armstrong@nimbus-analytics.example,T05,London,Account Executive
+E026,Stelios Dimitriou,stelios.dimitriou@nimbus-analytics.example,T05,Athens,Account Executive
+E027,Lucy Marshall,lucy.marshall@nimbus-analytics.example,T05,London,Sales Operations
+E028,Fotini Zografou,fotini.zografou@nimbus-analytics.example,T05,Athens,Account Manager
+E029,Andreas Kostas,andreas.kostas@nimbus-analytics.example,T06,Athens,Operations Manager
+E030,Rebecca Hughes,rebecca.hughes@nimbus-analytics.example,T06,London,Office Manager
+E031,Panos Theodorou,panos.theodorou@nimbus-analytics.example,T06,Athens,Facilities Coordinator
+E032,Isabelle Cooper,isabelle.cooper@nimbus-analytics.example,T06,London,Operations Analyst
+E033,Yannis Sotiriou,yannis.sotiriou@nimbus-analytics.example,T07,Athens,IT Support Lead
+E034,Marcus Webb,marcus.webb@nimbus-analytics.example,T07,London,IT Support Engineer
+E035,Dora Evangelou,dora.evangelou@nimbus-analytics.example,T07,Athens,IT Support Engineer
+E036,Ben Takahashi,ben.takahashi@nimbus-analytics.example,T07,London,Systems Administrator
+E037,Lena Fotiou,lena.fotiou@nimbus-analytics.example,T07,Athens,Security Analyst
+E038,Alexandra Pitt,alexandra.pitt@nimbus-analytics.example,T08,London,Legal Counsel
+E039,Kostas Raptis,kostas.raptis@nimbus-analytics.example,T08,Athens,Compliance Officer
+E040,Nefeli Andreou,nefeli.andreou@nimbus-analytics.example,T09,Athens,Marketing Manager

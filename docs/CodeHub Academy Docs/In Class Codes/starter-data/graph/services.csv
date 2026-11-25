@@ -1,0 +1,11 @@
+service_id,name,description
+S01,Identity Provider (Nimbus ID SSO),"Single sign-on, MFA and password management"
+S02,VPN Gateway,Remote access gateway for both offices
+S03,Email & Calendar Service,"Mail, calendar and shared mailboxes"
+S04,File Server,Shared drives and document libraries
+S05,Finance Database Cluster,Hosts finance and timesheet data
+S06,Office Network & Wi-Fi,Wired and wireless office networks
+S07,Print Service,Central print servers and queues
+S08,Collaboration Platform,Team chat and video meetings
+S09,Cloud Hosting Platform,Hosts line-of-business web applications
+S10,Backup Service,Nightly backups and file restores

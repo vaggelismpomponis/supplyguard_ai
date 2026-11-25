@@ -1,0 +1,65 @@
+{
+  "description": "Contract of the simulated procurement system exposed through MCP. Read operations are free; write operations require an approval_id bound to the exact payload.",
+  "read_operations": [
+    "get_inventory(component_id)",
+    "get_open_purchase_orders(component_id|supplier_id)",
+    "get_supplier(supplier_id)",
+    "get_supplier_catalog(component_id)",
+    "get_customer_orders(product_id, due_before)",
+    "get_production_schedule(product_id)",
+    "get_shipment_updates(po_id)"
+  ],
+  "write_operations": {
+    "create_purchase_order": {
+      "payload": [
+        "supplier_id",
+        "component_id",
+        "qty",
+        "unit_price_eur",
+        "requested_delivery_date"
+      ],
+      "requires": [
+        "approval_id",
+        "valid_certification",
+        "within_spending_cap"
+      ]
+    },
+    "expedite_purchase_order": {
+      "payload": [
+        "po_id",
+        "days_gain",
+        "fee_pct"
+      ],
+      "requires": [
+        "approval_id",
+        "expedite_allowed"
+      ]
+    },
+    "request_stock_transfer": {
+      "payload": [
+        "component_id",
+        "from_location",
+        "to_location",
+        "qty"
+      ],
+      "requires": [
+        "approval_id",
+        "usable_stock >= qty"
+      ],
+      "cost_eur_per_unit": 0.12,
+      "transfer_days": 2
+    },
+    "update_production_schedule": {
+      "payload": [
+        "product_id",
+        "week_start",
+        "planned_units"
+      ],
+      "requires": [
+        "approval_id"
+      ]
+    }
+  },
+  "idempotency": "Every write carries an idempotency_key (case_id + step); a repeated key returns the first result and creates nothing new.",
+  "seed_state": "structured/*.csv"
+}
