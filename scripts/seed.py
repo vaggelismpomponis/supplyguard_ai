@@ -37,6 +37,7 @@ try:
 except ImportError:
     pass
 
+from src.db import auth as db_auth
 from src.knowledge import incident_memory, ingest_documents, load_structured, supply_graph
 from src.knowledge.common import neo4j_driver, pg
 
@@ -109,7 +110,7 @@ def wait_for_services(max_attempts: int = 20, delay_seconds: float = 2.0) -> Non
 # 2. Knowledge loaders
 # ==============================================================================
 
-STEPS = ["tables", "graph", "documents", "memories"]
+STEPS = ["tables", "graph", "documents", "memories", "users"]
 
 
 def run_seeding(steps: List[str] = STEPS) -> None:
@@ -128,6 +129,9 @@ def run_seeding(steps: List[str] = STEPS) -> None:
         print(f"[documents] ✅ {ingest_documents.ingest()} documents indexed in pgvector and ChromaDB")
     if "memories" in steps:
         print(f"[memories]  ✅ {incident_memory.ingest()} disruption cases and approved memories indexed")
+    if "users" in steps:
+        user_count = db_auth.seed_users_from_csv()
+        print(f"[users]     ✅ {user_count} authenticated operator accounts ready in app_users")
     print("\n" + "=" * 75)
     print(f"🚀 SupplyGuard AI database seeding completed in {time.time() - started:.0f}s.")
     print("=" * 75)

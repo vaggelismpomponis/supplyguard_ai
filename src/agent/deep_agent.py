@@ -282,6 +282,7 @@ class SupplyGuardOrchestrator:
     def __init__(self, *, use_postgres: bool = True) -> None:
         self.use_postgres = use_postgres
         self._threads: Dict[str, Dict[str, Any]] = {}
+        self._latest_by_actor: Dict[Tuple[str, str], Dict[str, Any]] = {}
         self._executed_receipts: Dict[str, ProcurementReceipt] = {}
         self._checkpointer: Optional[Any] = None
         self._checkpointer_initialized: bool = False
@@ -405,10 +406,54 @@ class SupplyGuardOrchestrator:
             state["procurement_receipt"] = ProcurementReceipt.model_validate(state["procurement_receipt"])
         return state
 
+    @staticmethod
+    def _extract_owner_identity(state: Dict[str, Any]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        prof = state.get("user_profile")
+        prof_uid = prof.get("user_id") if isinstance(prof, dict) else getattr(prof, "user_id", None)
+        prof_role = prof.get("role") if isinstance(prof, dict) else getattr(prof, "role", None)
+        prof_scope = prof.get("access_scope") if isinstance(prof, dict) else getattr(prof, "access_scope", None)
+        if hasattr(prof_scope, "value"):
+            prof_scope = prof_scope.value
+        return (
+            state.get("owner_user_id") or prof_uid,
+            state.get("owner_role") or prof_role,
+            state.get("access_scope") or prof_scope,
+        )
+
+    @classmethod
+    def _authorize_state(
+        cls,
+        state: Dict[str, Any],
+        requester: Optional[UserProfile],
+        *,
+        thread_id: str,
+        raise_on_unauthorized: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        if requester is None:
+            return state
+        owner_uid, owner_role, _ = cls._extract_owner_identity(state)
+        if (owner_uid and owner_uid != requester.user_id) or (owner_role and owner_role != requester.role):
+            if raise_on_unauthorized:
+                raise PermissionError(
+                    f"Thread '{thread_id}' is locked to user '{owner_uid}' (role '{owner_role}'); "
+                    f"authenticated user '{requester.user_id}' (role '{requester.role}') is not authorized."
+                )
+            return None
+        return state
+
     def persist_state(self, thread_id: str, state: Dict[str, Any]) -> None:
         """Persist full thread state to memory, LangGraph checkpointer (PostgresSaver), thread_states, and audit_log."""
+        owner_uid, owner_role, owner_scope = self._extract_owner_identity(state)
+        if owner_uid and not state.get("owner_user_id"):
+            state["owner_user_id"] = owner_uid
+        if owner_role and not state.get("owner_role"):
+            state["owner_role"] = owner_role
+        if owner_scope and not state.get("access_scope"):
+            state["access_scope"] = owner_scope
+
         self._threads[thread_id] = state
-        self._threads["latest"] = state
+        if owner_uid and owner_role:
+            self._latest_by_actor[(owner_uid, owner_role)] = state
 
         serialized = self._serialize_state(state)
 
@@ -437,6 +482,8 @@ class SupplyGuardOrchestrator:
                     "source": "supplyguard_orchestrator",
                     "case_id": state.get("case_id"),
                     "status": state.get("status"),
+                    "owner_user_id": state.get("owner_user_id"),
+                    "owner_role": state.get("owner_role"),
                 }
                 cp.put(cp_config, checkpoint_obj, metadata_obj, {"case_state": version})
             except Exception as exc:
@@ -451,16 +498,27 @@ class SupplyGuardOrchestrator:
                 return
             from src.db.idempotency import record_action, save_thread_state
 
-            save_thread_state(thread_id, serialized)
+            save_thread_state(
+                thread_id,
+                serialized,
+                owner_user_id=state.get("owner_user_id"),
+                owner_role=state.get("owner_role"),
+                access_scope=state.get("access_scope"),
+            )
 
             payload: Optional[ApprovalPayload] = state.get("approval_payload")
             if payload is not None:
                 profile: Optional[UserProfile] = state.get("user_profile")
+                actor_label = (
+                    f"{profile.name} ({profile.user_id}, {profile.role})"
+                    if profile
+                    else None
+                )
                 record_action(
                     action_id=payload.action_id,
                     thread_id=thread_id,
                     action_type=payload.action_type.value if hasattr(payload.action_type, "value") else str(payload.action_type),
-                    actor=profile.name if profile else None,
+                    actor=actor_label,
                     component_id=payload.component_id,
                     status=payload.status.value if hasattr(payload.status, "value") else str(payload.status),
                     parameters={
@@ -476,10 +534,21 @@ class SupplyGuardOrchestrator:
         """Internal alias for persist_state()."""
         self.persist_state(thread_id, state)
 
-    def get_state(self, thread_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve thread state from local cache or restore from PostgreSQL / checkpointer across restarts."""
+    def get_state(
+        self,
+        thread_id: str,
+        *,
+        requester: Optional[UserProfile] = None,
+        raise_on_unauthorized: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieve thread state from local cache or PostgreSQL, enforcing owner & role isolation when `requester` is provided."""
         if thread_id in self._threads:
-            return self._threads[thread_id]
+            return self._authorize_state(
+                self._threads[thread_id],
+                requester,
+                thread_id=thread_id,
+                raise_on_unauthorized=raise_on_unauthorized,
+            )
 
         # 1. Try PostgreSQL thread_states when enabled
         if self.use_postgres:
@@ -491,8 +560,17 @@ class SupplyGuardOrchestrator:
                     raw_case = load_thread_state(thread_id)
                     if raw_case is not None:
                         restored = self._deserialize_state(raw_case)
-                        self._threads[thread_id] = restored
-                        return restored
+                        authorized = self._authorize_state(
+                            restored,
+                            requester,
+                            thread_id=thread_id,
+                            raise_on_unauthorized=raise_on_unauthorized,
+                        )
+                        if authorized is not None:
+                            self._threads[thread_id] = authorized
+                        return authorized
+            except PermissionError:
+                raise
             except Exception as exc:
                 logger.debug("Could not restore thread %s from thread_states: %s", thread_id, exc)
 
@@ -516,8 +594,17 @@ class SupplyGuardOrchestrator:
                     raw_cp_case = channel_vals.get("case_state")
                     if isinstance(raw_cp_case, dict):
                         restored = self._deserialize_state(raw_cp_case)
-                        self._threads[thread_id] = restored
-                        return restored
+                        authorized = self._authorize_state(
+                            restored,
+                            requester,
+                            thread_id=thread_id,
+                            raise_on_unauthorized=raise_on_unauthorized,
+                        )
+                        if authorized is not None:
+                            self._threads[thread_id] = authorized
+                        return authorized
+            except PermissionError:
+                raise
             except Exception as exc:
                 logger.debug("Could not restore thread %s from checkpointer: %s", thread_id, exc)
 
@@ -551,16 +638,30 @@ class SupplyGuardOrchestrator:
                     if not raw_audit_case:
                         return None
                     restored = self._deserialize_state(raw_audit_case, status_override=row[1])
-                    self._threads[thread_id] = restored
-                    return restored
+                    authorized = self._authorize_state(
+                        restored,
+                        requester,
+                        thread_id=thread_id,
+                        raise_on_unauthorized=raise_on_unauthorized,
+                    )
+                    if authorized is not None:
+                        self._threads[thread_id] = authorized
+                    return authorized
+        except PermissionError:
+            raise
         except Exception as exc:
             logger.debug("Could not restore thread %s from Postgres audit_log: %s", thread_id, exc)
             return None
 
-    def get_latest_state(self) -> Optional[Dict[str, Any]]:
-        """Restore the most recent persisted SupplyGuard case across restarts."""
-        if "latest" in self._threads:
-            return self._threads["latest"]
+    def get_latest_state(self, *, requester: Optional[UserProfile] = None) -> Optional[Dict[str, Any]]:
+        """Restore the most recent persisted SupplyGuard case owned by `requester` (user + role)."""
+        if requester is not None:
+            actor_key = (requester.user_id, requester.role)
+            if actor_key in self._latest_by_actor:
+                return self._latest_by_actor[actor_key]
+        elif self._latest_by_actor:
+            return list(self._latest_by_actor.values())[-1]
+
         if not self.use_postgres:
             return None
         try:
@@ -569,13 +670,23 @@ class SupplyGuardOrchestrator:
 
             if not is_postgres_available():
                 return None
-            loaded = load_latest_thread_state()
+            loaded = load_latest_thread_state(
+                owner_user_id=requester.user_id if requester else None,
+                owner_role=requester.role if requester else None,
+            )
             if loaded is None:
                 return None
             _, raw = loaded
             restored = self._deserialize_state(raw)
-            self._threads["latest"] = restored
-            return restored
+            authorized = self._authorize_state(
+                restored,
+                requester,
+                thread_id=str(restored.get("thread_id", "")),
+                raise_on_unauthorized=False,
+            )
+            if authorized is not None and requester is not None:
+                self._latest_by_actor[(requester.user_id, requester.role)] = authorized
+            return authorized
         except Exception as exc:
             logger.debug("Could not restore latest thread from Postgres: %s", exc)
             return None
@@ -746,7 +857,7 @@ class SupplyGuardOrchestrator:
         case_id_tag: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute the full Deep Agent planning + 6-subagent pipeline up to clarification or approval gate."""
-        prior = self.get_state(thread_id)
+        prior = self.get_state(thread_id, requester=user_profile, raise_on_unauthorized=True)
         _ = _build_run_config(
             thread_id,
             case_id=case_id_tag,
@@ -892,7 +1003,7 @@ class SupplyGuardOrchestrator:
         """Unified conversational entry point for Chainlit UI and EvalHarness."""
         text = user_message.strip()
         lowered = text.lower()
-        state = self.get_state(thread_id)
+        state = self.get_state(thread_id, requester=user_profile, raise_on_unauthorized=True)
 
         # 1. Standalone adversarial override / approval bypass / pasted malicious supplier message
         if _is_standalone_adversarial_request(text):
@@ -975,7 +1086,7 @@ class SupplyGuardOrchestrator:
 
         # 3. Conversational Resume ("Resume the case I was reviewing yesterday." - EV-0085)
         if "resume the case" in lowered or "reviewing yesterday" in lowered:
-            restored = state or self.get_latest_state()
+            restored = state or self.get_latest_state(requester=user_profile)
             if restored is None:
                 empty_state = {
                     "case_id": "CASE-NONE",
@@ -1036,7 +1147,12 @@ class SupplyGuardOrchestrator:
             )
             qty_match = re.search(r"\b(\d{1,2},?\d{3}|\d{2,4})\b", qty_text)
             new_qty = int(qty_match.group(1).replace(",", "")) if qty_match else None
-            return self.modify_plan(thread_id, new_quantity=new_qty, new_spending_cap=new_cap)
+            return self.modify_plan(
+                thread_id,
+                new_quantity=new_qty,
+                new_spending_cap=new_cap,
+                user_profile=user_profile,
+            )
 
         # 5. Follow-up Q&A or Policy Challenge on an existing/context case
         if is_supplyguard_followup_or_policy_query(text, state):
@@ -1062,9 +1178,9 @@ class SupplyGuardOrchestrator:
         user_profile: UserProfile,
     ) -> Dict[str, Any]:
         """Answer multi-turn follow-up and policy/authorization questions from persisted case state."""
-        state = self.get_state(thread_id)
+        state = self.get_state(thread_id, requester=user_profile, raise_on_unauthorized=True)
         if not state:
-            latest = self.get_latest_state()
+            latest = self.get_latest_state(requester=user_profile)
             state = latest if latest and latest.get("investigation_completed") else {}
         state = dict(state)
         state["thread_id"] = thread_id
@@ -1460,9 +1576,10 @@ class SupplyGuardOrchestrator:
         *,
         new_quantity: Optional[int] = None,
         new_spending_cap: Optional[float] = None,
+        user_profile: Optional[UserProfile] = None,
     ) -> Dict[str, Any]:
         """Invalidate prior ApprovalPayload and build a fresh revalidated payload."""
-        state = self.get_state(thread_id)
+        state = self.get_state(thread_id, requester=user_profile, raise_on_unauthorized=True)
         if not state or not state.get("approval_payload"):
             raise ValueError(f"No active case state for thread '{thread_id}'")
 
@@ -1540,7 +1657,7 @@ class SupplyGuardOrchestrator:
         if not user_profile.can_approve:
             raise PermissionError(f"Role '{user_profile.role}' is read-only and cannot approve actions.")
 
-        state = self.get_state(thread_id)
+        state = self.get_state(thread_id, requester=user_profile, raise_on_unauthorized=True)
         if not state or not state.get("approval_payload"):
             raise ValueError(f"No approval payload found for thread '{thread_id}'")
 
@@ -1869,7 +1986,7 @@ class SupplyGuardOrchestrator:
         """Mark the pending approval payload as rejected without executing any procurement action."""
         if not user_profile.can_approve:
             raise PermissionError(f"Role '{user_profile.role}' is read-only and cannot reject actions.")
-        state = self.get_state(thread_id)
+        state = self.get_state(thread_id, requester=user_profile, raise_on_unauthorized=True)
         if not state or not state.get("approval_payload"):
             raise ValueError(f"No approval payload found for thread '{thread_id}'")
         payload: ApprovalPayload = state["approval_payload"]

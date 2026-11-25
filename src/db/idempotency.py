@@ -187,21 +187,59 @@ def execute_idempotent(
                 return True, result
 
 
+def _extract_state_owner(
+    case_state: Dict[str, Any],
+    owner_user_id: Optional[str] = None,
+    owner_role: Optional[str] = None,
+    access_scope: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    prof = case_state.get("user_profile")
+    prof_uid = prof.get("user_id") if isinstance(prof, dict) else getattr(prof, "user_id", None)
+    prof_role = prof.get("role") if isinstance(prof, dict) else getattr(prof, "role", None)
+    prof_scope = prof.get("access_scope") if isinstance(prof, dict) else getattr(prof, "access_scope", None)
+    if hasattr(prof_scope, "value"):
+        prof_scope = prof_scope.value
+    return (
+        owner_user_id or case_state.get("owner_user_id") or prof_uid,
+        owner_role or case_state.get("owner_role") or prof_role,
+        access_scope or case_state.get("access_scope") or prof_scope,
+    )
+
+
 def _ensure_thread_states_table(cur: Any) -> None:
-    """Ensure the durable thread_states table exists on older unmigrated Postgres volumes."""
+    """Ensure the durable thread_states table and ownership columns exist on older volumes."""
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS thread_states (
             thread_id TEXT PRIMARY KEY,
+            owner_user_id TEXT,
+            owner_role TEXT,
+            access_scope TEXT,
             case_state JSONB NOT NULL,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
         """
     )
+    cur.execute("ALTER TABLE thread_states ADD COLUMN IF NOT EXISTS owner_user_id TEXT;")
+    cur.execute("ALTER TABLE thread_states ADD COLUMN IF NOT EXISTS owner_role TEXT;")
+    cur.execute("ALTER TABLE thread_states ADD COLUMN IF NOT EXISTS access_scope TEXT;")
 
 
-def save_thread_state(thread_id: str, case_state: Dict[str, Any]) -> None:
-    """Persist serialized thread state to PostgreSQL for container-restart durability."""
+def save_thread_state(
+    thread_id: str,
+    case_state: Dict[str, Any],
+    *,
+    owner_user_id: Optional[str] = None,
+    owner_role: Optional[str] = None,
+    access_scope: Optional[str] = None,
+) -> None:
+    """Persist serialized thread state with owner_user_id and owner_role to PostgreSQL."""
+    resolved_uid, resolved_role, resolved_scope = _extract_state_owner(
+        case_state,
+        owner_user_id=owner_user_id,
+        owner_role=owner_role,
+        access_scope=access_scope,
+    )
     payload_json = json.dumps(case_state, default=str)
     with get_pooled_connection() as conn:
         with conn.transaction():
@@ -209,26 +247,36 @@ def save_thread_state(thread_id: str, case_state: Dict[str, Any]) -> None:
                 _ensure_thread_states_table(cur)
                 cur.execute(
                     """
-                    INSERT INTO thread_states (thread_id, case_state, updated_at)
-                    VALUES (%s, %s::jsonb, CURRENT_TIMESTAMP)
+                    INSERT INTO thread_states (
+                        thread_id, owner_user_id, owner_role, access_scope, case_state, updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s::jsonb, CURRENT_TIMESTAMP)
                     ON CONFLICT (thread_id)
                     DO UPDATE SET
+                        owner_user_id = COALESCE(NULLIF(thread_states.owner_user_id, ''), EXCLUDED.owner_user_id),
+                        owner_role = COALESCE(NULLIF(thread_states.owner_role, ''), EXCLUDED.owner_role),
+                        access_scope = COALESCE(NULLIF(thread_states.access_scope, ''), EXCLUDED.access_scope),
                         case_state = EXCLUDED.case_state,
                         updated_at = CURRENT_TIMESTAMP;
                     """,
-                    (thread_id, payload_json),
+                    (thread_id, resolved_uid, resolved_role, resolved_scope, payload_json),
                 )
 
 
-def load_thread_state(thread_id: str) -> Optional[Dict[str, Any]]:
-    """Load persisted thread state from PostgreSQL."""
+def load_thread_state(
+    thread_id: str,
+    *,
+    owner_user_id: Optional[str] = None,
+    owner_role: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Load persisted thread state from PostgreSQL, optionally enforcing owner_user_id and owner_role."""
     with get_pooled_connection() as conn:
         with conn.transaction():
             with conn.cursor() as cur:
                 _ensure_thread_states_table(cur)
                 cur.execute(
                     """
-                    SELECT case_state
+                    SELECT case_state, owner_user_id, owner_role
                     FROM thread_states
                     WHERE thread_id = %s;
                     """,
@@ -237,22 +285,45 @@ def load_thread_state(thread_id: str) -> Optional[Dict[str, Any]]:
                 row = cur.fetchone()
                 if not row:
                     return None
-                return row[0] if isinstance(row[0], dict) else json.loads(row[0])
+                raw = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+                row_uid, row_role, _ = _extract_state_owner(raw, owner_user_id=row[1], owner_role=row[2])
+                if owner_user_id and row_uid and row_uid != owner_user_id:
+                    raise PermissionError(f"Thread '{thread_id}' belongs to a different operator.")
+                if owner_role and row_role and row_role != owner_role:
+                    raise PermissionError(
+                        f"Thread '{thread_id}' requires role '{row_role}', active role is '{owner_role}'."
+                    )
+                return raw
 
 
-def load_latest_thread_state() -> Optional[Tuple[str, Dict[str, Any]]]:
-    """Load the most recently updated SupplyGuard thread state from PostgreSQL."""
+def load_latest_thread_state(
+    *,
+    owner_user_id: Optional[str] = None,
+    owner_role: Optional[str] = None,
+) -> Optional[Tuple[str, Dict[str, Any]]]:
+    """Load the most recently updated SupplyGuard thread state scoped by owner_user_id and owner_role."""
     with get_pooled_connection() as conn:
         with conn.transaction():
             with conn.cursor() as cur:
                 _ensure_thread_states_table(cur)
+                clauses = []
+                params: list[Any] = []
+                if owner_user_id:
+                    clauses.append("owner_user_id = %s")
+                    params.append(owner_user_id)
+                if owner_role:
+                    clauses.append("owner_role = %s")
+                    params.append(owner_role)
+                where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
                 cur.execute(
-                    """
+                    f"""
                     SELECT thread_id, case_state
                     FROM thread_states
+                    {where_sql}
                     ORDER BY updated_at DESC
                     LIMIT 1;
-                    """
+                    """,
+                    tuple(params),
                 )
                 row = cur.fetchone()
                 if not row:

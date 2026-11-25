@@ -44,6 +44,8 @@ def get_connection_pool(min_size: int = 1, max_size: int = 10) -> ConnectionPool
                     min_size=min_size,
                     max_size=max_size,
                     timeout=2.0,
+                    max_idle=120.0,
+                    check=ConnectionPool.check_connection,
                     kwargs={"connect_timeout": 2},
                     open=True,
                 )

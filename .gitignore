@@ -224,3 +224,7 @@ __marimo__/
 # LangGraph
 .langgraph_api/
 
+# Chainlit runtime uploaded files & generated reports
+.files/
+supplyguard_reports/
+
