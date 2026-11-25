@@ -2,7 +2,7 @@
 
 This is the team agreement for SupplyGuard AI, the agentic supply chain disruption and recovery platform built for the Code.Hub × PwC Agentic AI Bootcamp capstone. It covers how we work together, branch, commit, review and decide when something is done. Every team member follows it.
 
-> **Status: draft.** Items marked _TBD_ are still open. Decisions are tracked in the [CONTRIBUTING log](./docs/CONTRIBUTING_LOG.md) and moved here once the team agrees on them.
+> **Status: final except three team decisions.** The communication channel, the stand-up time and the pair-session day (marked _TBD_) are still open. Decisions are tracked in the [CONTRIBUTING log](./docs/CONTRIBUTING_LOG.md) and moved here once the team agrees on them. The Definition of Done check is in the [DoD verification table](./docs/CONTRIBUTING_LOG.md#definition-of-done-verification-93).
 
 ## Table of Contents
 

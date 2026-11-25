@@ -2,9 +2,11 @@
 
 **Owner:** Quality · **Issue:** #91 · **Presenters:** rotate per segment, see [REHEARSAL_LOG.md](./REHEARSAL_LOG.md) (#92)
 
-> **Status (2026-11-24): draft.** Written against the contracts and the MC-17 reference incident. It is
-> confirmed only when `eval/demo_check.py` passes on the real agent; update the expected outputs from
-> that run.
+> **Status (2026-11-25): verified on the real agent.** `eval.demo_check` passes on `develop` @ `15fbd79`
+> (steps 2a, 2b, 6a, 6b; the golden-scenario evaluators confirm the impact, cost and rejection values
+> below), both on the running stack and on a fresh clean clone. The restart in segment 5 was checked
+> with `eval.restart_scenario` (Procedures A and B: one execution, one `audit_log` row). The 10-minute
+> timing is confirmed at the rehearsals ([REHEARSAL_LOG.md](./REHEARSAL_LOG.md)).
 
 **Story:** Atlas Components announces a 12-day delay on MC-17. In ten minutes SupplyGuard clarifies the
 facts, measures the impact, ignores a planted instruction, compares recovery options, waits for
@@ -20,6 +22,23 @@ approval through a container restart, and creates exactly one purchase order.
 | 4 | 5:00–7:00 | Strategy comparison: recovery cost vs revenue at risk; Helios, Borealis, Delta rejected | Chainlit (strategy matrix), Neo4j Browser |
 | 5 | 7:00–9:00 | Approval card, container restart, resume, PO executed once | Chainlit, terminal |
 | 6 | 9:00–10:00 | Follow-up questions and LangSmith observability | Chainlit, LangSmith |
+
+## Presenters
+
+Every member can present every segment (see the rehearsal rotation in
+[REHEARSAL_LOG.md](./REHEARSAL_LOG.md#rotation)). For the final demo each member presents the
+segment closest to their own role, and the backup is whoever presented it in rehearsal 2:
+
+| # | Segment | Time | Presenter | Backup |
+|---|---|---|---|---|
+| 1 | Business goal and architecture | 1′ | @vaggelismpomponis (Platform) | @stef-fot |
+| 2 | Triage clarification | 2′ | @AlexZarkalis (Interface) | @vaggelismpomponis |
+| 3 | Investigation, impact, planted document | 2′ | @stef-fot (Knowledge) | @VickyMil-ai |
+| 4 | Strategy comparison | 2′ | @VickyMil-ai (Workflow) | @AlexZarkalis |
+| 5 | Approval, restart, resume | 2′ | @vaggelismpomponis (Platform) | @stef-fot |
+| 6 | Follow-ups and LangSmith | 1′ | @VickyMil-ai (Quality) | @AlexZarkalis |
+
+Minutes: Vaggelis 3′, Vicky 3′, Alex 2′, Stef 2′.
 
 ## Before the demo (T-30 min)
 
