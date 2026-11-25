@@ -34,8 +34,25 @@ def indexed():
 @needs_pg
 def test_ingest_is_idempotent(indexed):
     assert indexed == im.ingest() == 340
+    seeded = [r["memory_id"] for r in im.records()]
     with im.pg() as c:
-        assert c.execute("SELECT count(*) FROM incident_memories").fetchone()[0] == 340
+        assert c.execute("SELECT count(*) FROM incident_memories WHERE memory_id = ANY(%s)", (seeded,)).fetchone()[0] == 340
+
+
+@needs_pg
+def test_reseeding_keeps_memories_approved_at_runtime(indexed):
+    im.save_approved_memory(
+        memory_id="MEM-TEST-RESEED", case_id="CASE-TEST", supplier_id="S004", component_id="MC-17", delay_days=12,
+        strategy="Purchase from an approved alternative", recovery_cost_eur=30378.0, outcome="resolved",
+        approved_summary="Test memory: Cordillera expedite plus new order kept MC-17 lines running.",
+    )
+    try:
+        im.ingest()  # what the compose seed does on every start
+        with im.pg() as c:
+            assert c.execute("SELECT count(*) FROM incident_memories WHERE memory_id = 'MEM-TEST-RESEED'").fetchone()[0] == 1
+    finally:
+        with im.pg() as c:
+            c.execute("DELETE FROM incident_memories WHERE memory_id = 'MEM-TEST-RESEED'")
 
 
 @needs_pg
