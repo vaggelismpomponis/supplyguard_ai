@@ -62,27 +62,31 @@ Status: `Proposed` (προτάθηκε) · `Decided` (συμφωνήθηκε) ·
 | 2026-11-20 | Interface | End-to-End Conversation Flow, Approval Gate & Multi-Turn UI Alignment: Ενεργοποίηση human approval gate για όλες τις ενέργειες (συμπεριλαμβανομένου του `link_outage`) ώστε να εμφανίζεται κάρτα Approve/Reject και να υποστηρίζεται restart εν μέσω έγκρισης, δρομολόγηση ερωτήσεων πολιτικής χωρίς `?` απευθείας στην ανάκτηση πολιτικής, υποστήριξη follow-up ερωτήσεων μετά την ενέργεια από το υπάρχον state/policy/graph, απομόνωση νέων αιτημάτων ανά turn με διατήρηση στοιχείων χρήστη, ευέλικτη αντιστοίχιση συσκευών/υπαλλήλων με σαφές μήνυμα καταλόγου, και καθαρισμός διπλών citations/τελειών μεταξύ `respond` και `src/app.py`. | Επίλυση προβλημάτων ροής διαλόγου και human-in-the-loop που εντοπίστηκαν κατά το end-to-end testing στο Chainlit UI, με 10/10 επιτυχία στο evaluation suite και 133/133 unit/integration tests. | [`src/app.py`](../src/app.py), [`src/agent/nodes.py`](../src/agent/nodes.py), [`src/agent/graph.py`](../src/agent/graph.py), [`tests/test_ui.py`](../tests/test_ui.py), [`tests/test_graph.py`](../tests/test_graph.py), [roles/interface.md](./roles/interface.md) |
 | 2026-11-24 | Quality | Αναθεώρηση του `CONTRIBUTING.md` για το SupplyGuard AI: όνομα έργου, πίνακας ρόλων/backups, νέα commit scopes, review rotation, ενότητα Handoffs (✋), zero-conflict check πριν από PR, code conventions του capstone (Deep Agents, deterministic calculators, payload-bound approval ≤ €75k, idempotency, provenance, untrusted content) και Definition of Done σε επίπεδο task και project. Ενημέρωση θεμάτων 4, 7–10 και προσθήκη 17–18 ως Proposed. | Το `CONTRIBUTING.md` περιέγραφε ακόμη το HelpDesk Lite· η ομάδα χρειάζεται κοινούς κανόνες για το capstone πριν ξεκινήσουν τα PRs. | Issue #79, Issue #81 |
 | 2026-11-24 | Quality | Σουίτα αξιολόγησης SupplyGuard (#82–#93): LangSmith `run_config` και ρυθμίσεις tracing, loader για τα 105 cases και το MC-17, 7 evaluators, runners για evaluation, red team, restart και pre-demo check πάνω σε ένα κοινό agent harness (`eval/harness.py`), retrieval benchmark με 24 ground-truth queries. Νέα έγγραφα: `EVALUATION.md`, `RETRIEVAL_BENCHMARK.md`, `RED_TEAM_REPORT.md`· ξαναγράφτηκαν τα `DEMO_SCRIPT.md`, `REHEARSAL_LOG.md`, `RESTART_TEST_SCENARIO.md`. Mid-week audit του `PROJECT_CHECKLIST.md`. Owners ρόλων στο `CONTRIBUTING.md`. | Τα `eval/` και τα έγγραφα Quality περιέγραφαν ακόμη το HelpDesk Lite. Η εκτέλεση στον πραγματικό agent περιμένει το harness του Workflow. | Issues #82–#93, [EVALUATION.md](./EVALUATION.md) |
-
 | 2026-11-24 | Quality | Καθαρισμός υπολειμμάτων HelpDesk Lite σε έγγραφα και ρυθμίσεις: `README.md`, `GIT_GUIDE.md` (GitHub αντί Codeberg), `KNOWLEDGE_GRAPH.md`, `src/knowledge/README.md`, headers αρχείων, `helpdesk_network` → `supplyguard_network`, default `POSTGRES_DB` → `supplyguard`. Διαγραφή `PROJECT_NOTES.md` και `KNOWLEDGE_HANDOFF.md`. Ο κώδικας του HelpDesk agent μένει μέχρι τον SupplyGuard Deep Agent (λίστα στο `PROJECT_CHECKLIST.md` §9.5). | Τα έγγραφα περιέγραφαν άλλο σύστημα· το default `POSTGRES_DB=helpdesk` σύνδεε σε λάθος βάση όταν έλειπε το `.env`. | [PROJECT_CHECKLIST.md §9](./PROJECT_CHECKLIST.md#9-mid-week-audit-86) |
+| 2026-11-25 | Quality | Έλεγχος Definition of Done (#93) στο `develop` @ `15fbd79`: 11/12 κριτήρια με απόδειξη (eval 99/99, restart A/B, red team, live benchmark, clean clone σε macOS). Ανοιχτό το κριτήριο 12: reviews μόνο από ένα μέλος, όλα τα merges από ένα μέλος (και self-merges), πρόβες εκκρεμούν | Το DoD απαιτεί απόδειξη, όχι δήλωση | Issue #93 |
 
 ## Definition of Done verification (#93)
 
 Ελέγχεται από Quality πριν τις πρόβες (Ημ. 8) και ξανά πριν το demo. Κάθε γραμμή χρειάζεται απόδειξη (εντολή, αρχείο ή run), όχι δήλωση. Πηγή: [`PROJECT_CHECKLIST.md` §6](./PROJECT_CHECKLIST.md#6-definition-of-done) και [`CONTRIBUTING.md`](../CONTRIBUTING.md#definition-of-done).
 
-| # | Κριτήριο | Απόδειξη / πώς ελέγχεται | Status (2026-11-24) |
+| # | Κριτήριο | Απόδειξη / πώς ελέγχεται | Status (2026-11-25, `develop` @ `15fbd79`) |
 |---|---|---|---|
-| 1 | `docker compose up -d` < 10′ από καθαρό clone, 5 services | Run sheet στο [`CLEAN_CLONE_BENCHMARK.md` §8](./CLEAN_CLONE_BENCHMARK.md#8-quality-coordination-supplyguard-day-5-clean-clone-test-85--platform) | Ανοιχτό: οι υπάρχοντες χρόνοι είναι πριν το SupplyGuard stack |
-| 2 | Το `seed` φορτώνει όλα τα δεδομένα αυτόματα | `docker compose logs seed`· 212 έγγραφα, graph, πίνακες | Μερικώς: λείπουν historical cases και incident memories |
-| 3 | Ορχήστρωση με Deep Agents, planning, subagents | Trace στο LangSmith με root agent και subagents | Ανοιχτό: δεν υλοποιήθηκε |
-| 4 | Καμία PO χωρίς ρητή έγκριση | `human_approval_integrity` σε 99 cases· red team RT-02/RT-03 | Ανοιχτό: περιμένει harness |
-| 5 | Payload-bound approval ≤ €75,000 | `policy_constraints`· EV-0096· fingerprint στο restart test | Ανοιχτό: περιμένει harness |
-| 6 | Restart χωρίς διπλή εκτέλεση | [`RESTART_TEST_SCENARIO.md`](./RESTART_TEST_SCENARIO.md) A–C | Ανοιχτό: περιμένει harness και kill points |
-| 7 | Revenue at Risk χωριστά από Recovery Cost | `numerical_correctness` (calculator tools, δύο πεδία) | Ανοιχτό: περιμένει harness |
-| 8 | Τεκμηριωμένες απορρίψεις Helios / Borealis / Delta | `dependency_risk` στο EV-0001 | Ανοιχτό: περιμένει harness |
-| 9 | Το φυτεμένο έγγραφο αναφέρεται και εξουδετερώνεται | `red_team scan` (✅ βρίσκει μόνο το `DOC-NOT-HELIOS-PRICE`)· `red_team attack` 17/17 | Μερικώς: scan ✅, attacks περιμένουν harness |
-| 10 | Retrieval benchmark pgvector / ChromaDB / Hybrid | [`RETRIEVAL_BENCHMARK.md`](./RETRIEVAL_BENCHMARK.md), live run | Μερικώς: harness και offline validation ✅, live run ανοιχτό |
-| 11 | Traces στο LangSmith και αξιολόγηση στα 105 | `eval.tracing --ping`· `eval.run_eval --langsmith` | Ανοιχτό: περιμένει harness και API key |
-| 12 | Commits και reviews από όλα τα μέλη· όλοι εξηγούν τη ροή | `git shortlog -sn develop`· PR reviews· [`REHEARSAL_LOG.md`](./REHEARSAL_LOG.md) | Ανοιχτό |
+| 1 | `docker compose up -d` < 10′ από καθαρό clone, 5 services | Run sheet στο [`CLEAN_CLONE_BENCHMARK.md` §8.3](./CLEAN_CLONE_BENCHMARK.md#83-run-sheet-day-5-2026-11-30) | ✅ Linux (~6′) και macOS (~5′)· ⏳ Windows (laptop 1) |
+| 2 | Το `seed` φορτώνει όλα τα δεδομένα αυτόματα | `docker compose logs seed`: 18 πίνακες / 9,093 rows, Neo4j graph, 212 έγγραφα, 340 cases + memories, 5 users, exit 0 | ✅ |
+| 3 | Ορχήστρωση με Deep Agents, planning, subagents | `src/agent/deep_agent.py`: `create_deep_agent` με 6 subagents, `interrupt_on` στο `execute_procurement_po` και PostgresSaver· στο live stack χτίζεται `CompiledStateGraph` | ✅ κώδικας και runtime· το trace στο LangSmith ελέγχεται στην πρόβα (segment 6) |
+| 4 | Καμία PO χωρίς ρητή έγκριση | `eval.run_eval`: `human_approval_integrity` 99/99· `restart_scenario start` (no execution before approval) | ✅ |
+| 5 | Payload-bound approval ≤ €75,000 | `policy_constraints` 26/26· restart A: ίδιο fingerprint `f22a…` μετά το restart, total €30,378 | ✅ |
+| 6 | Restart χωρίς διπλή εκτέλεση | `eval.restart_scenario` A (approve, replay, double click → 1 εκτέλεση, 1 γραμμή `audit_log`) και B (`after_graph_query`, `before_execute`) | ✅ |
+| 7 | Revenue at Risk χωριστά από Recovery Cost | `numerical_correctness` 65/65 (calculator tools) | ✅ |
+| 8 | Τεκμηριωμένες απορρίψεις Helios / Borealis / Delta | `dependency_risk` 2/2 (EV-0001 golden)· `demo_check` 6a | ✅ |
+| 9 | Το φυτεμένο έγγραφο αναφέρεται και εξουδετερώνεται | `red_team scan`: μόνο `DOC-NOT-HELIOS-PRICE`· `prompt_injection` 11/11 στο `run_eval` | ✅ |
+| 10 | Retrieval benchmark pgvector / ChromaDB / Hybrid | `eval.retrieval_benchmark --live` (24 queries): R@5 1.000 / 0.833 / 0.986, MRR 1.000 / 0.938 / 0.979 | ✅ |
+| 11 | Traces στο LangSmith και αξιολόγηση στα 105 | `eval.run_eval` 99/99 + 6 restart cases μέσω `restart_scenario` = 105· `eval.tracing`: enabled, project `supplyguard-ai` | ✅ τοπικά· ⏳ το experiment `run_eval --langsmith` δεν ξανατρέχτηκε σε αυτόν τον έλεγχο |
+| 12 | Commits και reviews από όλα τα μέλη· όλοι εξηγούν τη ροή | GitHub (15 PRs): merged PRs ανά μέλος Vaggelis 5, Vicky 4, Alex 4, Stef 2. Reviews σε PR άλλου: μόνο @vaggelismpomponis (#102, #106). Όλα τα PRs έγιναν merge από @vaggelismpomponis, μαζί και 4 δικά του (#94, #96, #101, #105). Εξήγηση της ροής: [`REHEARSAL_LOG.md`](./REHEARSAL_LOG.md) | ❌ λείπουν reviews από @VickyMil-ai, @AlexZarkalis, @stef-fot· ⏳ πρόβες 1 και 2 |
+
+Οι αριθμοί των evaluators είναι από `docker compose exec -T app python -m eval.run_eval` (2026-11-25, 7′40″). Τα tests: `python -m pytest tests -q` → 362 passed, 1 skipped.
+
+**Για να κλείσει το #93:** (α) κάθε μέλος κάνει τουλάχιστον ένα GitHub review (Approve ή Request changes) σε PR άλλου ρόλου, σύμφωνα με τη rotation του `CONTRIBUTING.md`, και ο reviewer κάνει το merge· (β) γίνονται και καταγράφονται οι πρόβες 1 και 2 (#92)· (γ) τρέχει το Windows clean clone (#85)· (δ) η ομάδα αποφασίζει τα θέματα 5, 6 και 12 του πίνακα θεμάτων (κανάλι, ώρα stand-up, ημέρα pair session).
 
 ## Team Sign-off (Conversation Flow, Approval Gate & Multi-Turn UI Alignment ✋)
 
